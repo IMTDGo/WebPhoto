@@ -143,6 +143,45 @@
     </div>
   </div>
 
+  <!-- Channel preview modal -->
+  <dialog id="previewModal" class="modal">
+    <div class="modal-box max-w-2xl w-full">
+      <h3 class="font-bold text-lg mb-1">確認通道貼圖</h3>
+      <p class="text-xs text-base-content/50 mb-4">確認各通道正確後再上傳</p>
+      <div class="grid grid-cols-3 gap-3 mb-5">
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_basecolor" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">Base Color</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_roughness" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">Roughness</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_ao" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">AO</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_height" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">Height</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_metallic" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">Metallic</span>
+        </div>
+        <div class="flex flex-col items-center gap-1">
+          <canvas id="modalCh_normal" class="rounded w-full aspect-square bg-base-300"></canvas>
+          <span class="text-xs text-base-content/60">Normal</span>
+        </div>
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-ghost" id="btnPreviewModalClose">取消</button>
+        <button class="btn btn-primary" id="btnPreviewModalConfirm">確認上傳</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+
   <script type="module" src="./js/app-desktop.js"></script>
 </body>
 </html>

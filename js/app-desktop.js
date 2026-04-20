@@ -5,7 +5,7 @@
 import * as THREE            from 'three';
 import { CropEditor }        from './crop-editor.js';
 import { PatternPreview }    from './preview.js';
-import { uploadCrop }        from './upload.js';
+import { generateChannels, uploadAllMaps } from './upload.js';
 import { showToast }         from './toast.js';
 import { applySeamless, extractCrop, DEFAULT_PARAMS } from './seamless.js';
 
@@ -34,6 +34,7 @@ const uvOffY         = document.getElementById('uvOffY');
 // ── State ─────────────────────────────────────────────────────────────────────
 let cropEditor  = null;
 let currentCrop = null;
+let generatedMaps = null;   // { basecolor, roughness, ... } canvases
 let threeTexture = null;
 let threeMaterial = null;
 const seamlessParams = { ...DEFAULT_PARAMS };
@@ -174,18 +175,57 @@ uvOffY.addEventListener('input', (e) => {
 });
 
 // ── Upload ────────────────────────────────────────────────────────────────────
+const previewModal          = document.getElementById('previewModal');
+const btnPreviewModalClose   = document.getElementById('btnPreviewModalClose');
+const btnPreviewModalConfirm = document.getElementById('btnPreviewModalConfirm');
+
 btnUpload.addEventListener('click', async () => {
+  if (!currentCrop) { showToast('請先選擇圖片', 'warning'); return; }
   const name = uploadNameInput.value.trim();
   if (!name) { showToast('請輸入名稱', 'warning'); return; }
-  if (!currentCrop) { showToast('請先選擇圖片', 'warning'); return; }
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
-  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
+  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 生成通道...';
 
   try {
-    await uploadCrop(currentCrop, name, seamlessEnabled ? seamlessParams : null);
-    showToast('上傳成功！', 'success');
+    generatedMaps = await generateChannels(currentCrop, seamlessEnabled ? seamlessParams : null);
+    for (const [key, canvas] of Object.entries(generatedMaps)) {
+      const el = document.getElementById(`modalCh_${key}`);
+      if (!el) continue;
+      el.width  = canvas.width;
+      el.height = canvas.height;
+      el.getContext('2d').drawImage(canvas, 0, 0);
+      el.style.width  = '100%';
+      el.style.height = 'auto';
+    }
+    previewModal.showModal();
+  } catch (err) {
+    showToast('通道生成失敗: ' + err.message, 'error');
+  } finally {
+    btnUpload.disabled = false;
+    btnUpload.innerHTML = origHTML;
+  }
+});
+
+btnPreviewModalClose.addEventListener('click', () => previewModal.close());
+
+btnPreviewModalConfirm.addEventListener('click', async () => {
+  const name = uploadNameInput.value.trim();
+  if (!generatedMaps) return;
+  previewModal.close();
+
+  btnUpload.disabled = true;
+  const origHTML = btnUpload.innerHTML;
+
+  const onProgress = (done, total) => {
+    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
+  };
+
+  try {
+    await uploadAllMaps(name, generatedMaps, onProgress);
+    showToast('上傳成功！共 6 個通道', 'success');
+    generatedMaps = null;
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
   } finally {

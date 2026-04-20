@@ -2,11 +2,11 @@
  * app-mobile.js — mobile app logic
  */
 
-import { CropEditor }    from './crop-editor.js';
-import { PatternPreview } from './preview.js';
-import { uploadCrop }     from './upload.js';
-import { showToast }      from './toast.js';
-import { DEFAULT_PARAMS } from './seamless.js';
+import { CropEditor }              from './crop-editor.js';
+import { PatternPreview }           from './preview.js';
+import { generateChannels, uploadAllMaps } from './upload.js';
+import { showToast }               from './toast.js';
+import { DEFAULT_PARAMS }          from './seamless.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const stepEntry    = document.getElementById('stepEntry');
@@ -23,9 +23,14 @@ const cropCanvas   = document.getElementById('cropCanvas');
 const previewCanvas = document.getElementById('previewCanvas');
 const previewGridSlider = document.getElementById('previewGridSlider');
 const previewGridVal    = document.getElementById('previewGridVal');
-const btnRetake    = document.getElementById('btnRetake');
+const btnRetake      = document.getElementById('btnRetake');
 const btnPickAnother = document.getElementById('btnPickAnother');
-const btnShowUpload = document.getElementById('btnShowUpload');
+const btnShowUpload  = document.getElementById('btnShowUpload');
+const stepPreview    = document.getElementById('stepPreview');
+const btnPreviewBack    = document.getElementById('btnPreviewBack');
+const btnPreviewConfirm = document.getElementById('btnPreviewConfirm');
+const genOverlay     = document.getElementById('genOverlay');
+const genOverlayLabel = document.getElementById('genOverlayLabel');
 const uploadSheet  = document.getElementById('uploadSheet');
 const uploadSheetBackdrop = document.getElementById('uploadSheetBackdrop');
 const uploadNameInput = document.getElementById('uploadName');
@@ -39,11 +44,12 @@ const blendWidthVal   = document.getElementById('blendWidthVal');
 const seamlessControls = document.getElementById('seamlessControls');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let cropEditor   = null;
-let preview      = null;
-let currentCrop  = null;
-let cameraStream = null;
-let cameraFacing = 'environment';
+let cropEditor      = null;
+let preview         = null;
+let currentCrop     = null;
+let generatedMaps   = null;   // { basecolor, roughness, ao, height, metallic, normal } canvases
+let cameraStream    = null;
+let cameraFacing    = 'environment';
 let seamlessEnabled = true;
 const seamlessParams = { ...DEFAULT_PARAMS };
 
@@ -106,10 +112,24 @@ function showStep(stepName) {
   stepEntry.classList.add('hidden');
   stepCamera.classList.add('hidden');
   stepEdit.classList.add('hidden');
+  stepPreview.classList.add('hidden');
 
-  if (stepName === 'camera') stepCamera.classList.remove('hidden');
-  else if (stepName === 'edit') stepEdit.classList.remove('hidden');
-  else stepEntry.classList.remove('hidden');
+  if      (stepName === 'camera')  stepCamera.classList.remove('hidden');
+  else if (stepName === 'edit')    stepEdit.classList.remove('hidden');
+  else if (stepName === 'preview') stepPreview.classList.remove('hidden');
+  else                             stepEntry.classList.remove('hidden');
+}
+
+function paintPreviewThumbnails(maps) {
+  for (const [key, canvas] of Object.entries(maps)) {
+    const el = document.getElementById(`previewCh_${key}`);
+    if (!el) continue;
+    el.width  = canvas.width;
+    el.height = canvas.height;
+    el.getContext('2d').drawImage(canvas, 0, 0);
+    el.style.width  = '100%';
+    el.style.height = 'auto';
+  }
 }
 
 async function startCamera() {
@@ -258,7 +278,24 @@ btnPickAnother.addEventListener('click', () => {
   resetToEntry();
 });
 
-btnShowUpload.addEventListener('click', () => {
+btnShowUpload.addEventListener('click', async () => {
+  if (!currentCrop) { showToast('請先展開裁切區域', 'warning'); return; }
+  genOverlayLabel.textContent = '生成通道中...';
+  genOverlay.classList.remove('hidden');
+  try {
+    generatedMaps = await generateChannels(currentCrop, seamlessEnabled ? seamlessParams : null);
+    paintPreviewThumbnails(generatedMaps);
+    showStep('preview');
+  } catch (err) {
+    showToast('通道生成失敗: ' + err.message, 'error');
+  } finally {
+    genOverlay.classList.add('hidden');
+  }
+});
+
+btnPreviewBack.addEventListener('click', () => showStep('edit'));
+
+btnPreviewConfirm.addEventListener('click', () => {
   uploadNameInput.value = '';
   openUploadSheet();
 });
@@ -272,14 +309,20 @@ btnConfirmUpload.addEventListener('click', async () => {
   if (!name) { showToast('請輸入名稱', 'warning'); return; }
   if (!currentCrop) { showToast('請先選取裁切範圍', 'warning'); return; }
 
+  if (!generatedMaps) { showToast('請先預覽通道', 'warning'); return; }
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
-  btnConfirmUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
+
+  const onProgress = (done, total) => {
+    btnConfirmUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
+  };
 
   try {
-    await uploadCrop(currentCrop, name, seamlessEnabled ? seamlessParams : null);
+    await uploadAllMaps(name, generatedMaps, onProgress);
     closeUploadSheet();
-    showToast('上傳成功！', 'success');
+    generatedMaps = null;
+    showToast('上傳成功！共 6 個通道', 'success');
+    showStep('entry');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
   } finally {

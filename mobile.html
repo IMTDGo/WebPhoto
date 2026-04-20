@@ -131,10 +131,53 @@
       <div class="shrink-0 p-3 safe-bottom bg-base-100/95 border-t border-base-content/10 grid grid-cols-3 gap-2">
         <button class="btn btn-ghost" id="btnRetake">重拍</button>
         <button class="btn btn-outline" id="btnPickAnother">重選</button>
-        <button class="btn btn-primary" id="btnShowUpload">上傳</button>
+        <button class="btn btn-primary" id="btnShowUpload">下一步 →</button>
+      </div>
+    </section>
+
+    <!-- Step 4: channel preview -->
+    <section id="stepPreview" class="hidden h-full flex flex-col overflow-hidden" style="min-height:0">
+      <div class="flex-1 overflow-y-auto p-3">
+        <p class="text-xs text-base-content/50 uppercase tracking-widest mb-3">確認通道貼圖</p>
+        <div class="grid grid-cols-3 gap-2">
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_basecolor" class="rounded w-full aspect-square bg-base-300 object-cover"></canvas>
+            <span class="text-xs text-base-content/60">Base Color</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_roughness" class="rounded w-full aspect-square bg-base-300"></canvas>
+            <span class="text-xs text-base-content/60">Roughness</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_ao" class="rounded w-full aspect-square bg-base-300"></canvas>
+            <span class="text-xs text-base-content/60">AO</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_height" class="rounded w-full aspect-square bg-base-300"></canvas>
+            <span class="text-xs text-base-content/60">Height</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_metallic" class="rounded w-full aspect-square bg-base-300"></canvas>
+            <span class="text-xs text-base-content/60">Metallic</span>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <canvas id="previewCh_normal" class="rounded w-full aspect-square bg-base-300"></canvas>
+            <span class="text-xs text-base-content/60">Normal</span>
+          </div>
+        </div>
+      </div>
+      <div class="shrink-0 p-3 safe-bottom bg-base-100/95 border-t border-base-content/10 grid grid-cols-2 gap-2">
+        <button class="btn btn-ghost" id="btnPreviewBack">← 返回</button>
+        <button class="btn btn-primary" id="btnPreviewConfirm">確認上傳</button>
       </div>
     </section>
   </main>
+
+  <!-- Generation loading overlay -->
+  <div id="genOverlay" class="hidden fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center gap-3">
+    <span class="loading loading-spinner loading-lg text-primary"></span>
+    <p id="genOverlayLabel" class="text-sm text-white/80">生成通道中...</p>
+  </div>
 
   <!-- Upload bottom sheet -->
   <div id="uploadSheetBackdrop" class="hidden fixed inset-0 bg-black/45 z-40"></div>
@@ -142,9 +185,9 @@
     <div class="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4"></div>
     <h3 class="font-bold text-lg mb-3">命名並上傳</h3>
     <div class="form-control gap-2">
-      <label class="label py-0"><span class="label-text">圖片名稱</span></label>
+      <label class="label py-0"><span class="label-text">資料夾名稱</span></label>
       <input type="text" id="uploadName" placeholder="例如: wood_floor_01" class="input input-bordered w-full" maxlength="100" />
-      <p class="text-xs text-base-content/40">格式會儲存為 PNG</p>
+      <p class="text-xs text-base-content/40">6 個通道將上傳至同一資料夾</p>
     </div>
     <div class="mt-4 grid grid-cols-2 gap-2">
       <button class="btn btn-ghost" id="btnCancelUpload">取消</button>
