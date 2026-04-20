@@ -1,0 +1,16 @@
+{
+  "name": "webphoto-server",
+  "version": "1.0.0",
+  "description": "WebPhoto upload server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "multer": "^2.1.1"
+  },
+  "devDependencies": {
+    "localtunnel": "^2.0.2"
+  }
+}

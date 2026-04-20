@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebPhoto</title>
+  <script>
+    // Redirect based on device type
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    if (isMobile) {
+      window.location.replace('./mobile.html');
+    } else {
+      window.location.replace('./desktop.html');
+    }
+  </script>
+</head>
+<body>
+  <p>正在偵測裝置類型，請稍候...</p>
+</body>
+</html>
