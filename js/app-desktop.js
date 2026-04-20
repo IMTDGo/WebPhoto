@@ -234,6 +234,42 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   }
 });
 
+// ── Keyboard crop control ─────────────────────────────────────────────────────
+window.addEventListener('keydown', (e) => {
+  if (!cropEditor?.img) return;
+  // Ignore when user is typing in an input / textarea
+  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+  const img  = cropEditor.img;
+  const step = Math.max(1, Math.round(img.width * 0.005)); // 0.5% of image width
+  const sizeStep = Math.max(1, Math.round(Math.min(img.width, img.height) * 0.01)); // 1%
+  let handled = true;
+
+  switch (e.key) {
+    case 'ArrowLeft':  cropEditor.cropX -= step; break;
+    case 'ArrowRight': cropEditor.cropX += step; break;
+    case 'ArrowUp':    cropEditor.cropY -= step; break;
+    case 'ArrowDown':  cropEditor.cropY += step; break;
+    case '+': case '=': {
+      const maxDim = Math.min(img.width, img.height);
+      cropEditor.cropSize = Math.min(maxDim, cropEditor.cropSize + sizeStep);
+      break;
+    }
+    case '-': case '_':
+      cropEditor.cropSize = Math.max(16, cropEditor.cropSize - sizeStep);
+      break;
+    default: handled = false;
+  }
+
+  if (handled) {
+    e.preventDefault();
+    cropEditor._clampCrop();
+    cropEditor._draw();
+    currentCrop = cropEditor.getCrop();
+    updateThreeTexture();
+  }
+});
+
 // ── Resize ────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => { resizeThree(); cropEditor?.resize(); });
 resizeThree();
