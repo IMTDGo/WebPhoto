@@ -83,19 +83,31 @@ export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 512) {
   const w = baseCanvas.width, h = baseCanvas.height;
   const imageData  = baseCanvas.getContext('2d').getImageData(0, 0, w, h);
 
+  // Copy the buffer before sending — keeps imageData intact for the main-thread fallback
+  const bufferCopy = imageData.data.buffer.slice(0);
+
   return new Promise((resolve) => {
     try {
       const worker = new Worker(new URL('./textureWorker.js', import.meta.url), { type: 'module' });
+
+      // Safety timeout: if Worker hangs or never fires, fall back after 20 s
+      const timer = setTimeout(() => {
+        worker.terminate();
+        resolve(_generateMainThread(imageData, w, h, baseCanvas));
+      }, 20000);
+
       worker.onmessage = ({ data }) => {
+        clearTimeout(timer);
         worker.terminate();
         resolve(_workerResults(data, w, h, baseCanvas));
       };
       worker.onerror = () => {
+        clearTimeout(timer);
         worker.terminate();
         resolve(_generateMainThread(imageData, w, h, baseCanvas));
       };
-      // Transfer buffer (zero-copy) — imageData is no longer needed on main thread
-      worker.postMessage({ buffer: imageData.data.buffer, width: w, height: h }, [imageData.data.buffer]);
+      // Transfer the COPY — original imageData stays usable for fallback
+      worker.postMessage({ buffer: bufferCopy, width: w, height: h }, [bufferCopy]);
     } catch (_) {
       resolve(_generateMainThread(imageData, w, h, baseCanvas));
     }
