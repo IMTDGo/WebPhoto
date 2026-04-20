@@ -21,7 +21,6 @@ import {
   generateRoughnessMap,
   generateAOMap,
   generateHeightMap,
-  generateMetallicMap,
   generateNormalMap,
   canvasFromData,
 } from './textureGenerator.js';
@@ -32,12 +31,13 @@ const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-async function _uploadCanvas(canvas, publicId) {
+async function _uploadCanvas(canvas, folder, suffix) {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   const fd = new FormData();
   fd.append('file', blob);
   fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  fd.append('public_id', publicId);
+  fd.append('folder', folder);
+  fd.append('public_id', `${folder}_${suffix}`);
   const resp = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
   if (!resp.ok) throw new Error(await resp.text());
   const data = await resp.json();
@@ -51,7 +51,6 @@ function _workerResults(workerData, w, h, baseCanvas) {
     roughness: make(workerData.roughness),
     ao:        make(workerData.ao),
     height:    make(workerData.height),
-    metallic:  make(workerData.metallic),
     normal:    make(workerData.normal),
   };
 }
@@ -59,11 +58,10 @@ function _workerResults(workerData, w, h, baseCanvas) {
 function _generateMainThread(imageData, w, h, baseCanvas) {
   return {
     basecolor: baseCanvas,
-    roughness: canvasFromData(generateRoughnessMap(imageData, 1.0),        w, h),
-    ao:        canvasFromData(generateAOMap(imageData, 1.0),               w, h),
-    height:    canvasFromData(generateHeightMap(imageData, 1.0),           w, h),
-    metallic:  canvasFromData(generateMetallicMap(imageData, 0.8),         w, h),
-    normal:    canvasFromData(generateNormalMap(imageData, w, h, 5.0),     w, h),
+    roughness: canvasFromData(generateRoughnessMap(imageData, 1.0),    w, h),
+    ao:        canvasFromData(generateAOMap(imageData, 1.0),           w, h),
+    height:    canvasFromData(generateHeightMap(imageData, 1.0),       w, h),
+    normal:    canvasFromData(generateNormalMap(imageData, w, h, 5.0), w, h),
   };
 }
 
@@ -120,7 +118,7 @@ export async function uploadAllMaps(name, canvasMap, onProgress = null) {
 
   const results = await Promise.all(
     entries.map(async ([suffix, canvas]) => {
-      const result = await _uploadCanvas(canvas, `${name}/${name}_${suffix}`);
+      const result = await _uploadCanvas(canvas, name, suffix);
       onProgress?.(++completed, total, suffix);
       return [suffix, result];
     })
