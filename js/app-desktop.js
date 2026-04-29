@@ -135,7 +135,7 @@ dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
-  if (file?.type.startsWith('image/')) loadImage(file);
+  if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
   else showToast('請拖放圖片檔案', 'error');
 });
 

@@ -214,7 +214,7 @@ function resetToEntry() {
 
 // ── File handling ─────────────────────────────────────────────────────────────
 function handleFile(file) {
-  if (!file?.type.startsWith('image/')) {
+  if (!file?.type.startsWith('image/') && !/\.tiff?$/i.test(file?.name)) {
     showToast('請選擇圖片檔案', 'error');
     return;
   }
