@@ -212,25 +212,57 @@ function resetToEntry() {
   currentCrop = null;
 }
 
+// ── TIFF decode helper ────────────────────────────────────────────────────────
+function _isTiff(file) {
+  return /\.tiff?$/i.test(file.name) || file.type === 'image/tiff' || file.type === 'image/x-tiff';
+}
+
+async function fileToImage(file) {
+  if (_isTiff(file) && typeof UTIF !== 'undefined') {
+    const buf  = await file.arrayBuffer();
+    const ifds = UTIF.decode(buf);
+    UTIF.decodeImage(buf, ifds[0]);
+    const ifd = ifds[0];
+    const cvs = document.createElement('canvas');
+    cvs.width  = ifd.width;
+    cvs.height = ifd.height;
+    const ctx  = cvs.getContext('2d');
+    const imgData = ctx.createImageData(ifd.width, ifd.height);
+    imgData.data.set(ifd.data);
+    ctx.putImageData(imgData, 0, 0);
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = cvs.toDataURL(); });
+    return img;
+  }
+  const dataURL = await new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload  = (e) => res(e.target.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataURL; });
+  return img;
+}
+
 // ── File handling ─────────────────────────────────────────────────────────────
-function handleFile(file) {
-  if (!file?.type.startsWith('image/') && !/\.tiff?$/i.test(file?.name)) {
+async function handleFile(file) {
+  if (!file?.type.startsWith('image/') && !_isTiff(file)) {
     showToast('請選擇圖片檔案', 'error');
     return;
   }
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const img = new Image();
-    img.onload = () => {
-      if (!cropEditor) initEditors();
-      cropEditor.load(img);
-      currentCrop = cropEditor.getCrop();
-      preview.update(currentCrop);
-      showStep('edit');
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  let img;
+  try {
+    img = await fileToImage(file);
+  } catch {
+    showToast('圖片載入失敗，格式可能不支援', 'error');
+    return;
+  }
+  if (!cropEditor) initEditors();
+  cropEditor.load(img);
+  currentCrop = cropEditor.getCrop();
+  preview.update(currentCrop);
+  showStep('edit');
 }
 
 fileInputCapture.addEventListener('change', (e) => handleFile(e.target.files[0]));
