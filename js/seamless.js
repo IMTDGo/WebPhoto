@@ -1,6 +1,15 @@
 /**
- * seamless.js — JS port of the seamless-tiling algorithm from uv-editor.js
+ * seamless.js — Poisson Image Editing based seamless-tiling algorithm.
  * Shared between mobile and desktop.
+ *
+ * Parameters:
+ *   offsetX / offsetY   — toroidal shift applied before the solve (0–1).
+ *                         0.5 / 0.5 centres the original seam edges.
+ *   blendStrength       — lerp weight between the original shifted image
+ *                         and the full Poisson result (0 = no effect, 1 = full).
+ *   blendWidth          — controls Gauss-Seidel iteration count (quality).
+ *                         Range 0.01–0.49 maps to ~4–196 iterations.
+ *                         Default 0.15 → 60 iterations (good balance).
  */
 
 export const DEFAULT_PARAMS = {
@@ -10,102 +19,142 @@ export const DEFAULT_PARAMS = {
   blendWidth:    0.15,
 };
 
-function smoothEdge(x, w) {
-  const a = Math.max(0, Math.min(1, x / w));
-  const b = Math.max(0, Math.min(1, (1 - x) / w));
-  return a * (3 - 2 * a) * (b * (3 - 2 * b));
-}
+/**
+ * Poisson seamless tiling via Gauss-Seidel relaxation.
+ *
+ * Algorithm:
+ *  1. Compute the divergence of the gradient field of the source image
+ *     with toroidal (wrap-around) boundary conditions (RHS of ∇²u = div(∇src)).
+ *  2. Solve ∇²u = rhs using Gauss-Seidel iteration. The solution u preserves
+ *     all local gradients while removing global DC discontinuities at tile edges.
+ *  3. Correct the DC offset so mean brightness matches the source.
+ *
+ * @param {Uint8ClampedArray} px    — RGBA pixel data (source)
+ * @param {number}            W     — image width
+ * @param {number}            H     — image height
+ * @param {number}            iters — Gauss-Seidel iterations
+ * @returns {Uint8ClampedArray}     — RGBA pixel data (seamless result)
+ */
+function poissonSeamless(px, W, H, iters) {
+  const N = W * H;
 
-function fract(v) { return v - Math.floor(v); }
+  function idx(x, y) { return ((y + H) % H) * W + ((x + W) % W); }
+  function getC(x, y, c) { return px[idx(x, y) * 4 + c]; }
 
-function sampleBilinear(pixels, W, H, u, v) {
-  const px = fract(u) * W;
-  const py = fract(v) * H;
-  const x0 = Math.floor(px) % W;
-  const y0 = Math.floor(py) % H;
-  const x1 = (x0 + 1) % W;
-  const y1 = (y0 + 1) % H;
-  const fx = px - Math.floor(px);
-  const fy = py - Math.floor(py);
-
-  function g(x, y) {
-    const i = (y * W + x) * 4;
-    return [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
+  // Step 1: build RHS = divergence of source gradient (toroidal)
+  const rhs = new Float32Array(N * 3);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = idx(x, y);
+      for (let c = 0; c < 3; c++) {
+        const v = getC(x, y, c);
+        rhs[i * 3 + c] =
+          (getC(x + 1, y, c) - v) - (v - getC(x - 1, y, c)) +
+          (getC(x, y + 1, c) - v) - (v - getC(x, y - 1, c));
+      }
+    }
   }
 
-  const c00 = g(x0, y0), c10 = g(x1, y0);
-  const c01 = g(x0, y1), c11 = g(x1, y1);
-  return [
-    c00[0] * (1 - fx) * (1 - fy) + c10[0] * fx * (1 - fy) + c01[0] * (1 - fx) * fy + c11[0] * fx * fy,
-    c00[1] * (1 - fx) * (1 - fy) + c10[1] * fx * (1 - fy) + c01[1] * (1 - fx) * fy + c11[1] * fx * fy,
-    c00[2] * (1 - fx) * (1 - fy) + c10[2] * fx * (1 - fy) + c01[2] * (1 - fx) * fy + c11[2] * fx * fy,
-    c00[3] * (1 - fx) * (1 - fy) + c10[3] * fx * (1 - fy) + c01[3] * (1 - fx) * fy + c11[3] * fx * fy,
-  ];
-}
+  // Step 2: Gauss-Seidel solve ∇²u = rhs, initialised with source values
+  const u = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++)
+    for (let c = 0; c < 3; c++)
+      u[i * 3 + c] = px[i * 4 + c];
 
-function lerp4(a, b, t) {
-  return [
-    a[0] + (b[0] - a[0]) * t,
-    a[1] + (b[1] - a[1]) * t,
-    a[2] + (b[2] - a[2]) * t,
-    a[3] + (b[3] - a[3]) * t,
-  ];
+  for (let iter = 0; iter < iters; iter++) {
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const i  = idx(x, y);
+        const ir = idx(x + 1, y), il = idx(x - 1, y);
+        const id = idx(x, y + 1), iu = idx(x, y - 1);
+        for (let c = 0; c < 3; c++) {
+          u[i * 3 + c] = (
+            u[ir * 3 + c] + u[il * 3 + c] +
+            u[id * 3 + c] + u[iu * 3 + c] -
+            rhs[i * 3 + c]
+          ) * 0.25;
+        }
+      }
+    }
+  }
+
+  // Step 3: correct DC offset to match source mean
+  const meanSrc = [0, 0, 0], meanU = [0, 0, 0];
+  for (let i = 0; i < N; i++) {
+    for (let c = 0; c < 3; c++) {
+      meanSrc[c] += px[i * 4 + c];
+      meanU[c]   += u[i * 3 + c];
+    }
+  }
+  for (let c = 0; c < 3; c++) { meanSrc[c] /= N; meanU[c] /= N; }
+
+  const out = new Uint8ClampedArray(N * 4);
+  for (let i = 0; i < N; i++) {
+    for (let c = 0; c < 3; c++) {
+      out[i * 4 + c] = Math.max(0, Math.min(255,
+        Math.round(u[i * 3 + c] + (meanSrc[c] - meanU[c]))
+      ));
+    }
+    out[i * 4 + 3] = px[i * 4 + 3]; // preserve alpha
+  }
+  return out;
 }
 
 /**
- * Apply seamless blending to a source canvas.
+ * Apply Poisson seamless blending to a source canvas.
  *
- * @param {HTMLCanvasElement} srcCanvas  — square-ish source image canvas
+ * @param {HTMLCanvasElement} srcCanvas  — source image canvas
  * @param {number}            outSize    — output canvas resolution (pixels)
  * @param {object}            params     — seamless parameters
  * @returns {HTMLCanvasElement}
  */
 export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
   const W = srcCanvas.width, H = srcCanvas.height;
-  const srcCtx = srcCanvas.getContext('2d');
-  const pixels = srcCtx.getImageData(0, 0, W, H).data;
-
-  const out = document.createElement('canvas');
-  out.width = outSize;
-  out.height = outSize;
-  const outCtx = out.getContext('2d');
-  const outData = outCtx.createImageData(outSize, outSize);
-  const op = outData.data;
-
   const { offsetX: offX, offsetY: offY, blendStrength: strength, blendWidth: blendW } = params;
 
-  for (let py = 0; py < outSize; py++) {
-    for (let px = 0; px < outSize; px++) {
-      const u = px / outSize;
-      const v = py / outSize;
-      const ou = fract(u + offX);
-      const ov = fract(v + offY);
+  // Apply toroidal offset shift so the original seam lines land in the image centre
+  const sx = Math.round(offX * W) % W;
+  const sy = Math.round(offY * H) % H;
+  const shiftCanvas = document.createElement('canvas');
+  shiftCanvas.width  = W;
+  shiftCanvas.height = H;
+  const shiftCtx = shiftCanvas.getContext('2d');
+  shiftCtx.drawImage(srcCanvas,  sx,  sy, W - sx, H - sy,    0,    0, W - sx, H - sy);
+  if (sx > 0)            shiftCtx.drawImage(srcCanvas,   0,  sy,     sx, H - sy, W - sx,    0,     sx, H - sy);
+  if (sy > 0)            shiftCtx.drawImage(srcCanvas,  sx,   0, W - sx,      sy,    0, H - sy, W - sx,      sy);
+  if (sx > 0 && sy > 0)  shiftCtx.drawImage(srcCanvas,   0,   0,     sx,      sy, W - sx, H - sy,     sx,      sy);
 
-      const c1 = sampleBilinear(pixels, W, H, ou,              ov);
-      const c2 = sampleBilinear(pixels, W, H, fract(ou + 0.5), ov);
-      const c3 = sampleBilinear(pixels, W, H, ou,              fract(ov + 0.5));
-      const c4 = sampleBilinear(pixels, W, H, fract(ou + 0.5), fract(ov + 0.5));
+  const shiftedPx = shiftCtx.getImageData(0, 0, W, H).data;
 
-      const eX = smoothEdge(ou, blendW);
-      const eY = smoothEdge(ov, blendW);
-      const f  = strength;
+  // Poisson solve — blendWidth maps to iteration count
+  // 0.01 → 4 iters (min 10), 0.15 → 60 iters, 0.49 → ~196 iters
+  const iters = Math.max(10, Math.round(blendW * 400));
+  const poissonPx = poissonSeamless(shiftedPx, W, H, iters);
 
-      const mx1 = lerp4(c2, c1, eX * f + (1 - f));
-      const mx2 = lerp4(c4, c3, eX * f + (1 - f));
-      let   fin = lerp4(mx2, mx1, eY * f + (1 - f));
-
-      const center = (1 - eX) * (1 - eY) * blendW * 2.0;
-      fin = lerp4(fin, c4, center * f * 0.3);
-
-      const i = (py * outSize + px) * 4;
-      op[i]     = Math.round(Math.max(0, Math.min(255, fin[0])));
-      op[i + 1] = Math.round(Math.max(0, Math.min(255, fin[1])));
-      op[i + 2] = Math.round(Math.max(0, Math.min(255, fin[2])));
-      op[i + 3] = Math.round(Math.max(0, Math.min(255, fin[3])));
+  // Lerp between shifted original and Poisson result using blendStrength
+  const blended = new Uint8ClampedArray(W * H * 4);
+  for (let i = 0; i < W * H; i++) {
+    for (let c = 0; c < 3; c++) {
+      blended[i * 4 + c] = Math.round(
+        shiftedPx[i * 4 + c] * (1 - strength) + poissonPx[i * 4 + c] * strength
+      );
     }
+    blended[i * 4 + 3] = shiftedPx[i * 4 + 3];
   }
 
-  outCtx.putImageData(outData, 0, 0);
+  // Write blended result into an intermediate canvas, then scale to outSize
+  const midCanvas = document.createElement('canvas');
+  midCanvas.width  = W;
+  midCanvas.height = H;
+  const midCtx = midCanvas.getContext('2d');
+  const imgData = midCtx.createImageData(W, H);
+  imgData.data.set(blended);
+  midCtx.putImageData(imgData, 0, 0);
+
+  const out = document.createElement('canvas');
+  out.width  = outSize;
+  out.height = outSize;
+  out.getContext('2d').drawImage(midCanvas, 0, 0, outSize, outSize);
   return out;
 }
 
