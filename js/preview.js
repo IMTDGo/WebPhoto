@@ -22,6 +22,7 @@ export class PatternPreview {
     this.displaySize = options.displaySize || 512;
     this.gridSize    = options.gridSize    || 3;
     this.params      = { ...DEFAULT_PARAMS };
+    this.seamlessEnabled = false;  // default off — seamless feature is hidden
     this._lastCrop   = null;  // cached so gridSize changes auto-redraw
   }
 
@@ -39,19 +40,25 @@ export class PatternPreview {
    * Uses edge-blend only (no Poisson) so it completes in <1ms.
    */
   updateFast(crop) {
-    const { img, x, y, size } = crop;
+    const { img, x, y, w, h } = crop;
     if (!img) return;
     this._lastCrop = crop;
 
-    const fastTile = Math.max(16, Math.round(this.displaySize / this.gridSize / 4));
-    const srcCanvas      = extractCrop(img, x, y, size);
-    const seamlessCanvas = applyEdgeBlendOnly(srcCanvas, fastTile, this.params);
+    const srcCanvas = extractCrop(img, x, y, w, h);
 
     const D = this.displaySize;
     this.canvas.width  = D;
     this.canvas.height = D;
 
-    const pat = this.ctx.createPattern(seamlessCanvas, 'repeat');
+    let tileCanvas;
+    if (this.seamlessEnabled) {
+      const fastTile = Math.max(16, Math.round(this.displaySize / this.gridSize / 4));
+      tileCanvas = applyEdgeBlendOnly(srcCanvas, fastTile, this.params);
+    } else {
+      tileCanvas = srcCanvas;
+    }
+
+    const pat = this.ctx.createPattern(tileCanvas, 'repeat');
     this.ctx.fillStyle = pat;
     this.ctx.fillRect(0, 0, D, D);
 
@@ -63,22 +70,26 @@ export class PatternPreview {
    * Poisson solve runs in a Web Worker so the main thread stays responsive.
    */
   async update(crop) {
-    const { img, x, y, size } = crop;
+    const { img, x, y, w, h } = crop;
     if (!img) return;
     this._lastCrop = crop;
 
-    // tileSize shrinks as gridSize grows, keeping canvas at fixed displaySize
-    const tileSize = Math.max(4, Math.round(this.displaySize / this.gridSize));
-
-    const srcCanvas      = extractCrop(img, x, y, size);
-    const seamlessCanvas = await applySeamlessAsync(srcCanvas, tileSize, this.params);
-    if (!seamlessCanvas) return; // superseded by a newer call
+    const srcCanvas = extractCrop(img, x, y, w, h);
 
     const D = this.displaySize;
     this.canvas.width  = D;
     this.canvas.height = D;
 
-    const pat = this.ctx.createPattern(seamlessCanvas, 'repeat');
+    let tileCanvas;
+    if (this.seamlessEnabled) {
+      const tileSize = Math.max(4, Math.round(this.displaySize / this.gridSize));
+      tileCanvas = await applySeamlessAsync(srcCanvas, tileSize, this.params);
+      if (!tileCanvas) return; // superseded by a newer call
+    } else {
+      tileCanvas = srcCanvas;
+    }
+
+    const pat = this.ctx.createPattern(tileCanvas, 'repeat');
     this.ctx.fillStyle = pat;
     this.ctx.fillRect(0, 0, D, D);
 

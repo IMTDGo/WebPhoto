@@ -6,7 +6,7 @@ import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
 import { generateChannels, uploadAllMaps } from './upload.js';
 import { showToast }               from './toast.js';
-import { DEFAULT_PARAMS }          from './seamless.js';
+// seamless.js no longer needed for UI
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const stepEntry    = document.getElementById('stepEntry');
@@ -36,12 +36,11 @@ const uploadSheetBackdrop = document.getElementById('uploadSheetBackdrop');
 const uploadNameInput = document.getElementById('uploadName');
 const btnConfirmUpload = document.getElementById('btnConfirmUpload');
 const btnCancelUpload  = document.getElementById('btnCancelUpload');
-const enableSeamless  = document.getElementById('enableSeamless');
-const seamBlendWidth  = document.getElementById('seamBlendWidth');
-const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
-const poissonIter     = document.getElementById('poissonIter');
-const poissonIterVal  = document.getElementById('poissonIterVal');
-const seamlessControls = document.getElementById('seamlessControls');
+const uploadResolution = document.getElementById('uploadResolution');
+const btnAspectLock    = document.getElementById('btnAspectLock');
+const lockIconClosed   = document.getElementById('lockIconClosed');
+const lockIconOpen     = document.getElementById('lockIconOpen');
+const lockLabel        = document.getElementById('lockLabel');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let cropEditor      = null;
@@ -50,8 +49,7 @@ let currentCrop     = null;
 let generatedMaps   = null;   // { basecolor, roughness, ao, height, metallic, normal } canvases
 let cameraStream    = null;
 let cameraFacing    = 'environment';
-let seamlessEnabled = true;
-const seamlessParams = { ...DEFAULT_PARAMS };
+
 
 // ── Initialise editors ────────────────────────────────────────────────────────
 function initEditors() {
@@ -75,40 +73,28 @@ function initEditors() {
     preview.setGridSize(n);
   });
 
-  // Seamless parameter controls
-  let _seamlessTimer = null;
-  function _debouncedPreviewUpdate() {
-    clearTimeout(_seamlessTimer);
-    _seamlessTimer = setTimeout(() => {
-      if (currentCrop) {
-        preview.params = { ...seamlessParams };
-        preview.update(currentCrop);
-      }
-    }, 300);
-  }
-
-  enableSeamless.addEventListener('change', (e) => {
-    seamlessEnabled = e.target.checked;
-    seamlessControls.style.display = seamlessEnabled ? 'block' : 'none';
-    if (currentCrop) {
-      preview.params = seamlessEnabled ? { ...seamlessParams } : { ...DEFAULT_PARAMS };
-      preview.update(currentCrop);
+  // Aspect ratio lock
+  function _updateLockUI(locked) {
+    if (locked) {
+      lockIconClosed?.classList.remove('hidden');
+      lockIconOpen?.classList.add('hidden');
+      if (lockLabel) lockLabel.textContent = '1:1';
+      btnAspectLock?.classList.remove('btn-ghost');
+      btnAspectLock?.classList.add('btn-outline');
+    } else {
+      lockIconClosed?.classList.add('hidden');
+      lockIconOpen?.classList.remove('hidden');
+      if (lockLabel) lockLabel.textContent = '自由';
+      btnAspectLock?.classList.remove('btn-outline');
+      btnAspectLock?.classList.add('btn-ghost');
     }
+  }
+  btnAspectLock?.addEventListener('click', () => {
+    const locked = !cropEditor?.aspectLocked;
+    cropEditor?.setAspectLock(locked);
+    _updateLockUI(locked);
+    if (currentCrop) currentCrop = cropEditor.getCrop();
   });
-
-  seamBlendWidth.addEventListener('input', (e) => {
-    seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
-    seamBlendWidthVal.textContent = e.target.value + '%';
-    _debouncedPreviewUpdate();
-  });
-
-  poissonIter.addEventListener('input', (e) => {
-    seamlessParams.iterations = parseInt(e.target.value);
-    poissonIterVal.textContent = e.target.value;
-    _debouncedPreviewUpdate();
-  });
-
-  seamlessControls.style.display = seamlessEnabled ? 'block' : 'none';
 }
 
 function showStep(stepName) {
@@ -318,7 +304,8 @@ btnShowUpload.addEventListener('click', async () => {
   genOverlayLabel.textContent = '生成通道中...';
   genOverlay.classList.remove('hidden');
   try {
-    generatedMaps = await generateChannels(currentCrop, seamlessEnabled ? seamlessParams : null);
+    const outSize = parseInt(uploadResolution?.value || '1024');
+    generatedMaps = await generateChannels(currentCrop, null, outSize);
     paintPreviewThumbnails(generatedMaps);
     showStep('preview');
   } catch (err) {

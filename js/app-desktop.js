@@ -1,4 +1,4 @@
-/**
+﻿/**
  * app-desktop.js — desktop app logic (Three.js viewer)
  */
 
@@ -69,15 +69,12 @@ function resizeThree() {
 async function updateThreeTexture() {
   if (!currentCrop?.img) return;
   const TILE = 512;
-  const src  = extractCrop(currentCrop.img, currentCrop.x, currentCrop.y, currentCrop.size);
+  const src  = extractCrop(currentCrop.img, currentCrop.x, currentCrop.y, currentCrop.w, currentCrop.h);
 
-  let tex;
-  if (seamlessEnabled) {
-    tex = await applySeamlessAsync(src, TILE, seamlessParams);
-    if (!tex) return; // superseded by a newer call
-  } else {
-    tex = src;
-  }
+  // Resize to square tile for 3D preview
+  const tex = document.createElement('canvas');
+  tex.width = tex.height = TILE;
+  tex.getContext('2d').drawImage(src, 0, 0, TILE, TILE);
 
   if (threeTexture) threeTexture.dispose();
   threeTexture = new THREE.CanvasTexture(tex);
@@ -158,7 +155,6 @@ async function loadImage(file) {
   document.getElementById('infoSize').textContent = `${img.width} × ${img.height}`;
   imageInfo.classList.remove('hidden');
   cropPanel.classList.remove('hidden');
-  seamlessPanel.classList.remove('hidden');
   uvPanel.classList.remove('hidden');
   uploadPanel.classList.remove('hidden');
   emptyState.classList.add('hidden');
@@ -182,28 +178,26 @@ dropZone.addEventListener('drop', (e) => {
 // ── Crop size slider (removed — corner handles are the sole resize interaction) ──────
 
 // ── Seamless controls ─────────────────────────────────────────────────────────
-let _seamlessTimer = null;
-function _debouncedTextureUpdate() {
-  clearTimeout(_seamlessTimer);
-  _seamlessTimer = setTimeout(() => updateThreeTexture(), 300);
+function _updateLockUI(locked) {
+  if (locked) {
+    lockIconClosed.classList.remove('hidden');
+    lockIconOpen.classList.add('hidden');
+    lockLabel.textContent = '1:1';
+    btnAspectLock.classList.remove('btn-ghost');
+    btnAspectLock.classList.add('btn-outline');
+  } else {
+    lockIconClosed.classList.add('hidden');
+    lockIconOpen.classList.remove('hidden');
+    lockLabel.textContent = '自由';
+    btnAspectLock.classList.remove('btn-outline');
+    btnAspectLock.classList.add('btn-ghost');
+  }
 }
-
-enableSeamless.addEventListener('change', (e) => {
-  seamlessEnabled = e.target.checked;
-  document.getElementById('seamlessControls').style.display = e.target.checked ? '' : 'none';
-  updateThreeTexture();
-});
-
-seamBlendWidth.addEventListener('input', (e) => {
-  seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
-  document.getElementById('seamBlendWidthVal').textContent = e.target.value + '%';
-  _debouncedTextureUpdate();
-});
-
-poissonIter.addEventListener('input', (e) => {
-  seamlessParams.iterations = parseInt(e.target.value);
-  document.getElementById('poissonIterVal').textContent = e.target.value;
-  _debouncedTextureUpdate();
+btnAspectLock.addEventListener('click', () => {
+  const locked = !cropEditor?.aspectLocked;
+  cropEditor?.setAspectLock(locked);
+  _updateLockUI(locked);
+  if (currentCrop) currentCrop = cropEditor.getCrop();
 });
 
 // ── UV controls ───────────────────────────────────────────────────────────────
@@ -229,13 +223,14 @@ btnUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('請先選擇圖片', 'warning'); return; }
   const name = uploadNameInput.value.trim();
   if (!name) { showToast('請輸入名稱', 'warning'); return; }
+  const outSize = parseInt(uploadResolution?.value || '1024');
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
   btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 生成通道...';
 
   try {
-    generatedMaps = await generateChannels(currentCrop, seamlessEnabled ? seamlessParams : null);
+    generatedMaps = await generateChannels(currentCrop, null, outSize);
     for (const [key, canvas] of Object.entries(generatedMaps)) {
       const el = document.getElementById(`modalCh_${key}`);
       if (!el) continue;
@@ -296,14 +291,30 @@ window.addEventListener('keydown', (e) => {
     case 'ArrowRight': cropEditor.cropX += step; break;
     case 'ArrowUp':    cropEditor.cropY -= step; break;
     case 'ArrowDown':  cropEditor.cropY += step; break;
-    case '+': case '=': {
-      const maxDim = Math.min(img.width, img.height);
-      cropEditor.cropSize = Math.min(maxDim, cropEditor.cropSize + sizeStep);
+  case '+': case '=': {
+      const maxW = img.width, maxH = img.height;
+      if (cropEditor.aspectLocked) {
+        const maxDim = Math.min(maxW, maxH);
+        const newSz = Math.min(maxDim, cropEditor.cropW + sizeStep);
+        cropEditor.cropW = newSz;
+        cropEditor.cropH = newSz;
+      } else {
+        cropEditor.cropW = Math.min(maxW, cropEditor.cropW + sizeStep);
+        cropEditor.cropH = Math.min(maxH, cropEditor.cropH + sizeStep);
+      }
       break;
     }
-    case '-': case '_':
-      cropEditor.cropSize = Math.max(16, cropEditor.cropSize - sizeStep);
+    case '-': case '_': {
+      if (cropEditor.aspectLocked) {
+        const newSz = Math.max(16, cropEditor.cropW - sizeStep);
+        cropEditor.cropW = newSz;
+        cropEditor.cropH = newSz;
+      } else {
+        cropEditor.cropW = Math.max(16, cropEditor.cropW - sizeStep);
+        cropEditor.cropH = Math.max(16, cropEditor.cropH - sizeStep);
+      }
       break;
+    }
     default: handled = false;
   }
 

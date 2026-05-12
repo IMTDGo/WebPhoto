@@ -86,6 +86,20 @@
         <canvas id="cropCanvas"></canvas>
       </div>
 
+      <!-- Aspect ratio lock -->
+      <div class="shrink-0 flex items-center justify-center gap-2 px-3 py-1.5 bg-base-100/70 border-b border-base-content/10">
+        <button id="btnAspectLock" class="btn btn-xs btn-outline gap-1" title="切換裁切比例">
+          <svg id="lockIconClosed" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+          </svg>
+          <svg id="lockIconOpen" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+          </svg>
+          <span id="lockLabel">1:1</span>
+        </button>
+        <span class="text-xs text-base-content/40">裁切比例</span>
+      </div>
+
       <div id="previewContainer" class="flex-1 shrink-0 bg-base-100/85 backdrop-blur px-3 py-2 flex flex-col gap-2 border-b border-base-content/10 overflow-hidden" style="min-height:0">
         <div class="flex items-center gap-2 shrink-0">
           <span class="text-xs uppercase tracking-widest text-base-content/50 flex-1">UV 縮放</span>
@@ -98,8 +112,8 @@
         </div>
       </div>
 
-      <!-- Advanced parameters dropdown -->
-      <details class="collapse shrink-0 bg-base-100/80 border-b border-base-content/10" open="">
+      <!-- Advanced parameters dropdown (hidden - seamless feature removed) -->
+      <details class="collapse shrink-0 bg-base-100/80 border-b border-base-content/10" style="display:none">
         <summary class="collapse-title text-sm font-semibold cursor-pointer py-3 px-4">⚙️ 進階調整</summary>
         <div class="collapse-content px-4 pb-3 pt-0">
           <!-- Seamless parameters -->
@@ -181,6 +195,13 @@
     <div class="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4"></div>
     <h3 class="font-bold text-lg mb-3">命名並上傳</h3>
     <div class="form-control gap-2">
+      <label class="label py-0"><span class="label-text">輸出解析度</span></label>
+      <select id="uploadResolution" class="select select-bordered w-full">
+        <option value="512">512 × 512</option>
+        <option value="1024" selected>1024 × 1024</option>
+        <option value="2048">2048 × 2048</option>
+        <option value="4096">4096 × 4096</option>
+      </select>
       <label class="label py-0"><span class="label-text">資料夾名稱</span></label>
       <input type="text" id="uploadName" placeholder="例如: wood_floor_01" class="input input-bordered w-full" maxlength="100" />
       <p class="text-xs text-base-content/40">6 個通道將上傳至同一資料夾</p>

@@ -77,9 +77,18 @@ function _generateMainThread(imageData, w, h, baseCanvas) {
  * @returns {Promise<{ basecolor, roughness, ao, height, metallic, normal }>}
  *          each value is an HTMLCanvasElement
  */
-export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 512) {
-  const srcCanvas  = extractCrop(crop.img, crop.x, crop.y, crop.size);
-  const baseCanvas = params ? applySeamless(srcCanvas, outSize, params) : srcCanvas;
+export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024) {
+  const srcCanvas = extractCrop(crop.img, crop.x, crop.y, crop.w, crop.h);
+  let baseCanvas;
+  if (params) {
+    baseCanvas = applySeamless(srcCanvas, outSize, params);
+  } else {
+    // No seamless — resize crop to outSize × outSize
+    baseCanvas = document.createElement('canvas');
+    baseCanvas.width  = outSize;
+    baseCanvas.height = outSize;
+    baseCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, outSize, outSize);
+  }
   const w = baseCanvas.width, h = baseCanvas.height;
   const imageData  = baseCanvas.getContext('2d').getImageData(0, 0, w, h);
 

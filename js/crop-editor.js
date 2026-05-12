@@ -2,10 +2,10 @@
  * crop-editor.js
  *
  * Renders a full-image preview with a draggable / pinch-zoomable
- * 1:1 square crop box (similar to LINE avatar crop UI).
+ * crop box. Supports both 1:1 locked and free-form aspect ratio.
  *
  * Usage:
- *   const editor = new CropEditor(canvasEl, { onChange: ({ img, x, y, size }) => ... });
+ *   const editor = new CropEditor(canvasEl, { onChange: ({ img, x, y, w, h }) => ... });
  *   editor.load(imageElement);
  */
 
@@ -24,15 +24,19 @@ export class CropEditor {
     this.img  = null;
 
     // Crop box in IMAGE coordinates
-    this.cropX    = 0;
-    this.cropY    = 0;
-    this.cropSize = 100;  // square side length
+    this.cropX = 0;
+    this.cropY = 0;
+    this.cropW = 100;  // width
+    this.cropH = 100;  // height
+
+    // Aspect ratio lock: true = 1:1, false = free-form
+    this.aspectLocked = true;
 
     // Drag state: { mode:'move'|'resize', ... }
     this._drag = null;
 
     // Pinch state
-    this._pinch = null;  // { startDist, startSize }
+    this._pinch = null;
 
     // Corner hit radius in canvas-display pixels
     this._hitRadius = 28;
@@ -52,24 +56,44 @@ export class CropEditor {
 
   /** Return current crop parameters in image-space. */
   getCrop() {
-    return { img: this.img, x: this.cropX, y: this.cropY, size: this.cropSize };
+    return { img: this.img, x: this.cropX, y: this.cropY, w: this.cropW, h: this.cropH };
   }
 
-  /** Set normalised crop size (0–1 relative to shorter side). */
+  /** Set normalised crop size (0–1 relative to shorter side). Always sets 1:1. */
   setSizeNorm(norm) {
     if (!this.img) return;
     const minDim = Math.min(this.img.width, this.img.height);
-    this.cropSize = Math.max(8, Math.min(minDim, Math.round(norm * minDim)));
+    const size = Math.max(8, Math.min(minDim, Math.round(norm * minDim)));
+    this.cropW = size;
+    this.cropH = size;
     this._clampCrop();
     this._draw();
     this._emitChange();
   }
 
-  /** Get normalised crop size. */
+  /** Get normalised crop size (based on width). */
   getSizeNorm() {
     if (!this.img) return 0.5;
     const minDim = Math.min(this.img.width, this.img.height);
-    return this.cropSize / minDim;
+    return this.cropW / minDim;
+  }
+
+  /**
+   * Toggle aspect ratio lock.
+   * When locked=true, forces a square crop (uses current cropW).
+   */
+  setAspectLock(locked) {
+    this.aspectLocked = locked;
+    if (locked && this.img) {
+      // Snap to square using current width
+      const minDim = Math.min(this.img.width, this.img.height);
+      const size = Math.max(16, Math.min(minDim, this.cropW));
+      this.cropW = size;
+      this.cropH = size;
+      this._clampCrop();
+      this._draw();
+      this._emitChange();
+    }
   }
 
   // ── Layout ─────────────────────────────────────────────────────────────────
@@ -96,14 +120,16 @@ export class CropEditor {
 
   _resetCrop() {
     const minDim = Math.min(this.img.width, this.img.height);
-    this.cropSize = Math.round(minDim * 0.6);
-    this.cropX    = Math.round((this.img.width  - this.cropSize) / 2);
-    this.cropY    = Math.round((this.img.height - this.cropSize) / 2);
+    const size   = Math.round(minDim * 0.6);
+    this.cropW = size;
+    this.cropH = size;
+    this.cropX = Math.round((this.img.width  - this.cropW) / 2);
+    this.cropY = Math.round((this.img.height - this.cropH) / 2);
   }
 
   _clampCrop() {
-    this.cropX = Math.max(0, Math.min(this.img.width  - this.cropSize, this.cropX));
-    this.cropY = Math.max(0, Math.min(this.img.height - this.cropSize, this.cropY));
+    this.cropX = Math.max(0, Math.min(this.img.width  - this.cropW, this.cropX));
+    this.cropY = Math.max(0, Math.min(this.img.height - this.cropH, this.cropY));
   }
 
   // ── Drawing ────────────────────────────────────────────────────────────────
@@ -117,36 +143,37 @@ export class CropEditor {
     ctx.drawImage(img, 0, 0, cw, ch);
 
     // Dim area outside crop
-    const cx = Math.round(this.cropX    * s);
-    const cy = Math.round(this.cropY    * s);
-    const cs = Math.round(this.cropSize * s);
+    const cx = Math.round(this.cropX * s);
+    const cy = Math.round(this.cropY * s);
+    const cw2 = Math.round(this.cropW * s);
+    const ch2 = Math.round(this.cropH * s);
 
     ctx.fillStyle = 'rgba(0,0,0,0.52)';
-    ctx.fillRect(0,       0,       cw,      cy);           // top
-    ctx.fillRect(0,       cy + cs, cw,      ch - cy - cs); // bottom
-    ctx.fillRect(0,       cy,      cx,      cs);           // left
-    ctx.fillRect(cx + cs, cy,      cw - cx - cs, cs);     // right
+    ctx.fillRect(0,        0,        cw,       cy);               // top
+    ctx.fillRect(0,        cy + ch2, cw,       ch - cy - ch2);    // bottom
+    ctx.fillRect(0,        cy,       cx,       ch2);              // left
+    ctx.fillRect(cx + cw2, cy,       cw - cx - cw2, ch2);        // right
 
     // Crop border
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth   = 1.5;
-    ctx.strokeRect(cx + 0.5, cy + 0.5, cs - 1, cs - 1);
+    ctx.strokeRect(cx + 0.5, cy + 0.5, cw2 - 1, ch2 - 1);
 
     // Rule-of-thirds grid inside crop
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth   = 0.5;
     for (let i = 1; i <= 2; i++) {
-      const gx = cx + Math.round(cs * i / 3);
-      const gy = cy + Math.round(cs * i / 3);
-      ctx.beginPath(); ctx.moveTo(gx, cy); ctx.lineTo(gx, cy + cs); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx, gy); ctx.lineTo(cx + cs, gy); ctx.stroke();
+      const gx = cx + Math.round(cw2 * i / 3);
+      const gy = cy + Math.round(ch2 * i / 3);
+      ctx.beginPath(); ctx.moveTo(gx, cy); ctx.lineTo(gx, cy + ch2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, gy); ctx.lineTo(cx + cw2, gy); ctx.stroke();
     }
 
     // Corner handles
-    const hLen = Math.min(18, cs * 0.2);
+    const hLen = Math.min(18, Math.min(cw2, ch2) * 0.2);
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth   = 3;
-    const corners = [[cx, cy], [cx + cs, cy], [cx, cy + cs], [cx + cs, cy + cs]];
+    const corners = [[cx, cy], [cx + cw2, cy], [cx, cy + ch2], [cx + cw2, cy + ch2]];
     corners.forEach(([px, py]) => {
       const sx = px === cx ? 1 : -1;
       const sy = py === cy ? 1 : -1;
@@ -187,21 +214,22 @@ export class CropEditor {
    */
   _hitCorner(clientX, clientY) {
     if (!this.img) return null;
-    const s  = this._scaleToCanvas;
-    const cx = Math.round(this.cropX    * s);
-    const cy = Math.round(this.cropY    * s);
-    const cs = Math.round(this.cropSize * s);
-    const dp = this._clientToDisplay(clientX, clientY);
+    const s   = this._scaleToCanvas;
+    const cx  = Math.round(this.cropX * s);
+    const cy  = Math.round(this.cropY * s);
+    const cw2 = Math.round(this.cropW * s);
+    const ch2 = Math.round(this.cropH * s);
+    const dp  = this._clientToDisplay(clientX, clientY);
 
     const corners = [
       // Top-Left dragged → anchor = Bottom-Right
-      { px: cx,      py: cy,      anchorImgX: this.cropX + this.cropSize, anchorImgY: this.cropY + this.cropSize, xMode: 'offset', yMode: 'offset', cursor: 'nw-resize'  },
+      { px: cx,       py: cy,       anchorImgX: this.cropX + this.cropW, anchorImgY: this.cropY + this.cropH, xMode: 'offset', yMode: 'offset', cursor: 'nw-resize' },
       // Top-Right dragged → anchor = Bottom-Left
-      { px: cx + cs, py: cy,      anchorImgX: this.cropX,                 anchorImgY: this.cropY + this.cropSize, xMode: 'fixed',  yMode: 'offset', cursor: 'ne-resize'  },
+      { px: cx + cw2, py: cy,       anchorImgX: this.cropX,              anchorImgY: this.cropY + this.cropH, xMode: 'fixed',  yMode: 'offset', cursor: 'ne-resize' },
       // Bottom-Left dragged → anchor = Top-Right
-      { px: cx,      py: cy + cs, anchorImgX: this.cropX + this.cropSize, anchorImgY: this.cropY,                 xMode: 'offset', yMode: 'fixed',  cursor: 'sw-resize'  },
+      { px: cx,       py: cy + ch2, anchorImgX: this.cropX + this.cropW, anchorImgY: this.cropY,              xMode: 'offset', yMode: 'fixed',  cursor: 'sw-resize' },
       // Bottom-Right dragged → anchor = Top-Left
-      { px: cx + cs, py: cy + cs, anchorImgX: this.cropX,                 anchorImgY: this.cropY,                 xMode: 'fixed',  yMode: 'fixed',  cursor: 'se-resize'  },
+      { px: cx + cw2, py: cy + ch2, anchorImgX: this.cropX,              anchorImgY: this.cropY,              xMode: 'fixed',  yMode: 'fixed',  cursor: 'se-resize' },
     ];
 
     for (const c of corners) {
@@ -244,7 +272,7 @@ export class CropEditor {
       } else if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
-        this._pinch = { startDist: Math.hypot(dx, dy), startSize: this.cropSize };
+        this._pinch = { startDist: Math.hypot(dx, dy), startW: this.cropW, startH: this.cropH };
       }
     }, { passive: false });
 
@@ -305,38 +333,53 @@ export class CropEditor {
     const pos = this._clientToImage(clientX, clientY);
     const dx  = pos.x - this._drag.imgX;
     const dy  = pos.y - this._drag.imgY;
-    this.cropX = Math.max(0, Math.min(this.img.width  - this.cropSize, Math.round(this._drag.startCropX + dx)));
-    this.cropY = Math.max(0, Math.min(this.img.height - this.cropSize, Math.round(this._drag.startCropY + dy)));
+    this.cropX = Math.max(0, Math.min(this.img.width  - this.cropW, Math.round(this._drag.startCropX + dx)));
+    this.cropY = Math.max(0, Math.min(this.img.height - this.cropH, Math.round(this._drag.startCropY + dy)));
     this._draw();
     this._emitChange();
   }
 
   _doResize(clientX, clientY) {
-    const pos  = this._clientToImage(clientX, clientY);
+    const pos = this._clientToImage(clientX, clientY);
     const { anchorImgX, anchorImgY, xMode, yMode } = this._drag;
-    const minDim  = Math.min(this.img.width, this.img.height);
-    // Square crop: size = whichever axis moved more
-    const rawSize = Math.max(Math.abs(pos.x - anchorImgX), Math.abs(pos.y - anchorImgY));
-    const newSize = Math.max(16, Math.min(minDim, Math.round(rawSize)));
 
-    const newX = xMode === 'offset' ? anchorImgX - newSize : anchorImgX;
-    const newY = yMode === 'offset' ? anchorImgY - newSize : anchorImgY;
-
-    this.cropSize = newSize;
-    this.cropX    = Math.max(0, Math.min(this.img.width  - newSize, newX));
-    this.cropY    = Math.max(0, Math.min(this.img.height - newSize, newY));
+    if (this.aspectLocked) {
+      // 1:1 — constrain by whichever axis moved further
+      const minDim  = Math.min(this.img.width, this.img.height);
+      const rawSize = Math.max(Math.abs(pos.x - anchorImgX), Math.abs(pos.y - anchorImgY));
+      const newSize = Math.max(16, Math.min(minDim, Math.round(rawSize)));
+      this.cropW = newSize;
+      this.cropH = newSize;
+      this.cropX = Math.max(0, Math.min(this.img.width  - newSize, xMode === 'offset' ? anchorImgX - newSize : anchorImgX));
+      this.cropY = Math.max(0, Math.min(this.img.height - newSize, yMode === 'offset' ? anchorImgY - newSize : anchorImgY));
+    } else {
+      // Free-form — each axis independent
+      const newW = Math.max(16, Math.min(this.img.width,  Math.round(Math.abs(pos.x - anchorImgX))));
+      const newH = Math.max(16, Math.min(this.img.height, Math.round(Math.abs(pos.y - anchorImgY))));
+      this.cropW = newW;
+      this.cropH = newH;
+      this.cropX = Math.max(0, Math.min(this.img.width  - newW, xMode === 'offset' ? anchorImgX - newW : anchorImgX));
+      this.cropY = Math.max(0, Math.min(this.img.height - newH, yMode === 'offset' ? anchorImgY - newH : anchorImgY));
+    }
     this._draw();
     this._emitChange();
   }
 
   _onPinchMove(e) {
     if (!this._pinch || !this.img) return;
-    const dx   = e.touches[0].clientX - e.touches[1].clientX;
-    const dy   = e.touches[0].clientY - e.touches[1].clientY;
-    const dist = Math.hypot(dx, dy);
+    const dx    = e.touches[0].clientX - e.touches[1].clientX;
+    const dy    = e.touches[0].clientY - e.touches[1].clientY;
+    const dist  = Math.hypot(dx, dy);
     const ratio = dist / this._pinch.startDist;
-    const minDim = Math.min(this.img.width, this.img.height);
-    this.cropSize = Math.max(16, Math.min(minDim, Math.round(this._pinch.startSize * ratio)));
+    if (this.aspectLocked) {
+      const minDim  = Math.min(this.img.width, this.img.height);
+      const newSize = Math.max(16, Math.min(minDim, Math.round(this._pinch.startW * ratio)));
+      this.cropW = newSize;
+      this.cropH = newSize;
+    } else {
+      this.cropW = Math.max(16, Math.min(this.img.width,  Math.round(this._pinch.startW * ratio)));
+      this.cropH = Math.max(16, Math.min(this.img.height, Math.round(this._pinch.startH * ratio)));
+    }
     this._clampCrop();
     this._draw();
     this._emitChange();

@@ -285,10 +285,10 @@ export function applySeamlessAsync(srcCanvas, outSize, params = DEFAULT_PARAMS) 
  * @param {number} size square size in image pixels
  * @returns {HTMLCanvasElement}
  */
-export function extractCrop(img, x, y, size) {
+export function extractCrop(img, x, y, w, h = w) {
   const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  c.getContext('2d').drawImage(img, x, y, size, size, 0, 0, size, size);
+  c.width  = w;
+  c.height = h;
+  c.getContext('2d').drawImage(img, x, y, w, h, 0, 0, w, h);
   return c;
 }
