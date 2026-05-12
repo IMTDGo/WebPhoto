@@ -229,32 +229,50 @@
       btnLogin.disabled = true;
       btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
 
+      // ── Client-side credential validation (works on GitHub Pages / static hosting) ──
+      function clientValidate(u, p) {
+        return u === '123456' && p === '123456';
+      }
+
+      // ── Save token and redirect helper ──
+      function onLoginSuccess() {
+        if (rememberMe) {
+          localStorage.setItem('wp_auth', '1');
+        } else {
+          sessionStorage.setItem('wp_auth', '1');
+        }
+        showAlert('success', '✔ 登入成功，歡迎回來！');
+        setTimeout(() => window.location.replace('./index.html'), 800);
+      }
+
       try {
-        // ── POST to /login (server writes to login_log.txt as mock notepad backend) ──
+        // Try server first (local dev — server logs to login_log.txt)
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, rememberMe })
+          body: JSON.stringify({ username, password, rememberMe }),
+          signal: controller.signal
         });
+        clearTimeout(timeout);
 
         const data = await res.json();
 
         if (data.ok) {
-          showAlert('success', '✔ ' + data.message);
-          // Save auth token
-          if (rememberMe) {
-            localStorage.setItem('wp_auth', '1');
-          } else {
-            sessionStorage.setItem('wp_auth', '1');
-          }
-          // Redirect to main app (index.html handles device detection)
-          setTimeout(() => window.location.replace('./index.html'), 800);
+          onLoginSuccess();
         } else {
           showAlert('error', '✘ ' + data.message);
         }
 
       } catch (err) {
-        showAlert('error', '連線失敗，請確認伺服器是否執行中');
+        // Server unavailable (GitHub Pages / static hosting) → fallback to client-side check
+        if (clientValidate(username, password)) {
+          onLoginSuccess();
+        } else {
+          showAlert('error', '✘ 帳號或密碼錯誤，請重試');
+        }
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';
