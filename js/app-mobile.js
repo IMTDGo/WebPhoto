@@ -37,10 +37,10 @@ const uploadNameInput = document.getElementById('uploadName');
 const btnConfirmUpload = document.getElementById('btnConfirmUpload');
 const btnCancelUpload  = document.getElementById('btnCancelUpload');
 const enableSeamless  = document.getElementById('enableSeamless');
-const blendStrength   = document.getElementById('blendStrength');
-const blendStrengthVal = document.getElementById('blendStrengthVal');
-const blendWidth      = document.getElementById('blendWidth');
-const blendWidthVal   = document.getElementById('blendWidthVal');
+const seamBlendWidth  = document.getElementById('seamBlendWidth');
+const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
+const poissonIter     = document.getElementById('poissonIter');
+const poissonIterVal  = document.getElementById('poissonIterVal');
 const seamlessControls = document.getElementById('seamlessControls');
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -85,20 +85,18 @@ function initEditors() {
     }
   });
 
-  blendStrength.addEventListener('input', (e) => {
-    const val = parseFloat(e.target.value);
-    seamlessParams.blendStrength = val;
-    blendStrengthVal.textContent = val.toFixed(2);
+  seamBlendWidth.addEventListener('input', (e) => {
+    seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
+    seamBlendWidthVal.textContent = e.target.value + '%';
     if (currentCrop) {
       preview.params = { ...seamlessParams };
       preview.update(currentCrop);
     }
   });
 
-  blendWidth.addEventListener('input', (e) => {
-    const val = parseFloat(e.target.value);
-    seamlessParams.blendWidth = val;
-    blendWidthVal.textContent = val.toFixed(2);
+  poissonIter.addEventListener('input', (e) => {
+    seamlessParams.iterations = parseInt(e.target.value);
+    poissonIterVal.textContent = e.target.value;
     if (currentCrop) {
       preview.params = { ...seamlessParams };
       preview.update(currentCrop);

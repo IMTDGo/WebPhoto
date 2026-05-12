@@ -25,8 +25,8 @@ const sizeVal           = document.getElementById('cropSizeVal');
 const btnUpload      = document.getElementById('btnUpload');
 const uploadNameInput = document.getElementById('uploadName');
 const enableSeamless = document.getElementById('enableSeamless');
-const blendStrength  = document.getElementById('blendStrength');
-const blendWidth     = document.getElementById('blendWidth');
+const seamBlendWidth = document.getElementById('seamBlendWidth');
+const poissonIter    = document.getElementById('poissonIter');
 const uvScale        = document.getElementById('uvScale');
 const uvOffX         = document.getElementById('uvOffX');
 const uvOffY         = document.getElementById('uvOffY');
@@ -181,15 +181,15 @@ enableSeamless.addEventListener('change', (e) => {
   updateThreeTexture();
 });
 
-blendStrength.addEventListener('input', (e) => {
-  seamlessParams.blendStrength = parseFloat(e.target.value);
-  document.getElementById('blendStrengthVal').textContent = parseFloat(e.target.value).toFixed(2);
+seamBlendWidth.addEventListener('input', (e) => {
+  seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
+  document.getElementById('seamBlendWidthVal').textContent = e.target.value + '%';
   updateThreeTexture();
 });
 
-blendWidth.addEventListener('input', (e) => {
-  seamlessParams.blendWidth = parseFloat(e.target.value);
-  document.getElementById('blendWidthVal').textContent = parseFloat(e.target.value).toFixed(2);
+poissonIter.addEventListener('input', (e) => {
+  seamlessParams.iterations = parseInt(e.target.value);
+  document.getElementById('poissonIterVal').textContent = e.target.value;
   updateThreeTexture();
 });
 
