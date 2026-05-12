@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WebPhoto - 電腦版</title>
   <script>
+    // Auth guard — must be logged in
+    if (!sessionStorage.getItem('wp_auth') && !localStorage.getItem('wp_auth')) {
+      window.location.replace('./login.html');
+    }
     // Auto-redirect mobile/tablet to mobile version
     const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (window.innerWidth < 1024 && window.innerHeight < 1366);
     if (isMobileDevice) {

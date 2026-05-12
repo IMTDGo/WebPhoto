@@ -5,12 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WebPhoto</title>
   <script>
-    // Redirect based on device type
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
-    if (isMobile) {
-      window.location.replace('./mobile.html');
+    // Auth guard — must be logged in
+    const _auth = sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth');
+    if (!_auth) {
+      window.location.replace('./login.html');
     } else {
-      window.location.replace('./desktop.html');
+      // Redirect based on device type
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+      if (isMobile) {
+        window.location.replace('./mobile.html');
+      } else {
+        window.location.replace('./desktop.html');
+      }
     }
   </script>
 </head>

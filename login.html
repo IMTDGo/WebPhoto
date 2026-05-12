@@ -184,6 +184,11 @@
   </div>
 
   <script>
+    // If already logged in, skip login page
+    if (sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth')) {
+      window.location.replace('./index.html');
+    }
+
     const form       = document.getElementById('loginForm');
     const btnLogin   = document.getElementById('btnLogin');
     const btnCancel  = document.getElementById('btnCancel');
@@ -236,8 +241,14 @@
 
         if (data.ok) {
           showAlert('success', '✔ ' + data.message);
-          // Optional: redirect after success
-          // setTimeout(() => window.location.href = '/desktop.html', 1200);
+          // Save auth token
+          if (rememberMe) {
+            localStorage.setItem('wp_auth', '1');
+          } else {
+            sessionStorage.setItem('wp_auth', '1');
+          }
+          // Redirect to main app (index.html handles device detection)
+          setTimeout(() => window.location.replace('./index.html'), 800);
         } else {
           showAlert('error', '✘ ' + data.message);
         }
