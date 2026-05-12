@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In - WebPhoto</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(ellipse at 50% 40%, #1e2a3a 0%, #0d1117 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Modal card */
+    .login-card {
+      background: #1c2333;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2.25rem 2rem;
+      width: 100%;
+      max-width: 430px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+    }
+
+    /* Input fields — match screenshot dark style */
+    .login-input {
+      width: 100%;
+      background: #252d3d;
+      border: 1.5px solid transparent;
+      border-radius: 0.625rem;
+      color: #e0e6f0;
+      font-size: 1rem;
+      padding: 0.85rem 1rem;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    .login-input:focus {
+      border-color: #3b82f6;
+    }
+    .login-input::placeholder {
+      color: #6b7a8d;
+    }
+
+    /* Checkbox accent */
+    .login-checkbox {
+      accent-color: #3b82f6;
+      width: 1.1rem;
+      height: 1.1rem;
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .btn-cancel {
+      border: 1.5px solid #4b5563;
+      border-radius: 9999px;
+      padding: 0.6rem 1.6rem;
+      background: transparent;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-cancel:hover {
+      background: #252d3d;
+      border-color: #6b7280;
+    }
+
+    .btn-login {
+      border: none;
+      border-radius: 9999px;
+      padding: 0.65rem 1.8rem;
+      background: #f1f5f9;
+      color: #1e40af;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-login:hover {
+      background: #e2e8f0;
+    }
+    .btn-login:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* Alert box */
+    .alert-box {
+      border-radius: 0.5rem;
+      padding: 0.65rem 1rem;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .alert-success {
+      background: #1a3a2a;
+      border: 1px solid #22c55e;
+      color: #4ade80;
+    }
+    .alert-error {
+      background: #3a1a1a;
+      border: 1px solid #ef4444;
+      color: #f87171;
+    }
+
+    /* Loading spinner inside button */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #3b82f6;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+
+    <!-- Title -->
+    <h1 class="text-center text-white font-bold text-2xl mb-6">Sign in</h1>
+
+    <!-- Alert area -->
+    <div id="alertBox" class="alert-box mb-4"></div>
+
+    <!-- Form -->
+    <form id="loginForm" autocomplete="on" novalidate>
+
+      <!-- Username -->
+      <div class="mb-3">
+        <input
+          id="username"
+          name="username"
+          type="text"
+          class="login-input"
+          placeholder="帳號"
+          autocomplete="username"
+          required
+        />
+      </div>
+
+      <!-- Password -->
+      <div class="mb-4">
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="login-input"
+          placeholder="密碼"
+          autocomplete="current-password"
+          required
+        />
+      </div>
+
+      <!-- Remember Me -->
+      <div class="flex items-center gap-2 mb-5">
+        <input type="checkbox" id="rememberMe" class="login-checkbox" checked />
+        <label for="rememberMe" class="text-sm text-slate-300 cursor-pointer select-none">
+          Remember Me <span class="text-slate-500">(Do not use on public computers)</span>
+        </label>
+      </div>
+
+      <!-- Sign up link -->
+      <div class="text-center mb-6">
+        <span class="text-sm text-slate-400">Don't have an account yet? </span>
+        <a href="#" class="text-sm text-blue-400 hover:underline" onclick="return false;">Sign up now.</a>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex justify-end gap-3">
+        <button type="button" class="btn-cancel" id="btnCancel">Cancel</button>
+        <button type="submit" class="btn-login" id="btnLogin">Log In</button>
+      </div>
+
+    </form>
+
+  </div>
+
+  <script>
+    const form       = document.getElementById('loginForm');
+    const btnLogin   = document.getElementById('btnLogin');
+    const btnCancel  = document.getElementById('btnCancel');
+    const alertBox   = document.getElementById('alertBox');
+
+    // Cancel → go back or close
+    btnCancel.addEventListener('click', () => {
+      if (history.length > 1) history.back();
+      else window.close();
+    });
+
+    // Show alert helper
+    function showAlert(type, message) {
+      alertBox.className = 'alert-box ' + (type === 'success' ? 'alert-success' : 'alert-error');
+      alertBox.style.display = 'block';
+      alertBox.textContent = message;
+    }
+
+    function hideAlert() {
+      alertBox.style.display = 'none';
+    }
+
+    // Submit handler
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert();
+
+      const username   = document.getElementById('username').value.trim();
+      const password   = document.getElementById('password').value;
+      const rememberMe = document.getElementById('rememberMe').checked;
+
+      if (!username || !password) {
+        showAlert('error', '請輸入帳號與密碼');
+        return;
+      }
+
+      // Loading state
+      btnLogin.disabled = true;
+      btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
+
+      try {
+        // ── POST to /login (server writes to login_log.txt as mock notepad backend) ──
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, rememberMe })
+        });
+
+        const data = await res.json();
+
+        if (data.ok) {
+          showAlert('success', '✔ ' + data.message);
+          // Optional: redirect after success
+          // setTimeout(() => window.location.href = '/desktop.html', 1200);
+        } else {
+          showAlert('error', '✘ ' + data.message);
+        }
+
+      } catch (err) {
+        showAlert('error', '連線失敗，請確認伺服器是否執行中');
+      } finally {
+        btnLogin.disabled = false;
+        btnLogin.innerHTML = 'Log In';
+      }
+    });
+  </script>
+
+</body>
+</html>

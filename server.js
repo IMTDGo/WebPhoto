@@ -12,6 +12,11 @@
  *   GET  /desktop.html→ serves desktop.html
  *   POST /upload      → accepts multipart/form-data { image: File, name: string }
  *                       saves to ./upload/<name>.png
+ *   POST /login       → accepts JSON { username, password, rememberMe }
+ *                       validates credentials, logs attempt to login_log.txt
+ *                       returns { ok: bool, message: string }
+ *
+ * Mock credentials: username=123456 / password=123456
  */
 
 'use strict';
@@ -23,6 +28,11 @@ const multer = require('multer');
 
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
+const LOGIN_LOG  = path.join(__dirname, 'login_log.txt');
+
+// ── Hardcoded credentials (mock "notepad backend") ───────────────────────────
+const VALID_USERNAME = '123456';
+const VALID_PASSWORD = '123456';
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -82,6 +92,28 @@ function serveStatic(res, filePath) {
   });
 }
 
+// ─── JSON body parser helper ─────────────────────────────────────────────────
+function readJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = '';
+    req.on('data', chunk => { raw += chunk; if (raw.length > 4096) reject(new Error('Payload too large')); });
+    req.on('end', () => {
+      try { resolve(JSON.parse(raw)); }
+      catch { reject(new Error('Invalid JSON')); }
+    });
+    req.on('error', reject);
+  });
+}
+
+// ─── Append login attempt to login_log.txt (mock notepad backend) ────────────
+function appendLoginLog(username, success) {
+  const timestamp = new Date().toISOString();
+  const status    = success ? 'SUCCESS' : 'FAILED';
+  // Never log the actual password — only the username and result
+  const line = `[${timestamp}] ${status} | user=${username}\n`;
+  fs.appendFile(LOGIN_LOG, line, () => {}); // fire-and-forget
+}
+
 // ─── Request handler ──────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   // Use raw URL path for routing (avoid Windows path.normalize issues with '/')
@@ -93,6 +125,36 @@ const server = http.createServer((req, res) => {
 
   // Security: ensure resolved path stays within project directory
   const isInProject = filePath.startsWith(__dirname + path.sep) || filePath === __dirname;
+
+  // POST /login
+  if (req.method === 'POST' && rawUrl === '/login') {
+    // CORS pre-flight (for integration into other projects)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    readJsonBody(req)
+      .then(body => {
+        const username = String(body.username || '').trim();
+        const password = String(body.password || '');
+
+        const success = (username === VALID_USERNAME && password === VALID_PASSWORD);
+        appendLoginLog(username, success);
+
+        console.log(`[login] user=${username} → ${success ? 'SUCCESS' : 'FAILED'}`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        if (success) {
+          res.end(JSON.stringify({ ok: true,  message: '登入成功，歡迎回來！' }));
+        } else {
+          res.end(JSON.stringify({ ok: false, message: '帳號或密碼錯誤，請重試' }));
+        }
+      })
+      .catch(err => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
+    return;
+  }
 
   // POST /upload
   if (req.method === 'POST' && rawUrl === '/upload') {
