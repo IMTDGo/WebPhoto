@@ -147,25 +147,133 @@ function poissonSmooth(px, W, H, iters) {
  * @param {object}            params     — { seamBlendWidth, iterations }
  * @returns {HTMLCanvasElement}
  */
-export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+// Maximum pixel dimension used for the Poisson solve.
+// Crops larger than this are downscaled before solving to avoid O(n²) cost.
+const MAX_SOLVE = 512;
+
+function _prepSolveCanvas(srcCanvas) {
   const W = srcCanvas.width, H = srcCanvas.height;
+  if (W <= MAX_SOLVE && H <= MAX_SOLVE) return srcCanvas;
+  const s  = MAX_SOLVE / Math.max(W, H);
+  const sw = Math.round(W * s), sh = Math.round(H * s);
+  const c  = document.createElement('canvas');
+  c.width = sw; c.height = sh;
+  c.getContext('2d').drawImage(srcCanvas, 0, 0, sw, sh);
+  return c;
+}
+
+export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
   const { seamBlendWidth, iterations } = params;
 
-  const srcPx = srcCanvas.getContext('2d').getImageData(0, 0, W, H).data;
-  const blended = makeEdgeBlended(srcPx, W, H, seamBlendWidth);
-  const result  = poissonSmooth(blended, W, H, iterations);
+  const solve  = _prepSolveCanvas(srcCanvas);
+  const sW = solve.width, sH = solve.height;
+  const srcPx  = solve.getContext('2d').getImageData(0, 0, sW, sH).data;
+  const blended = makeEdgeBlended(srcPx, sW, sH, seamBlendWidth);
+  const result  = poissonSmooth(blended, sW, sH, iterations);
 
   const mid = document.createElement('canvas');
-  mid.width = W; mid.height = H;
-  const midCtx = mid.getContext('2d');
-  const imgData = midCtx.createImageData(W, H);
+  mid.width = sW; mid.height = sH;
+  const imgData = mid.getContext('2d').createImageData(sW, sH);
   imgData.data.set(result);
-  midCtx.putImageData(imgData, 0, 0);
+  mid.getContext('2d').putImageData(imgData, 0, 0);
 
   const out = document.createElement('canvas');
   out.width = outSize; out.height = outSize;
   out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
   return out;
+}
+
+/**
+ * Fast sync function: edge-blend pass only (no Poisson).
+ * Suitable for real-time drag feedback — completes in <1ms on small tiles.
+ *
+ * @param {HTMLCanvasElement} srcCanvas
+ * @param {number}            outSize
+ * @param {object}            params
+ * @returns {HTMLCanvasElement}
+ */
+export function applyEdgeBlendOnly(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+  const solve = _prepSolveCanvas(srcCanvas);
+  const sW = solve.width, sH = solve.height;
+  const srcPx  = solve.getContext('2d').getImageData(0, 0, sW, sH).data;
+  const blended = makeEdgeBlended(srcPx, sW, sH, params.seamBlendWidth);
+
+  const mid = document.createElement('canvas');
+  mid.width = sW; mid.height = sH;
+  const imgData = mid.getContext('2d').createImageData(sW, sH);
+  for (let i = 0; i < blended.length; i++)
+    imgData.data[i] = Math.max(0, Math.min(255, Math.round(blended[i])));
+  mid.getContext('2d').putImageData(imgData, 0, 0);
+
+  const out = document.createElement('canvas');
+  out.width = outSize; out.height = outSize;
+  out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
+  return out;
+}
+
+// ── Async Poisson via Web Worker ──────────────────────────────────────────────
+
+let   _worker   = null;
+let   _latestId = 0;
+const _pending  = new Map(); // id → { resolve, outSize, sW, sH }
+
+function _ensureWorker() {
+  if (_worker) return _worker;
+  _worker = new Worker(new URL('./seamlessWorker.js', import.meta.url));
+  _worker.addEventListener('message', ({ data: { id, result } }) => {
+    const entry = _pending.get(id);
+    _pending.delete(id);
+    if (!entry) return; // stale / superseded
+
+    const { resolve, outSize, sW, sH } = entry;
+    const mid = document.createElement('canvas');
+    mid.width = sW; mid.height = sH;
+    const imgData = mid.getContext('2d').createImageData(sW, sH);
+    imgData.data.set(new Uint8ClampedArray(result));
+    mid.getContext('2d').putImageData(imgData, 0, 0);
+
+    const out = document.createElement('canvas');
+    out.width = outSize; out.height = outSize;
+    out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
+    resolve(out);
+  });
+  return _worker;
+}
+
+/**
+ * Async version — runs the Poisson solve in a Web Worker.
+ * Returns Promise<HTMLCanvasElement|null>.
+ * If a newer call arrives before this one completes, resolves with null.
+ *
+ * @param {HTMLCanvasElement} srcCanvas
+ * @param {number}            outSize
+ * @param {object}            params
+ * @returns {Promise<HTMLCanvasElement|null>}
+ */
+export function applySeamlessAsync(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+  const { seamBlendWidth, iterations } = params;
+
+  // Downscale on the main thread (canvas API not available in worker)
+  const solve = _prepSolveCanvas(srcCanvas);
+  const sW = solve.width, sH = solve.height;
+  const srcPx = solve.getContext('2d').getImageData(0, 0, sW, sH).data;
+
+  // Cancel all pending — only the latest result matters
+  for (const [pid, entry] of _pending) {
+    _pending.delete(pid);
+    entry.resolve(null);
+  }
+
+  const id      = ++_latestId;
+  const pixBuf  = new Uint8ClampedArray(srcPx).buffer; // copy for transfer
+
+  return new Promise((resolve) => {
+    _pending.set(id, { resolve, outSize, sW, sH });
+    _ensureWorker().postMessage(
+      { id, pixels: pixBuf, W: sW, H: sH, seamBlendWidth, iterations },
+      [pixBuf]
+    );
+  });
 }
 
 /**

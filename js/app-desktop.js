@@ -7,7 +7,7 @@ import { CropEditor }        from './crop-editor.js';
 import { PatternPreview }    from './preview.js';
 import { generateChannels, uploadAllMaps } from './upload.js';
 import { showToast }         from './toast.js';
-import { applySeamless, extractCrop, DEFAULT_PARAMS } from './seamless.js';
+import { applySeamlessAsync, extractCrop, DEFAULT_PARAMS } from './seamless.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const dropZone       = document.getElementById('dropZone');
@@ -66,11 +66,18 @@ function resizeThree() {
 (function animLoop() { requestAnimationFrame(animLoop); renderer.render(scene, camera); })();
 
 // ── Update Three.js texture from current crop ─────────────────────────────────
-function updateThreeTexture() {
+async function updateThreeTexture() {
   if (!currentCrop?.img) return;
   const TILE = 512;
   const src  = extractCrop(currentCrop.img, currentCrop.x, currentCrop.y, currentCrop.size);
-  const tex  = seamlessEnabled ? applySeamless(src, TILE, seamlessParams) : src;
+
+  let tex;
+  if (seamlessEnabled) {
+    tex = await applySeamlessAsync(src, TILE, seamlessParams);
+    if (!tex) return; // superseded by a newer call
+  } else {
+    tex = src;
+  }
 
   if (threeTexture) threeTexture.dispose();
   threeTexture = new THREE.CanvasTexture(tex);
@@ -175,6 +182,12 @@ dropZone.addEventListener('drop', (e) => {
 // ── Crop size slider (removed — corner handles are the sole resize interaction) ──────
 
 // ── Seamless controls ─────────────────────────────────────────────────────────
+let _seamlessTimer = null;
+function _debouncedTextureUpdate() {
+  clearTimeout(_seamlessTimer);
+  _seamlessTimer = setTimeout(() => updateThreeTexture(), 300);
+}
+
 enableSeamless.addEventListener('change', (e) => {
   seamlessEnabled = e.target.checked;
   document.getElementById('seamlessControls').style.display = e.target.checked ? '' : 'none';
@@ -184,13 +197,13 @@ enableSeamless.addEventListener('change', (e) => {
 seamBlendWidth.addEventListener('input', (e) => {
   seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
   document.getElementById('seamBlendWidthVal').textContent = e.target.value + '%';
-  updateThreeTexture();
+  _debouncedTextureUpdate();
 });
 
 poissonIter.addEventListener('input', (e) => {
   seamlessParams.iterations = parseInt(e.target.value);
   document.getElementById('poissonIterVal').textContent = e.target.value;
-  updateThreeTexture();
+  _debouncedTextureUpdate();
 });
 
 // ── UV controls ───────────────────────────────────────────────────────────────

@@ -76,6 +76,17 @@ function initEditors() {
   });
 
   // Seamless parameter controls
+  let _seamlessTimer = null;
+  function _debouncedPreviewUpdate() {
+    clearTimeout(_seamlessTimer);
+    _seamlessTimer = setTimeout(() => {
+      if (currentCrop) {
+        preview.params = { ...seamlessParams };
+        preview.update(currentCrop);
+      }
+    }, 300);
+  }
+
   enableSeamless.addEventListener('change', (e) => {
     seamlessEnabled = e.target.checked;
     seamlessControls.style.display = seamlessEnabled ? 'block' : 'none';
@@ -88,19 +99,13 @@ function initEditors() {
   seamBlendWidth.addEventListener('input', (e) => {
     seamlessParams.seamBlendWidth = parseInt(e.target.value) / 100;
     seamBlendWidthVal.textContent = e.target.value + '%';
-    if (currentCrop) {
-      preview.params = { ...seamlessParams };
-      preview.update(currentCrop);
-    }
+    _debouncedPreviewUpdate();
   });
 
   poissonIter.addEventListener('input', (e) => {
     seamlessParams.iterations = parseInt(e.target.value);
     poissonIterVal.textContent = e.target.value;
-    if (currentCrop) {
-      preview.params = { ...seamlessParams };
-      preview.update(currentCrop);
-    }
+    _debouncedPreviewUpdate();
   });
 
   seamlessControls.style.display = seamlessEnabled ? 'block' : 'none';

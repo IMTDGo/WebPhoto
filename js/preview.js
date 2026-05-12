@@ -5,7 +5,7 @@
  * Shared between mobile and desktop.
  */
 
-import { applySeamless, extractCrop, DEFAULT_PARAMS } from './seamless.js';
+import { applySeamlessAsync, applyEdgeBlendOnly, extractCrop, DEFAULT_PARAMS } from './seamless.js';
 
 export class PatternPreview {
   /**
@@ -36,7 +36,7 @@ export class PatternPreview {
 
   /**
    * Fast low-resolution update — suitable for real-time drag feedback.
-   * Computes a small seamless tile (~48px) and tiles it at display size.
+   * Uses edge-blend only (no Poisson) so it completes in <1ms.
    */
   updateFast(crop) {
     const { img, x, y, size } = crop;
@@ -45,7 +45,7 @@ export class PatternPreview {
 
     const fastTile = Math.max(16, Math.round(this.displaySize / this.gridSize / 4));
     const srcCanvas      = extractCrop(img, x, y, size);
-    const seamlessCanvas = applySeamless(srcCanvas, fastTile, this.params);
+    const seamlessCanvas = applyEdgeBlendOnly(srcCanvas, fastTile, this.params);
 
     const D = this.displaySize;
     this.canvas.width  = D;
@@ -59,9 +59,10 @@ export class PatternPreview {
   }
 
   /**
-   * Full-quality update — run after drag ends.
+   * Full-quality async update — run after drag ends.
+   * Poisson solve runs in a Web Worker so the main thread stays responsive.
    */
-  update(crop) {
+  async update(crop) {
     const { img, x, y, size } = crop;
     if (!img) return;
     this._lastCrop = crop;
@@ -70,7 +71,8 @@ export class PatternPreview {
     const tileSize = Math.max(4, Math.round(this.displaySize / this.gridSize));
 
     const srcCanvas      = extractCrop(img, x, y, size);
-    const seamlessCanvas = applySeamless(srcCanvas, tileSize, this.params);
+    const seamlessCanvas = await applySeamlessAsync(srcCanvas, tileSize, this.params);
+    if (!seamlessCanvas) return; // superseded by a newer call
 
     const D = this.displaySize;
     this.canvas.width  = D;
