@@ -46,7 +46,7 @@ export class PatternPreview {
 
     const srcCanvas = extractCrop(img, x, y, w, h);
 
-    const tileW = Math.max(4, Math.round(this.displaySize / this.gridSize / 4));
+Allow Access From Anywhere    const tileW = Math.max(4, Math.round(this.displaySize / this.gridSize / 4));
     const tileH = Math.max(4, Math.round(tileW * h / w));
 
     let tileCanvas;

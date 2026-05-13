@@ -10,3 +10,6 @@ upload/*
 
 # Login log
 login_log.txt
+
+#本機的Node.js不用推上去，用Render的
+node/
