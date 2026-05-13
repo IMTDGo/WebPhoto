@@ -77,16 +77,15 @@
       <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90">
         對準材質後按下拍照
       </div>
-      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center gap-3">
+      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-6">
         <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
-        <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary mx-auto" aria-label="拍照"></button>
-        <button id="btnSwitchCamera" class="btn btn-sm btn-ghost text-white border border-white/40">切鏡頭</button>
+        <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
       </div>
     </section>
 
     <!-- Step 3: edit + preview -->
     <section id="stepEdit" class="hidden h-full flex flex-col" style="min-height:0">
-      <div id="cropContainer" class="h-32 shrink-0 bg-black/70 flex items-center justify-center overflow-hidden border-b border-base-content/10" style="min-height:0">
+      <div id="cropContainer" class="flex-1 min-h-0 bg-black/70 flex items-center justify-center overflow-hidden border-b border-base-content/10">
         <canvas id="cropCanvas"></canvas>
       </div>
 
@@ -104,7 +103,7 @@
         <span class="text-xs text-base-content/40">裁切比例</span>
       </div>
 
-      <div id="previewContainer" class="flex-1 shrink-0 bg-base-100/85 backdrop-blur px-3 py-2 flex flex-col gap-2 border-b border-base-content/10 overflow-hidden" style="min-height:0">
+      <div id="previewContainer" class="flex-1 min-h-0 bg-base-100/85 backdrop-blur px-3 py-2 flex flex-col gap-2 border-b border-base-content/10 overflow-hidden">
         <div class="flex items-center gap-2 shrink-0">
           <span class="text-xs uppercase tracking-widest text-base-content/50 flex-1">UV 縮放</span>
           <span id="previewGridVal" class="text-xs font-mono">3</span>

@@ -1,94 +1,45 @@
-﻿/**
- * app-desktop.js — desktop app logic (Three.js viewer)
+/**
+ * app-desktop.js — desktop app logic (3-panel: original | crop | tiled preview)
  */
 
-import * as THREE            from 'three';
-import { CropEditor }        from './crop-editor.js';
-import { PatternPreview }    from './preview.js';
+import { CropEditor }     from './crop-editor.js';
+import { PatternPreview } from './preview.js';
 import { generateChannels, uploadAllMaps } from './upload.js';
-import { showToast }         from './toast.js';
-import { applySeamlessAsync, extractCrop, DEFAULT_PARAMS } from './seamless.js';
+import { showToast }      from './toast.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
-const dropZone       = document.getElementById('dropZone');
-const fileInput      = document.getElementById('fileInput');
-const threeCanvas    = document.getElementById('threeCanvas');
-const emptyState     = document.getElementById('emptyState');
-const cropCanvas     = document.getElementById('cropCanvas');
-const imageInfo      = document.getElementById('imageInfo');
-const cropPanel      = document.getElementById('cropPanel');
-const seamlessPanel  = document.getElementById('seamlessPanel');
-const uvPanel        = document.getElementById('uvPanel');
-const uploadPanel    = document.getElementById('uploadPanel');
-const sizeSlider        = document.getElementById('cropSizeSlider');
-const sizeVal           = document.getElementById('cropSizeVal');
-const btnUpload      = document.getElementById('btnUpload');
+const dropZone        = document.getElementById('dropZone');
+const fileInput       = document.getElementById('fileInput');
+const emptyState      = document.getElementById('emptyState');
+const originalImg     = document.getElementById('originalImg');
+const cropCanvas      = document.getElementById('cropCanvas');
+const imageInfo       = document.getElementById('imageInfo');
+const cropPanel       = document.getElementById('cropPanel');
+const rightCropPanel  = document.getElementById('rightCropPanel');
+const previewSection  = document.getElementById('previewSection');
+const previewCanvas   = document.getElementById('previewCanvas');
+const uploadPanel     = document.getElementById('uploadPanel');
+const btnUpload       = document.getElementById('btnUpload');
 const uploadNameInput = document.getElementById('uploadName');
-const enableSeamless = document.getElementById('enableSeamless');
-const seamBlendWidth = document.getElementById('seamBlendWidth');
-const poissonIter    = document.getElementById('poissonIter');
-const uvScale        = document.getElementById('uvScale');
-const uvOffX         = document.getElementById('uvOffX');
-const uvOffY         = document.getElementById('uvOffY');
+const uploadResolution = document.getElementById('uploadResolution');
+const btnAspectLock   = document.getElementById('btnAspectLock');
+const lockIconClosed  = document.getElementById('lockIconClosed');
+const lockIconOpen    = document.getElementById('lockIconOpen');
+const lockLabel       = document.getElementById('lockLabel');
+const uvScale         = document.getElementById('uvScale');
+const uvScaleVal      = document.getElementById('uvScaleVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let cropEditor  = null;
-let currentCrop = null;
-let generatedMaps = null;   // { basecolor, roughness, ... } canvases
-let threeTexture = null;
-let threeMaterial = null;
-const seamlessParams = { ...DEFAULT_PARAMS };
-let seamlessEnabled = true;
+let cropEditor    = null;
+let preview       = null;
+let currentCrop   = null;
+let generatedMaps = null;
+let _lastObjUrl   = null;
 
-// ── Three.js setup ────────────────────────────────────────────────────────────
-const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
-const camera = new THREE.OrthographicCamera(-1.5, 1.5, 1.5, -1.5, 0.1, 10);
-camera.position.z = 5;
-const mesh = new THREE.Mesh(
-  new THREE.PlaneGeometry(3, 3),
-  new THREE.MeshBasicMaterial({ color: 0x222233 })
-);
-scene.add(mesh);
-
-function resizeThree() {
-  const parent = threeCanvas.parentElement;
-  const w = parent.clientWidth, h = parent.clientHeight;
-  renderer.setSize(w, h);
-  const aspect = w / h;
-  camera.left  = -1.5 * aspect;
-  camera.right =  1.5 * aspect;
-  camera.updateProjectionMatrix();
-}
-
-(function animLoop() { requestAnimationFrame(animLoop); renderer.render(scene, camera); })();
-
-// ── Update Three.js texture from current crop ─────────────────────────────────
-async function updateThreeTexture() {
-  if (!currentCrop?.img) return;
-  const TILE = 512;
-  const src  = extractCrop(currentCrop.img, currentCrop.x, currentCrop.y, currentCrop.w, currentCrop.h);
-
-  // Resize to square tile for 3D preview
-  const tex = document.createElement('canvas');
-  tex.width = tex.height = TILE;
-  tex.getContext('2d').drawImage(src, 0, 0, TILE, TILE);
-
-  if (threeTexture) threeTexture.dispose();
-  threeTexture = new THREE.CanvasTexture(tex);
-  threeTexture.wrapS = threeTexture.wrapT = THREE.RepeatWrapping;
-  const sc  = parseFloat(uvScale.value);
-  const ox  = parseFloat(uvOffX.value);
-  const oy  = parseFloat(uvOffY.value);
-  threeTexture.repeat.set(sc, sc);
-  threeTexture.offset.set(ox, oy);
-  threeTexture.needsUpdate = true;
-
-  if (threeMaterial) threeMaterial.dispose();
-  threeMaterial = new THREE.MeshBasicMaterial({ map: threeTexture });
-  mesh.material = threeMaterial;
+// ── Preview update ────────────────────────────────────────────────────────────
+function updatePreview() {
+  if (!currentCrop?.img || !preview) return;
+  preview.update(currentCrop);
 }
 
 // ── TIFF decode helper ────────────────────────────────────────────────────────
@@ -134,50 +85,71 @@ async function loadImage(file) {
     return;
   }
 
-  // Init editors on first load
+  // Show original image in top-left panel
+  if (_lastObjUrl) URL.revokeObjectURL(_lastObjUrl);
+  _lastObjUrl = URL.createObjectURL(file);
+  originalImg.src = _lastObjUrl;
+  originalImg.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+
+  // Init crop editor on first load
   if (!cropEditor) {
     cropEditor = new CropEditor(cropCanvas, {
       onChange: (crop) => {
         currentCrop = crop;
+        preview?.updateFast(crop);
       },
       onChangeEnd: (crop) => {
         currentCrop = crop;
-        updateThreeTexture();
+        updatePreview();
       },
+    });
+  }
+
+  // Init preview on first load
+  if (!preview) {
+    preview = new PatternPreview(previewCanvas, {
+      displaySize: 1024,
+      gridSize: parseInt(uvScale.value) || 3,
     });
   }
 
   cropEditor.load(img);
   currentCrop = cropEditor.getCrop();
-  updateThreeTexture();
+  updatePreview();
 
   document.getElementById('infoName').textContent = file.name;
-  document.getElementById('infoSize').textContent = `${img.width} × ${img.height}`;
+  document.getElementById('infoSize').textContent = `${img.width} \u00d7 ${img.height}`;
   imageInfo.classList.remove('hidden');
   cropPanel.classList.remove('hidden');
-  uvPanel.classList.remove('hidden');
+  rightCropPanel.style.display = '';
+  previewSection.style.display = '';
   uploadPanel.classList.remove('hidden');
-  emptyState.classList.add('hidden');
-  threeCanvas.classList.remove('hidden');
-  resizeThree();
+  _updateResolutionLabels(cropEditor.aspectLocked);
 }
 
 // ── File input / drop ─────────────────────────────────────────────────────────
 fileInput.addEventListener('change', (e) => { if (e.target.files[0]) loadImage(e.target.files[0]); });
 
 dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', (e) => {
   e.preventDefault();
   dropZone.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
   if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
-  else showToast('請拖放圖片檔案', 'error');
+  else showToast('\u8acb\u62d6\u653e\u5716\u7247\u6a94\u6848', 'error');
 });
 
-// ── Crop size slider (removed — corner handles are the sole resize interaction) ──────
+// ── Aspect ratio lock ─────────────────────────────────────────────────────────
+function _updateResolutionLabels(locked) {
+  if (!uploadResolution) return;
+  for (const opt of uploadResolution.options) {
+    const n = opt.value;
+    opt.textContent = locked ? `${n} × ${n}` : `${n} px (最長邊)`;
+  }
+}
 
-// ── Seamless controls ─────────────────────────────────────────────────────────
 function _updateLockUI(locked) {
   if (locked) {
     lockIconClosed.classList.remove('hidden');
@@ -192,6 +164,7 @@ function _updateLockUI(locked) {
     btnAspectLock.classList.remove('btn-outline');
     btnAspectLock.classList.add('btn-ghost');
   }
+  _updateResolutionLabels(locked);
 }
 btnAspectLock.addEventListener('click', () => {
   const locked = !cropEditor?.aspectLocked;
@@ -200,37 +173,30 @@ btnAspectLock.addEventListener('click', () => {
   if (currentCrop) currentCrop = cropEditor.getCrop();
 });
 
-// ── UV controls ───────────────────────────────────────────────────────────────
+// ── UV scale (tile count) ─────────────────────────────────────────────────────
 uvScale.addEventListener('input', (e) => {
-  document.getElementById('uvScaleVal').textContent = parseFloat(e.target.value).toFixed(2);
-  if (threeTexture) { threeTexture.repeat.set(parseFloat(e.target.value), parseFloat(e.target.value)); threeTexture.needsUpdate = true; }
-});
-uvOffX.addEventListener('input', (e) => {
-  document.getElementById('uvOffXVal').textContent = parseFloat(e.target.value).toFixed(2);
-  if (threeTexture) { threeTexture.offset.x = parseFloat(e.target.value); threeTexture.needsUpdate = true; }
-});
-uvOffY.addEventListener('input', (e) => {
-  document.getElementById('uvOffYVal').textContent = parseFloat(e.target.value).toFixed(2);
-  if (threeTexture) { threeTexture.offset.y = parseFloat(e.target.value); threeTexture.needsUpdate = true; }
+  const n = parseInt(e.target.value);
+  uvScaleVal.textContent = n;
+  if (preview) preview.setGridSize(n);
 });
 
 // ── Upload ────────────────────────────────────────────────────────────────────
-const previewModal          = document.getElementById('previewModal');
+const previewModal           = document.getElementById('previewModal');
 const btnPreviewModalClose   = document.getElementById('btnPreviewModalClose');
 const btnPreviewModalConfirm = document.getElementById('btnPreviewModalConfirm');
 
 btnUpload.addEventListener('click', async () => {
-  if (!currentCrop) { showToast('請先選擇圖片', 'warning'); return; }
+  if (!currentCrop) { showToast('\u8acb\u5148\u9078\u64c7\u5716\u7247', 'warning'); return; }
   const name = uploadNameInput.value.trim();
-  if (!name) { showToast('請輸入名稱', 'warning'); return; }
+  if (!name) { showToast('\u8acb\u8f38\u5165\u540d\u7a31', 'warning'); return; }
   const outSize = parseInt(uploadResolution?.value || '1024');
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
-  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 生成通道...';
+  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> \u751f\u6210\u901a\u9053...';
 
   try {
-    generatedMaps = await generateChannels(currentCrop, null, outSize);
+    generatedMaps = await generateChannels(currentCrop, null, outSize, cropEditor?.aspectLocked ?? true);
     for (const [key, canvas] of Object.entries(generatedMaps)) {
       const el = document.getElementById(`modalCh_${key}`);
       if (!el) continue;
@@ -242,7 +208,7 @@ btnUpload.addEventListener('click', async () => {
     }
     previewModal.showModal();
   } catch (err) {
-    showToast('通道生成失敗: ' + err.message, 'error');
+    showToast('\u901a\u9053\u751f\u6210\u5931\u6557: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;
@@ -260,15 +226,15 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   const origHTML = btnUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
+    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> \u4e0a\u50b3\u4e2d... (${done}/${total})`;
   };
 
   try {
     await uploadAllMaps(name, generatedMaps, onProgress);
-    showToast('上傳成功！共 6 個通道', 'success');
+    showToast('\u4e0a\u50b3\u6210\u529f\uff01\u5171 6 \u500b\u901a\u9053', 'success');
     generatedMaps = null;
   } catch (err) {
-    showToast('上傳失敗: ' + err.message, 'error');
+    showToast('\u4e0a\u50b3\u5931\u6557: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;
@@ -278,12 +244,11 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
 // ── Keyboard crop control ─────────────────────────────────────────────────────
 window.addEventListener('keydown', (e) => {
   if (!cropEditor?.img) return;
-  // Ignore when user is typing in an input / textarea
-  if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
 
-  const img  = cropEditor.img;
-  const step = Math.max(1, Math.round(img.width * 0.005)); // 0.5% of image width
-  const sizeStep = Math.max(1, Math.round(Math.min(img.width, img.height) * 0.01)); // 1%
+  const img      = cropEditor.img;
+  const step     = Math.max(1, Math.round(img.width * 0.005));
+  const sizeStep = Math.max(1, Math.round(Math.min(img.width, img.height) * 0.01));
   let handled = true;
 
   switch (e.key) {
@@ -291,24 +256,21 @@ window.addEventListener('keydown', (e) => {
     case 'ArrowRight': cropEditor.cropX += step; break;
     case 'ArrowUp':    cropEditor.cropY -= step; break;
     case 'ArrowDown':  cropEditor.cropY += step; break;
-  case '+': case '=': {
-      const maxW = img.width, maxH = img.height;
+    case '+': case '=': {
       if (cropEditor.aspectLocked) {
-        const maxDim = Math.min(maxW, maxH);
+        const maxDim = Math.min(img.width, img.height);
         const newSz = Math.min(maxDim, cropEditor.cropW + sizeStep);
-        cropEditor.cropW = newSz;
-        cropEditor.cropH = newSz;
+        cropEditor.cropW = newSz; cropEditor.cropH = newSz;
       } else {
-        cropEditor.cropW = Math.min(maxW, cropEditor.cropW + sizeStep);
-        cropEditor.cropH = Math.min(maxH, cropEditor.cropH + sizeStep);
+        cropEditor.cropW = Math.min(img.width,  cropEditor.cropW + sizeStep);
+        cropEditor.cropH = Math.min(img.height, cropEditor.cropH + sizeStep);
       }
       break;
     }
     case '-': case '_': {
       if (cropEditor.aspectLocked) {
         const newSz = Math.max(16, cropEditor.cropW - sizeStep);
-        cropEditor.cropW = newSz;
-        cropEditor.cropH = newSz;
+        cropEditor.cropW = newSz; cropEditor.cropH = newSz;
       } else {
         cropEditor.cropW = Math.max(16, cropEditor.cropW - sizeStep);
         cropEditor.cropH = Math.max(16, cropEditor.cropH - sizeStep);
@@ -323,10 +285,9 @@ window.addEventListener('keydown', (e) => {
     cropEditor._clampCrop();
     cropEditor._draw();
     currentCrop = cropEditor.getCrop();
-    updateThreeTexture();
+    updatePreview();
   }
 });
 
 // ── Resize ────────────────────────────────────────────────────────────────────
-window.addEventListener('resize', () => { resizeThree(); cropEditor?.resize(); });
-resizeThree();
+window.addEventListener('resize', () => cropEditor?.resize());

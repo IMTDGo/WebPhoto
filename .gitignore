@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Environment variables — NEVER commit this file
+.env
+
+# Upload folder contents (keep directory, ignore files)
+upload/*
+!upload/.gitkeep
+
+# Login log
+login_log.txt

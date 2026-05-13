@@ -46,21 +46,27 @@ export class PatternPreview {
 
     const srcCanvas = extractCrop(img, x, y, w, h);
 
-    const D = this.displaySize;
-    this.canvas.width  = D;
-    this.canvas.height = D;
+    const tileW = Math.max(4, Math.round(this.displaySize / this.gridSize / 4));
+    const tileH = Math.max(4, Math.round(tileW * h / w));
 
     let tileCanvas;
     if (this.seamlessEnabled) {
-      const fastTile = Math.max(16, Math.round(this.displaySize / this.gridSize / 4));
-      tileCanvas = applyEdgeBlendOnly(srcCanvas, fastTile, this.params);
+      tileCanvas = applyEdgeBlendOnly(srcCanvas, tileW, this.params);
     } else {
-      tileCanvas = srcCanvas;
+      tileCanvas = document.createElement('canvas');
+      tileCanvas.width  = tileW;
+      tileCanvas.height = tileH;
+      tileCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, tileW, tileH);
     }
+
+    const DW = tileW * this.gridSize;
+    const DH = tileH * this.gridSize;
+    this.canvas.width  = DW;
+    this.canvas.height = DH;
 
     const pat = this.ctx.createPattern(tileCanvas, 'repeat');
     this.ctx.fillStyle = pat;
-    this.ctx.fillRect(0, 0, D, D);
+    this.ctx.fillRect(0, 0, DW, DH);
 
     this._fitDisplay();
   }
@@ -76,34 +82,41 @@ export class PatternPreview {
 
     const srcCanvas = extractCrop(img, x, y, w, h);
 
-    const D = this.displaySize;
-    this.canvas.width  = D;
-    this.canvas.height = D;
+    const tileW = Math.max(4, Math.round(this.displaySize / this.gridSize));
+    const tileH = Math.max(4, Math.round(tileW * h / w));
 
     let tileCanvas;
     if (this.seamlessEnabled) {
-      const tileSize = Math.max(4, Math.round(this.displaySize / this.gridSize));
-      tileCanvas = await applySeamlessAsync(srcCanvas, tileSize, this.params);
+      tileCanvas = await applySeamlessAsync(srcCanvas, tileW, this.params);
       if (!tileCanvas) return; // superseded by a newer call
     } else {
-      tileCanvas = srcCanvas;
+      tileCanvas = document.createElement('canvas');
+      tileCanvas.width  = tileW;
+      tileCanvas.height = tileH;
+      tileCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, tileW, tileH);
     }
+
+    const DW = tileW * this.gridSize;
+    const DH = tileH * this.gridSize;
+    this.canvas.width  = DW;
+    this.canvas.height = DH;
 
     const pat = this.ctx.createPattern(tileCanvas, 'repeat');
     this.ctx.fillStyle = pat;
-    this.ctx.fillRect(0, 0, D, D);
+    this.ctx.fillRect(0, 0, DW, DH);
 
     this._fitDisplay();
   }
 
-  /** Fit the canvas display size to its container element. */
+  /** Fit the canvas display size to fill its container, maintaining aspect ratio. */
   _fitDisplay() {
     const parent = this.canvas.parentElement;
     if (!parent) return;
-    const maxW  = (parent.clientWidth  || this.displaySize) - 8;
-    const maxH  = (parent.clientHeight || this.displaySize) - 8;
-    const scale = Math.min(maxW / this.displaySize, maxH / this.displaySize, 1);
-    this.canvas.style.width  = Math.round(this.displaySize * scale) + 'px';
-    this.canvas.style.height = Math.round(this.displaySize * scale) + 'px';
+    const maxW  = (parent.clientWidth  || this.canvas.width)  - 4;
+    const maxH  = (parent.clientHeight || this.canvas.height) - 4;
+    // No upper cap — allows upscaling low-res tiles during fast drag so size stays stable
+    const scale = Math.min(maxW / this.canvas.width, maxH / this.canvas.height);
+    this.canvas.style.width  = Math.round(this.canvas.width  * scale) + 'px';
+    this.canvas.style.height = Math.round(this.canvas.height * scale) + 'px';
   }
 }

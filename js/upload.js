@@ -77,17 +77,38 @@ function _generateMainThread(imageData, w, h, baseCanvas) {
  * @returns {Promise<{ basecolor, roughness, ao, height, metallic, normal }>}
  *          each value is an HTMLCanvasElement
  */
-export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024) {
+export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024, aspectLocked = true) {
   const srcCanvas = extractCrop(crop.img, crop.x, crop.y, crop.w, crop.h);
+  const cropW = srcCanvas.width;
+  const cropH = srcCanvas.height;
+
+  // Compute output dimensions
+  let outW, outH;
+  if (aspectLocked) {
+    // Square output — cap at outSize, never upscale
+    const side = Math.min(cropW, outSize);
+    outW = outH = side;
+  } else {
+    // Free aspect ratio — apply outSize to longest edge if crop exceeds it
+    const longest = Math.max(cropW, cropH);
+    if (longest <= outSize) {
+      outW = cropW;
+      outH = cropH;
+    } else {
+      const scale = outSize / longest;
+      outW = Math.max(1, Math.round(cropW * scale));
+      outH = Math.max(1, Math.round(cropH * scale));
+    }
+  }
+
   let baseCanvas;
   if (params) {
-    baseCanvas = applySeamless(srcCanvas, outSize, params);
+    baseCanvas = applySeamless(srcCanvas, outW, params);
   } else {
-    // No seamless — resize crop to outSize × outSize
     baseCanvas = document.createElement('canvas');
-    baseCanvas.width  = outSize;
-    baseCanvas.height = outSize;
-    baseCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, outSize, outSize);
+    baseCanvas.width  = outW;
+    baseCanvas.height = outH;
+    baseCanvas.getContext('2d').drawImage(srcCanvas, 0, 0, outW, outH);
   }
   const w = baseCanvas.width, h = baseCanvas.height;
   const imageData  = baseCanvas.getContext('2d').getImageData(0, 0, w, h);

@@ -16,7 +16,7 @@ const cameraVideo  = document.getElementById('cameraVideo');
 const btnOpenCamera = document.getElementById('btnOpenCamera');
 const btnCameraBack = document.getElementById('btnCameraBack');
 const btnTakePhoto  = document.getElementById('btnTakePhoto');
-const btnSwitchCamera = document.getElementById('btnSwitchCamera');
+
 const fileInputCapture = document.getElementById('fileInputCapture');
 const fileInputGallery = document.getElementById('fileInputGallery');
 const cropCanvas   = document.getElementById('cropCanvas');
@@ -48,7 +48,6 @@ let preview         = null;
 let currentCrop     = null;
 let generatedMaps   = null;   // { basecolor, roughness, ao, height, metallic, normal } canvases
 let cameraStream    = null;
-let cameraFacing    = 'environment';
 
 
 // ── Initialise editors ────────────────────────────────────────────────────────
@@ -65,7 +64,6 @@ function initEditors() {
   });
 
   preview = new PatternPreview(previewCanvas, { displaySize: 512, gridSize: 3 });
-  preview.params = { ...seamlessParams };
 
   previewGridSlider.addEventListener('input', (e) => {
     const n = parseInt(e.target.value);
@@ -126,7 +124,7 @@ async function startCamera() {
   const constraints = {
     audio: false,
     video: {
-      facingMode: { ideal: cameraFacing },
+      facingMode: { ideal: 'environment' },
       width: { min: 1920, ideal: 3840, max: 4096 },
       height: { min: 1080, ideal: 2160, max: 2160 },
     },
@@ -134,6 +132,10 @@ async function startCamera() {
 
   cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
   cameraVideo.srcObject = cameraStream;
+  await new Promise((res) => {
+    if (cameraVideo.readyState >= 2) return res();
+    cameraVideo.addEventListener('loadedmetadata', res, { once: true });
+  });
   await cameraVideo.play();
 }
 
@@ -263,16 +265,6 @@ btnOpenCamera.addEventListener('click', () => enterCameraStep());
 btnCameraBack.addEventListener('click', () => {
   stopCamera();
   showStep('entry');
-});
-
-btnSwitchCamera.addEventListener('click', async () => {
-  cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-  try {
-    await startCamera();
-  } catch (err) {
-    cameraFacing = cameraFacing === 'environment' ? 'user' : 'environment';
-    showToast('切換鏡頭失敗', 'error');
-  }
 });
 
 btnTakePhoto.addEventListener('click', async () => {

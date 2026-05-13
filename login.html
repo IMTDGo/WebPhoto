@@ -189,7 +189,11 @@
       window.location.replace('./index.html');
     }
 
-    const form       = document.getElementById('loginForm');
+    // ── API base URL ──────────────────────────────────────────────────────────
+    // 本機開發: 空字串 (呼叫同源 /login)
+    // GitHub Pages: 填入 Render 部署後的網址，例如:
+    //   'https://webphoto-xxxx.onrender.com'
+    const API_BASE = '';
     const btnLogin   = document.getElementById('btnLogin');
     const btnCancel  = document.getElementById('btnCancel');
     const alertBox   = document.getElementById('alertBox');
@@ -250,7 +254,7 @@
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
 
-        const res = await fetch('/login', {
+        const res = await fetch(`${API_BASE}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, password, rememberMe }),

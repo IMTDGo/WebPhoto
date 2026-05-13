@@ -1,10 +1,5 @@
 /**
  * WebPhoto Upload Server
- * Pure Node.js + multer — no extra framework required
- *
- * Usage:
- *   npm install
- *   npm start
  *
  * Endpoints:
  *   GET  /            → serves index.html (device-redirect)
@@ -13,26 +8,44 @@
  *   POST /upload      → accepts multipart/form-data { image: File, name: string }
  *                       saves to ./upload/<name>.png
  *   POST /login       → accepts JSON { username, password, rememberMe }
- *                       validates credentials, logs attempt to login_log.txt
+ *                       validates against MongoDB (bcrypt hash)
  *                       returns { ok: bool, message: string }
  *
- * Mock credentials: username=123456 / password=123456
+ * Environment variables (set in .env or Render dashboard):
+ *   MONGODB_URI  — MongoDB Atlas connection string
+ *   PORT         — server port (default 3000)
  */
 
 'use strict';
 
-const http   = require('http');
-const fs     = require('fs');
-const path   = require('path');
-const multer = require('multer');
+require('dotenv').config();
+
+const http     = require('http');
+const fs       = require('fs');
+const path     = require('path');
+const multer   = require('multer');
+const mongoose = require('mongoose');
+const bcrypt   = require('bcryptjs');
 
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
 const LOGIN_LOG  = path.join(__dirname, 'login_log.txt');
 
-// ── Hardcoded credentials (mock "notepad backend") ───────────────────────────
-const VALID_USERNAME = '123456';
-const VALID_PASSWORD = '123456';
+// ─── MongoDB connection ───────────────────────────────────────────────────────
+if (process.env.MONGODB_URI) {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('[db] Connected to MongoDB Atlas'))
+    .catch(err => console.error('[db] Connection error:', err.message));
+} else {
+  console.warn('[db] MONGODB_URI not set — login will use fallback mode');
+}
+
+// ─── User schema ──────────────────────────────────────────────────────────────
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true } // bcrypt hash
+});
+const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -105,49 +118,61 @@ function readJsonBody(req) {
   });
 }
 
-// ─── Append login attempt to login_log.txt (mock notepad backend) ────────────
+// ─── Append login attempt to login_log.txt ───────────────────────────────────
 function appendLoginLog(username, success) {
   const timestamp = new Date().toISOString();
   const status    = success ? 'SUCCESS' : 'FAILED';
-  // Never log the actual password — only the username and result
   const line = `[${timestamp}] ${status} | user=${username}\n`;
-  fs.appendFile(LOGIN_LOG, line, () => {}); // fire-and-forget
+  fs.appendFile(LOGIN_LOG, line, () => {});
 }
 
 // ─── Request handler ──────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
-  // Use raw URL path for routing (avoid Windows path.normalize issues with '/')
   const rawUrl = decodeURIComponent(req.url.split('?')[0]);
-
-  // Strip any path-traversal sequences, then resolve against __dirname
   const reqFile = rawUrl === '/' ? 'index.html' : rawUrl.replace(/^\/+/, '');
   const filePath = path.resolve(__dirname, reqFile);
-
-  // Security: ensure resolved path stays within project directory
   const isInProject = filePath.startsWith(__dirname + path.sep) || filePath === __dirname;
 
-  // POST /login
-  if (req.method === 'POST' && rawUrl === '/login') {
-    // CORS pre-flight (for integration into other projects)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // ── CORS preflight ─────────────────────────────────────────────────────────
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
+  // ── POST /login ────────────────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/login') {
     readJsonBody(req)
-      .then(body => {
+      .then(async body => {
         const username = String(body.username || '').trim();
         const password = String(body.password || '');
 
-        const success = (username === VALID_USERNAME && password === VALID_PASSWORD);
-        appendLoginLog(username, success);
+        let success = false;
 
+        if (mongoose.connection.readyState === 1) {
+          // ── MongoDB path ─────────────────────────────────────────────────
+          const user = await User.findOne({ username }).lean();
+          if (user) {
+            success = await bcrypt.compare(password, user.password);
+          }
+        } else {
+          // ── Fallback: no DB configured (local dev without .env) ──────────
+          console.warn('[login] No DB — using hardcoded fallback');
+          success = (username === '123456' && password === '123456');
+        }
+
+        appendLoginLog(username, success);
         console.log(`[login] user=${username} → ${success ? 'SUCCESS' : 'FAILED'}`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        if (success) {
-          res.end(JSON.stringify({ ok: true,  message: '登入成功，歡迎回來！' }));
-        } else {
-          res.end(JSON.stringify({ ok: false, message: '帳號或密碼錯誤，請重試' }));
-        }
+        res.end(JSON.stringify(
+          success
+            ? { ok: true,  message: '登入成功，歡迎回來！' }
+            : { ok: false, message: '帳號或密碼錯誤，請重試' }
+        ));
       })
       .catch(err => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
