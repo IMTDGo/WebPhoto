@@ -104,6 +104,11 @@
       border: 1px solid #ef4444;
       color: #f87171;
     }
+    .alert-info {
+      background: #1a2a3a;
+      border: 1px solid #60a5fa;
+      color: #93c5fd;
+    }
 
     /* Loading spinner inside button */
     .spinner {
@@ -207,7 +212,8 @@
 
     // Show alert helper
     function showAlert(type, message) {
-      alertBox.className = 'alert-box ' + (type === 'success' ? 'alert-success' : 'alert-error');
+      const cls = type === 'success' ? 'alert-success' : type === 'info' ? 'alert-info' : 'alert-error';
+      alertBox.className = 'alert-box ' + cls;
       alertBox.style.display = 'block';
       alertBox.textContent = message;
     }
@@ -234,6 +240,11 @@
       btnLogin.disabled = true;
       btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
 
+      // 超過 4 秒還沒回應 → 提示冷啟動
+      const coldStartTimer = setTimeout(() => {
+        showAlert('info', '⏳ 伺服器正在喚醒中，請稍候（最多約 60 秒）...');
+      }, 4000);
+
       // ── Client-side credential validation (works on GitHub Pages / static hosting) ──
       function clientValidate(u, p) {
         return u === '123456' && p === '123456';
@@ -253,7 +264,7 @@
       try {
         // Try server first (local dev — server logs to login_log.txt)
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000); // 3s timeout
+        const timeout = setTimeout(() => controller.abort(), 70000); // 70s — cover cold start
 
         const res = await fetch(`${API_BASE}/login`, {
           method: 'POST',
@@ -262,6 +273,7 @@
           signal: controller.signal
         });
         clearTimeout(timeout);
+        clearTimeout(coldStartTimer);
 
         const data = await res.json();
 
@@ -272,6 +284,7 @@
         }
 
       } catch (err) {
+        clearTimeout(coldStartTimer);
         // Server unavailable (GitHub Pages / static hosting) → fallback to client-side check
         if (clientValidate(username, password)) {
           onLoginSuccess();
