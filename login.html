@@ -175,7 +175,7 @@
       <!-- Sign up link -->
       <div class="text-center mb-6">
         <span class="text-sm text-slate-400">Don't have an account yet? </span>
-        <a href="#" class="text-sm text-blue-400 hover:underline" onclick="return false;">Sign up now.</a>
+        <a href="./signup.html" class="text-sm text-blue-400 hover:underline">Sign up now.</a>
       </div>
 
       <!-- Buttons -->
@@ -195,7 +195,10 @@
     }
 
     // ── API endpoint ───────────────────────────────────────────────────────
-    const LOGIN_URL = 'https://webphoto-lidl.onrender.com/login';
+    const BASE_URL  = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `${window.location.protocol}//${window.location.host}`
+      : 'https://webphoto-lidl.onrender.com';
+    const LOGIN_URL = BASE_URL + '/login';
     const form       = document.getElementById('loginForm');
     const btnLogin   = document.getElementById('btnLogin');
     const btnCancel  = document.getElementById('btnCancel');
@@ -249,6 +252,9 @@
       function onLoginSuccess(data) {
         const store = rememberMe ? localStorage : sessionStorage;
         store.setItem('wp_auth', '1');
+        if (data.username) {
+          store.setItem('wp_user', JSON.stringify({ id: data.username, name: data.username }));
+        }
         showAlert('success', '✔ ' + data.message);
         setTimeout(() => window.location.replace('./index.html'), 800);
       }

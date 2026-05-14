@@ -23,9 +23,11 @@ require('dotenv').config();
 const http     = require('http');
 const fs       = require('fs');
 const path     = require('path');
-const multer   = require('multer');
-const mongoose = require('mongoose');
-const bcrypt   = require('bcryptjs');
+const multer    = require('multer');
+const mongoose  = require('mongoose');
+const bcrypt    = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const crypto    = require('crypto');
 
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
@@ -43,9 +45,33 @@ if (process.env.MONGODB_URI) {
 // ─── User schema ──────────────────────────────────────────────────────────────
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true } // bcrypt hash
+  password: { type: String, required: true }, // bcrypt hash
+  email:    { type: String, unique: true, sparse: true }
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
+
+// ─── OTP schema (temporary records for email verification) ───────────────────
+const otpSchema = new mongoose.Schema({
+  email:    { type: String, required: true, unique: true },
+  username: { type: String, required: true },
+  password: { type: String, required: true }, // pre-hashed with bcrypt
+  otp:      { type: String, required: true },
+  expiresAt:{ type: Date,   required: true }
+});
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
+const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
+
+// ─── Dev accounts (local testing without MongoDB) ────────────────────────────
+const DEV_ACCOUNTS_FILE = path.join(__dirname, 'dev-accounts.json');
+let devAccounts = {};
+if (fs.existsSync(DEV_ACCOUNTS_FILE)) {
+  try {
+    devAccounts = JSON.parse(fs.readFileSync(DEV_ACCOUNTS_FILE, 'utf8'));
+    console.log(`[dev] Loaded ${Object.keys(devAccounts).length} dev account(s) from dev-accounts.json`);
+  } catch (e) {
+    console.warn('[dev] Failed to load dev-accounts.json:', e.message);
+  }
+}
 
 // Ensure upload directory exists
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -126,6 +152,19 @@ function appendLoginLog(username, success) {
   fs.appendFile(LOGIN_LOG, line, () => {});
 }
 
+// ─── In-memory fallback stores (used when MongoDB is not connected) ─────────
+const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
+const memUsers = new Map(); // username → { username, password, email }
+
+// ─── Email transporter (lazy creation) ──────────────────────────────────────
+function getMailTransport() {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+  });
+}
+
 // ─── Request handler ──────────────────────────────────────────────────────────
 const server = http.createServer((req, res) => {
   const rawUrl = decodeURIComponent(req.url.split('?')[0]);
@@ -159,9 +198,14 @@ const server = http.createServer((req, res) => {
             success = await bcrypt.compare(password, user.password);
           }
         } else {
-          // ── Fallback: no DB configured (local dev without .env) ──────────
-          console.warn('[login] No DB — using hardcoded fallback');
-          success = (username === '123456' && password === '123456');
+          // ── Fallback: no DB ──────────────────────────────────────────────
+          const devUser = devAccounts[username];
+          if (devUser) {
+            success = await bcrypt.compare(password, devUser.password);
+          } else {
+            console.warn('[login] No DB — using hardcoded fallback');
+            success = (username === '123456' && password === '123456');
+          }
         }
 
         appendLoginLog(username, success);
@@ -170,13 +214,136 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
           success
-            ? { ok: true,  message: '登入成功，歡迎回來！' }
+            ? { ok: true,  message: '登入成功，歡迎回來！', username }
             : { ok: false, message: '帳號或密碼錯誤，請重試' }
         ));
       })
       .catch(err => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
+    return;
+  }
+
+  // ── POST /register/send-otp ──────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/register/send-otp') {
+    readJsonBody(req)
+      .then(async body => {
+        const username = String(body.username || '').trim();
+        const password = String(body.password || '');
+        const email    = String(body.email    || '').trim().toLowerCase();
+
+        const fail = (code, msg) => {
+          res.writeHead(code, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: msg }));
+        };
+
+        if (!username || !password || !email) return fail(400, '請填寫所有欄位');
+        if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, '請輸入有效的 Gmail 地址');
+
+        const dbReady = mongoose.connection.readyState === 1;
+
+        if (dbReady) {
+          const [existingUser, existingEmail] = await Promise.all([
+            User.findOne({ username }).lean(),
+            User.findOne({ email }).lean()
+          ]);
+          if (existingUser)  return fail(409, '此帳號名稱已被使用');
+          if (existingEmail) return fail(409, '此 Gmail 已被註冊');
+        } else {
+          // In-memory fallback
+          if (memUsers.has(username)) return fail(409, '此帳號名稱已被使用（測試模式）');
+          const emailUsed = [...memUsers.values()].some(u => u.email === email);
+          if (emailUsed) return fail(409, '此 Gmail 已被註冊（測試模式）');
+        }
+
+        const transport = getMailTransport();
+        if (!transport) return fail(503, '郵件服務未設定，請先在 .env 填入 GMAIL_USER 和 GMAIL_APP_PASSWORD');
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+        const otp       = String(crypto.randomInt(100000, 1000000));
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        if (dbReady) {
+          await OtpRecord.findOneAndUpdate(
+            { email },
+            { username, password: hashedPassword, otp, expiresAt },
+            { upsert: true, new: true }
+          );
+        } else {
+          memOtp.set(email, { username, password: hashedPassword, otp, expiresAt });
+        }
+
+        await transport.sendMail({
+          from: `"WebPhoto" <${process.env.GMAIL_USER}>`,
+          to: email,
+          subject: 'WebPhoto 驗證碼',
+          text: `您的驗證碼是：${otp}，10 分鐘內有效。`,
+          html: `<p>您的 WebPhoto 驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`
+        });
+
+        console.log(`[register] OTP sent to ${email} for user "${username}" (${dbReady ? 'DB' : 'memory'})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: '驗證碼已寄出' }));
+      })
+      .catch(err => {
+        console.error('[register/send-otp]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
+      });
+    return;
+  }
+
+  // ── POST /register/verify ────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/register/verify') {
+    readJsonBody(req)
+      .then(async body => {
+        const email = String(body.email || '').trim().toLowerCase();
+        const otp   = String(body.otp   || '').trim();
+
+        if (!email || !otp) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: '請提供 email 與驗證碼' }));
+          return;
+        }
+
+        const dbReady = mongoose.connection.readyState === 1;
+        const record  = dbReady
+          ? await OtpRecord.findOne({ email }).lean()
+          : memOtp.get(email);
+
+        if (!record) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: '找不到驗證請求，請重新發送' }));
+          return;
+        }
+        if (new Date() > record.expiresAt) {
+          if (dbReady) await OtpRecord.deleteOne({ email }); else memOtp.delete(email);
+          res.writeHead(410, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: '驗證碼已過期，請重新發送' }));
+          return;
+        }
+        if (record.otp !== otp) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: '驗證碼錯誤，請重試' }));
+          return;
+        }
+
+        if (dbReady) {
+          await User.create({ username: record.username, password: record.password, email });
+          await OtpRecord.deleteOne({ email });
+        } else {
+          memUsers.set(record.username, { username: record.username, password: record.password, email });
+          memOtp.delete(email);
+        }
+        console.log(`[register] User created: "${record.username}" (${email}) (${dbReady ? 'DB' : 'memory'})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
+      })
+      .catch(err => {
+        console.error('[register/verify]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
       });
     return;
   }

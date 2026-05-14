@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign Up - WebPhoto</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: radial-gradient(ellipse at 50% 40%, #1e2a3a 0%, #0d1117 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: #1c2333;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2.25rem 2rem;
+      width: 100%;
+      max-width: 430px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.55);
+    }
+    .login-input {
+      width: 100%;
+      background: #252d3d;
+      border: 1.5px solid transparent;
+      border-radius: 0.625rem;
+      color: #e0e6f0;
+      font-size: 1rem;
+      padding: 0.85rem 1rem;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    .login-input:focus { border-color: #3b82f6; }
+    .login-input::placeholder { color: #6b7a8d; }
+    .btn-cancel {
+      border: 1.5px solid #4b5563;
+      border-radius: 9999px;
+      padding: 0.6rem 1.6rem;
+      background: transparent;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-cancel:hover { background: #252d3d; border-color: #6b7280; }
+    .btn-primary-action {
+      border: none;
+      border-radius: 9999px;
+      padding: 0.65rem 1.8rem;
+      background: #f1f5f9;
+      color: #1e40af;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary-action:hover { background: #e2e8f0; }
+    .btn-primary-action:disabled { opacity: 0.6; cursor: not-allowed; }
+    .alert-box {
+      border-radius: 0.5rem;
+      padding: 0.65rem 1rem;
+      font-size: 0.875rem;
+      display: none;
+    }
+    .alert-success { background: #1a3a2a; border: 1px solid #22c55e; color: #4ade80; }
+    .alert-error   { background: #3a1a1a; border: 1px solid #ef4444; color: #f87171; }
+    .alert-info    { background: #1a2a3a; border: 1px solid #60a5fa; color: #93c5fd; }
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid #3b82f6; border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .otp-input {
+      letter-spacing: 0.5rem;
+      text-align: center;
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+
+    <!-- ── STEP 1: Fill in details ── -->
+    <div id="step1">
+      <h1 class="text-center text-white font-bold text-2xl mb-1">Create Account</h1>
+      <p class="text-center text-slate-500 text-sm mb-6">建立您的 WebPhoto 帳號</p>
+
+      <div id="alertBox1" class="alert-box mb-4"></div>
+
+      <form id="step1Form" autocomplete="on" novalidate>
+
+        <div class="mb-3">
+          <input id="s1Username" name="username" type="text"
+            class="login-input" placeholder="帳號（英數字或底線，3–30 字元）"
+            autocomplete="username" required />
+        </div>
+
+        <div class="mb-3">
+          <input id="s1Password" name="password" type="password"
+            class="login-input" placeholder="密碼（至少 8 個字元）"
+            autocomplete="new-password" required />
+        </div>
+
+        <div class="mb-3">
+          <input id="s1Confirm" name="confirm" type="password"
+            class="login-input" placeholder="確認密碼"
+            autocomplete="new-password" required />
+        </div>
+
+        <div class="mb-4">
+          <input id="s1Email" name="email" type="email"
+            class="login-input" placeholder="Gmail 地址（每個 Gmail 只能註冊一次）"
+            autocomplete="email" required />
+        </div>
+
+        <p class="text-xs text-slate-500 mb-5">
+          ✉ 系統會向您的 Gmail 發送 6 位數驗證碼，10 分鐘內有效。
+        </p>
+
+        <div class="text-center mb-5">
+          <span class="text-sm text-slate-400">Already have an account? </span>
+          <a href="./login.html" class="text-sm text-blue-400 hover:underline">Sign in.</a>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn-cancel" id="btnCancel1">Cancel</button>
+          <button type="submit" class="btn-primary-action" id="btnSendOtp">Send OTP</button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── STEP 2: OTP verification ── -->
+    <div id="step2" class="hidden">
+      <h1 class="text-center text-white font-bold text-2xl mb-2">Verify Email</h1>
+      <p class="text-center text-slate-400 text-sm mb-1">驗證碼已寄送至</p>
+      <p class="text-center text-blue-400 font-medium text-sm mb-6" id="displayEmail"></p>
+
+      <div id="alertBox2" class="alert-box mb-4"></div>
+
+      <form id="step2Form" novalidate>
+
+        <div class="mb-2">
+          <input id="s2Otp" type="text" inputmode="numeric" maxlength="6"
+            class="login-input otp-input" placeholder="______" required />
+        </div>
+
+        <p class="text-xs text-slate-500 mb-5 text-center">輸入 6 位數字驗證碼</p>
+
+        <div class="text-center mb-5">
+          <span class="text-sm text-slate-400">沒收到？</span>
+          <button type="button" id="btnResend"
+            class="text-sm text-blue-400 hover:underline ml-1">重新發送</button>
+          <span id="resendCooldown" class="text-sm text-slate-500 ml-1 hidden"></span>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button type="button" class="btn-cancel" id="btnBack2">Back</button>
+          <button type="submit" class="btn-primary-action" id="btnVerify">Verify</button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+
+  <script>
+    const BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `${window.location.protocol}//${window.location.host}`
+      : 'https://webphoto-lidl.onrender.com';
+
+    // ── State ──
+    let currentEmail    = '';
+    let currentUsername = '';
+    let currentPassword = '';
+
+    // ── Helpers ──
+    function showAlert(boxId, type, msg) {
+      const el = document.getElementById(boxId);
+      el.className = 'alert-box ' + (
+        type === 'success' ? 'alert-success' :
+        type === 'info'    ? 'alert-info'    : 'alert-error'
+      );
+      el.style.display = 'block';
+      el.textContent   = msg;
+    }
+    function hideAlert(boxId) {
+      document.getElementById(boxId).style.display = 'none';
+    }
+    function showStep(n) {
+      document.getElementById('step1').classList.toggle('hidden', n !== 1);
+      document.getElementById('step2').classList.toggle('hidden', n !== 2);
+    }
+
+    // ── Cancel / Back ──
+    document.getElementById('btnCancel1').addEventListener('click', () => {
+      if (history.length > 1) history.back();
+      else window.location.href = './login.html';
+    });
+    document.getElementById('btnBack2').addEventListener('click', () => {
+      hideAlert('alertBox2');
+      showStep(1);
+    });
+
+    // ── STEP 1: Send OTP ──
+    document.getElementById('step1Form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alertBox1');
+
+      const username = document.getElementById('s1Username').value.trim();
+      const password = document.getElementById('s1Password').value;
+      const confirm  = document.getElementById('s1Confirm').value;
+      const email    = document.getElementById('s1Email').value.trim();
+
+      if (!username || !password || !confirm || !email) {
+        showAlert('alertBox1', 'error', '請填寫所有欄位');
+        return;
+      }
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+        showAlert('alertBox1', 'error', '帳號只能使用英數字和底線，長度 3–30 字元');
+        return;
+      }
+      if (password.length < 8) {
+        showAlert('alertBox1', 'error', '密碼至少需要 8 個字元');
+        return;
+      }
+      if (password !== confirm) {
+        showAlert('alertBox1', 'error', '兩次密碼輸入不一致');
+        return;
+      }
+      if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
+        showAlert('alertBox1', 'error', '請輸入有效的 Gmail 地址（需以 @gmail.com 結尾）');
+        return;
+      }
+
+      const btn = document.getElementById('btnSendOtp');
+      btn.disabled    = true;
+      btn.innerHTML   = '<span class="spinner"></span>寄送中...';
+
+      try {
+        const res = await fetch(`${BASE_URL}/register/send-otp`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ username, password, email })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          currentEmail    = email;
+          currentUsername = username;
+          currentPassword = password;
+          document.getElementById('displayEmail').textContent = email;
+          showStep(2);
+          startResendCooldown();
+        } else {
+          showAlert('alertBox1', 'error', '✘ ' + data.message);
+        }
+      } catch (err) {
+        showAlert('alertBox1', 'error', '✘ 連線失敗，請稍後再試');
+      } finally {
+        btn.disabled  = false;
+        btn.innerHTML = 'Send OTP';
+      }
+    });
+
+    // ── STEP 2: Verify OTP ──
+    document.getElementById('step2Form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alertBox2');
+
+      const otp = document.getElementById('s2Otp').value.trim();
+      if (!/^\d{6}$/.test(otp)) {
+        showAlert('alertBox2', 'error', '請輸入 6 位數驗證碼');
+        return;
+      }
+
+      const btn = document.getElementById('btnVerify');
+      btn.disabled  = true;
+      btn.innerHTML = '<span class="spinner"></span>驗證中...';
+
+      try {
+        const res = await fetch(`${BASE_URL}/register/verify`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email: currentEmail, otp })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showAlert('alertBox2', 'success', '✔ ' + data.message);
+          setTimeout(() => window.location.replace('./login.html'), 1500);
+        } else {
+          showAlert('alertBox2', 'error', '✘ ' + data.message);
+        }
+      } catch (err) {
+        showAlert('alertBox2', 'error', '✘ 連線失敗，請稍後再試');
+      } finally {
+        btn.disabled  = false;
+        btn.innerHTML = 'Verify';
+      }
+    });
+
+    // ── Resend cooldown ──
+    let resendTimer = null;
+    function startResendCooldown(seconds = 60) {
+      const btn = document.getElementById('btnResend');
+      const cd  = document.getElementById('resendCooldown');
+      btn.disabled = true;
+      btn.classList.add('opacity-40', 'cursor-not-allowed');
+      cd.classList.remove('hidden');
+      let remaining = seconds;
+      cd.textContent = `(${remaining}s)`;
+      if (resendTimer) clearInterval(resendTimer);
+      resendTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(resendTimer);
+          btn.disabled = false;
+          btn.classList.remove('opacity-40', 'cursor-not-allowed');
+          cd.classList.add('hidden');
+        } else {
+          cd.textContent = `(${remaining}s)`;
+        }
+      }, 1000);
+    }
+
+    document.getElementById('btnResend').addEventListener('click', async () => {
+      hideAlert('alertBox2');
+      try {
+        const res = await fetch(`${BASE_URL}/register/send-otp`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ username: currentUsername, password: currentPassword, email: currentEmail })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showAlert('alertBox2', 'info', '✉ 驗證碼已重新寄出');
+          startResendCooldown();
+        } else {
+          showAlert('alertBox2', 'error', '✘ ' + data.message);
+        }
+      } catch (err) {
+        showAlert('alertBox2', 'error', '✘ 連線失敗');
+      }
+    });
+  </script>
+
+</body>
+</html>
