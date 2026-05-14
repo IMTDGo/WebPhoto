@@ -156,13 +156,135 @@ function appendLoginLog(username, success) {
 const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
 const memUsers = new Map(); // username → { username, password, email }
 
-// ─── Email transporter (lazy creation) ──────────────────────────────────────
-function getMailTransport() {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) return null;
-  return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-  });
+// ─── Send OTP email ───────────────────────────────────────────────────────────
+// 優先順序：Brevo → Resend → SendGrid → Gmail SMTP (本機 fallback)
+async function sendOtpEmail(to, otp) {
+  const html = `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
+  const text = `您的驗證碼是：${otp}，10 分鐘內有效。`;
+
+  // ── Brevo HTTPS ───────────────────────────────────────────────────────────
+  if (process.env.BREVO_API_KEY) {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method:  'POST',
+      headers: {
+        'api-key':      process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM },
+        to:          [{ email: to }],
+        subject:     'WebPhoto 驗證碼',
+        htmlContent: html,
+        textContent: text
+      })
+    });
+    if (!r.ok) {
+      const errText = await r.text();
+      throw new Error(`Brevo ${r.status}: ${errText}`);
+    }
+    return;
+  }
+
+  // ── Resend HTTPS ──────────────────────────────────────────────────────────
+  if (process.env.RESEND_API_KEY) {
+    const r = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify({
+        from:    process.env.RESEND_FROM || 'WebPhoto <onboarding@resend.dev>',
+        to:      [to],
+        subject: 'WebPhoto 驗證碼',
+        text,
+        html
+      })
+    });
+    if (!r.ok) throw new Error(`Resend ${r.status}: ${await r.text()}`);
+    return;
+  }
+
+  // ── Gmail SMTP（本機開發 fallback）────────────────────────────────────────
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+    });
+    await transport.sendMail({
+      from: `"WebPhoto" <${process.env.GMAIL_USER}>`,
+      to, subject: 'WebPhoto 驗證碼', text, html
+    });
+    return;
+  }
+
+  throw new Error('NO_MAIL_SERVICE');
+}
+  const html = `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
+  const text = `您的驗證碼是：${otp}，10 分鐘內有效。`;
+
+  // ── Resend HTTPS ──────────────────────────────────────────────────────────
+  if (process.env.RESEND_API_KEY) {
+    const sgRes = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'WebPhoto <onboarding@resend.dev>',
+        to:   [to],
+        subject: 'WebPhoto 驗證碼',
+        text,
+        html
+      })
+    });
+    if (!sgRes.ok) {
+      const errText = await sgRes.text();
+      throw new Error(`Resend ${sgRes.status}: ${errText}`);
+    }
+    return;
+  }
+
+  // ── SendGrid HTTPS ────────────────────────────────────────────────────────
+  if (process.env.SENDGRID_API_KEY) {
+    const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SENDGRID_API_KEY}`,
+        'Content-Type':  'application/json'
+      },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to }] }],
+        from: { email: process.env.SENDGRID_FROM },
+        subject: 'WebPhoto 驗證碼',
+        content: [
+          { type: 'text/plain', value: text },
+          { type: 'text/html',  value: html }
+        ]
+      })
+    });
+    if (!sgRes.ok) {
+      const errText = await sgRes.text();
+      throw new Error(`SendGrid ${sgRes.status}: ${errText}`);
+    }
+    return;
+  }
+
+  // ── Gmail SMTP（本機開發 fallback）────────────────────────────────────────
+  if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    const transport = nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
+    });
+    await transport.sendMail({
+      from: `"WebPhoto" <${process.env.GMAIL_USER}>`,
+      to, subject: 'WebPhoto 驗證碼', text, html
+    });
+    return;
+  }
+
+  throw new Error('NO_MAIL_SERVICE');
 }
 
 // ─── Request handler ──────────────────────────────────────────────────────────
@@ -257,9 +379,6 @@ const server = http.createServer((req, res) => {
           if (emailUsed) return fail(409, '此 Gmail 已被註冊（測試模式）');
         }
 
-        const transport = getMailTransport();
-        if (!transport) return fail(503, '郵件服務未設定，請先在 .env 填入 GMAIL_USER 和 GMAIL_APP_PASSWORD');
-
         const hashedPassword = await bcrypt.hash(password, 12);
         const otp       = String(crypto.randomInt(100000, 1000000));
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -274,13 +393,13 @@ const server = http.createServer((req, res) => {
           memOtp.set(email, { username, password: hashedPassword, otp, expiresAt });
         }
 
-        await transport.sendMail({
-          from: `"WebPhoto" <${process.env.GMAIL_USER}>`,
-          to: email,
-          subject: 'WebPhoto 驗證碼',
-          text: `您的驗證碼是：${otp}，10 分鐘內有效。`,
-          html: `<p>您的 WebPhoto 驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`
-        });
+        try {
+          await sendOtpEmail(email, otp);
+          writeLastSent(); // 更新 keepalive 時間戳
+        } catch (mailErr) {
+          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, '郵件服務未設定，請聯繫管理員');
+          throw mailErr;
+        }
 
         console.log(`[register] OTP sent to ${email} for user "${username}" (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -389,4 +508,61 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`\nWebPhoto server running at http://localhost:${PORT}`);
   console.log(`Upload directory: ${UPLOAD_DIR}\n`);
+  checkBrevoKeepalive();
 });
+
+// ─── Brevo API key keepalive ──────────────────────────────────────────────────
+// 每次 server 啟動時檢查：若距離上次寄信已超過 89 天，自動寄一封保活信
+// 同時每 24 小時再檢查一次（以防 server 長時間不重啟）
+const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
+const KEEPALIVE_DAYS = 89;
+const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
+
+function readLastSent() {
+  try {
+    if (fs.existsSync(KEEPALIVE_FILE)) {
+      return new Date(fs.readFileSync(KEEPALIVE_FILE, 'utf8').trim());
+    }
+  } catch {}
+  return null;
+}
+
+function writeLastSent() {
+  try { fs.writeFileSync(KEEPALIVE_FILE, new Date().toISOString()); } catch {}
+}
+
+async function checkBrevoKeepalive() {
+  if (!process.env.BREVO_API_KEY || !KEEPALIVE_TO) return;
+
+  const last     = readLastSent();
+  const daysSince = last ? (Date.now() - last.getTime()) / 86400000 : Infinity;
+
+  if (daysSince >= KEEPALIVE_DAYS) {
+    try {
+      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method:  'POST',
+        headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM },
+          to:          [{ email: KEEPALIVE_TO }],
+          subject:     '[WebPhoto] 系統保活通知',
+          textContent: `此信由 WebPhoto 系統自動寄出以維持 Brevo API Key 活躍狀態。\n時間：${new Date().toISOString()}`
+        })
+      });
+      if (r.ok) {
+        writeLastSent();
+        console.log(`[keepalive] Brevo keepalive email sent to ${KEEPALIVE_TO}`);
+      } else {
+        console.warn('[keepalive] Failed:', await r.text());
+      }
+    } catch (e) {
+      console.warn('[keepalive] Error:', e.message);
+    }
+  } else {
+    console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
+  }
+
+  // 每 24 小時重新檢查一次
+  setTimeout(checkBrevoKeepalive, 24 * 60 * 60 * 1000);
+}
+
