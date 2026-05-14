@@ -194,11 +194,8 @@
       window.location.replace('./index.html');
     }
 
-    // ── API base URL ──────────────────────────────────────────────────────────
-    // 本機開發: 空字串 (呼叫同源 /login)
-    // GitHub Pages: 填入 Render 部署後的網址，例如:
-    //   'https://webphoto-xxxx.onrender.com'
-    const API_BASE = 'https://webphoto-lidl.onrender.com';
+    // ── API endpoint ───────────────────────────────────────────────────────
+    const LOGIN_URL = 'https://webphoto-lidl.onrender.com/login';
     const form       = document.getElementById('loginForm');
     const btnLogin   = document.getElementById('btnLogin');
     const btnCancel  = document.getElementById('btnCancel');
@@ -240,36 +237,27 @@
       btnLogin.disabled = true;
       btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
 
-      // 超過 4 秒還沒回應 → 提示冷啟動
+      // 超過 4 秒還沒回應 → 提示等待
       const coldStartTimer = setTimeout(() => {
-        showAlert('info', '⏳ 伺服器正在喚醒中，請稍候（最多約 60 秒）...');
+        showAlert('info', '⏳ 連線中，請稍候...');
       }, 4000);
 
-      // ── Client-side credential validation (works on GitHub Pages / static hosting) ──
-      function clientValidate(u, p) {
-        return u === '123456' && p === '123456';
-      }
-
       // ── Save token and redirect helper ──
-      function onLoginSuccess() {
-        if (rememberMe) {
-          localStorage.setItem('wp_auth', '1');
-        } else {
-          sessionStorage.setItem('wp_auth', '1');
-        }
-        showAlert('success', '✔ 登入成功，歡迎回來！');
+      function onLoginSuccess(data) {
+        const store = rememberMe ? localStorage : sessionStorage;
+        store.setItem('wp_auth', '1');
+        showAlert('success', '✔ ' + data.message);
         setTimeout(() => window.location.replace('./index.html'), 800);
       }
 
       try {
-        // Try server first (local dev — server logs to login_log.txt)
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 70000); // 70s — cover cold start
+        const timeout = setTimeout(() => controller.abort(), 70000);
 
-        const res = await fetch(`${API_BASE}/login`, {
+        const res = await fetch(LOGIN_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, rememberMe }),
+          body: JSON.stringify({ username, password }),
           signal: controller.signal
         });
         clearTimeout(timeout);
@@ -278,19 +266,14 @@
         const data = await res.json();
 
         if (data.ok) {
-          onLoginSuccess();
+          onLoginSuccess(data);
         } else {
-          showAlert('error', '✘ ' + data.message);
+          showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試'));
         }
 
       } catch (err) {
         clearTimeout(coldStartTimer);
-        // Server unavailable (GitHub Pages / static hosting) → fallback to client-side check
-        if (clientValidate(username, password)) {
-          onLoginSuccess();
-        } else {
-          showAlert('error', '✘ 帳號或密碼錯誤，請重試');
-        }
+        showAlert('error', '✘ 連線失敗，請稍後再試');
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';

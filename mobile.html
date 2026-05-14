@@ -36,8 +36,31 @@
   <div class="navbar bg-base-100/90 backdrop-blur shadow px-4 shrink-0 border-b border-base-content/10">
     <span class="text-lg font-black tracking-wide text-primary">WebPhoto Mobile</span>
     <div class="flex-1"></div>
+    <span id="navUsername" class="text-xs text-base-content/60 hidden mr-2"></span>
+    <button id="btnLogout" class="btn btn-xs btn-ghost text-error hidden mr-1">登出</button>
     <a href="desktop.html" class="btn btn-xs btn-ghost opacity-70">電腦版</a>
   </div>
+  <script>
+    (function () {
+      const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          const el = document.getElementById('navUsername');
+          el.textContent = '👤 ' + (user.name || user.id);
+          el.classList.remove('hidden');
+          document.getElementById('btnLogout').classList.remove('hidden');
+        } catch (e) {}
+      }
+      document.getElementById('btnLogout').addEventListener('click', () => {
+        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
+          localStorage.removeItem(k);
+          sessionStorage.removeItem(k);
+        });
+        window.location.replace('./login.html');
+      });
+    })();
+  </script>
 
   <main class="flex-1 relative overflow-hidden" style="min-height:0">
     <!-- Step 1: entry -->
