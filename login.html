@@ -201,10 +201,13 @@
     const btnCancel  = document.getElementById('btnCancel');
     const alertBox   = document.getElementById('alertBox');
 
-    // Cancel → go back or close
+    // Cancel → go back or redirect to Google
     btnCancel.addEventListener('click', () => {
-      if (history.length > 1) history.back();
-      else window.close();
+      if (history.length > 1) {
+        history.back();
+      } else {
+        window.location.href = 'https://www.google.com';
+      }
     });
 
     // Show alert helper
