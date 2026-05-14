@@ -171,7 +171,7 @@ async function sendOtpEmail(to, otp) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM },
+        sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
         to:          [{ email: to }],
         subject:     'WebPhoto 驗證碼',
         htmlContent: html,
@@ -341,8 +341,11 @@ const server = http.createServer((req, res) => {
       })
       .catch(err => {
         console.error('[register/send-otp]', err.message);
+        const msg = process.env.NODE_ENV !== 'production'
+          ? err.message
+          : '伺服器錯誤，請稍後再試';
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
+        res.end(JSON.stringify({ ok: false, message: msg }));
       });
     return;
   }
@@ -477,7 +480,7 @@ async function checkBrevoKeepalive() {
         method:  'POST',
         headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM },
+          sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
           to:          [{ email: KEEPALIVE_TO }],
           subject:     '[WebPhoto] 系統保活通知',
           textContent: `此信由 WebPhoto 系統自動寄出以維持 Brevo API Key 活躍狀態。\n時間：${new Date().toISOString()}`
