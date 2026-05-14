@@ -36,7 +36,21 @@ let currentCrop   = null;
 let generatedMaps = null;
 let _lastObjUrl   = null;
 
-// ── Preview update ────────────────────────────────────────────────────────────
+// ── Modal refs ────────────────────────────────────────────────────────────────
+const previewModal        = document.getElementById('previewModal');
+const btnPreviewModalClose   = document.getElementById('btnPreviewModalClose');
+const btnPreviewModalConfirm = document.getElementById('btnPreviewModalConfirm');
+const chkSendEmail        = document.getElementById('chkSendEmail');
+const sendEmailLabel      = document.getElementById('sendEmailLabel');
+
+// ── Show email checkbox only if user has email stored ─────────────────────────
+(function initEmailCheckbox() {
+  try {
+    const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const user = raw ? JSON.parse(raw) : null;
+    if (user?.email) sendEmailLabel?.classList.remove('hidden');
+  } catch {}
+})();
 function updatePreview() {
   if (!currentCrop?.img || !preview) return;
   preview.update(currentCrop);
@@ -181,10 +195,6 @@ uvScale.addEventListener('input', (e) => {
 });
 
 // ── Upload ────────────────────────────────────────────────────────────────────
-const previewModal           = document.getElementById('previewModal');
-const btnPreviewModalClose   = document.getElementById('btnPreviewModalClose');
-const btnPreviewModalConfirm = document.getElementById('btnPreviewModalConfirm');
-
 btnUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('\u8acb\u5148\u9078\u64c7\u5716\u7247', 'warning'); return; }
   const name = uploadNameInput.value.trim();
@@ -226,15 +236,39 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   const origHTML = btnUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> \u4e0a\u50b3\u4e2d... (${done}/${total})`;
+    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
   };
 
   try {
-    await uploadAllMaps(name, generatedMaps, onProgress);
-    showToast('\u4e0a\u50b3\u6210\u529f\uff01\u5171 6 \u500b\u901a\u9053', 'success');
+    const result = await uploadAllMaps(name, generatedMaps, onProgress);
+    showToast('上傳成功！共 6 個通道', 'success');
+
+    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
+    if (chkSendEmail?.checked) {
+      try {
+        const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+        const user = raw ? JSON.parse(raw) : null;
+        if (user?.email) {
+          const maps = {};
+          for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
+          const apiBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? `${location.protocol}//${location.host}`
+            : 'https://webphoto-lidl.onrender.com';
+          await fetch(`${apiBase}/send-upload-report`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: user.email, name, maps })
+          });
+          showToast('材質連結已寄至 ' + user.email, 'info');
+        }
+      } catch (mailErr) {
+        showToast('寄信失敗: ' + mailErr.message, 'warning');
+      }
+    }
+
     generatedMaps = null;
   } catch (err) {
-    showToast('\u4e0a\u50b3\u5931\u6557: ' + err.message, 'error');
+    showToast('上傳失敗: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;

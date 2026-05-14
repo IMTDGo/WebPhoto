@@ -250,9 +250,15 @@
           <span class="text-xs text-base-content/60">Normal</span>
         </div>
       </div>
-      <div class="modal-action">
-        <button class="btn btn-ghost" id="btnPreviewModalClose">取消</button>
-        <button class="btn btn-primary" id="btnPreviewModalConfirm">確認上傳</button>
+      <div class="modal-action flex-col items-stretch gap-3">
+        <label id="sendEmailLabel" class="flex items-center gap-2 text-sm text-base-content/70 cursor-pointer hidden">
+          <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
+          <span>📧 上傳完成後寄送材質連結至我的 Email</span>
+        </label>
+        <div class="flex justify-end gap-2">
+          <button class="btn btn-ghost" id="btnPreviewModalClose">取消</button>
+          <button class="btn btn-primary" id="btnPreviewModalConfirm">確認上傳</button>
+        </div>
       </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>

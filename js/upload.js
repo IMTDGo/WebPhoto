@@ -34,7 +34,7 @@ const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}
 async function _uploadCanvas(canvas, folder, suffix) {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   const fd = new FormData();
-  fd.append('file', blob);
+  fd.append('file', blob, `${folder}_${suffix}.png`);  // explicit filename fixes Cloudinary naming
   fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   fd.append('folder', folder);
   fd.append('public_id', `${folder}_${suffix}`);

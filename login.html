@@ -253,7 +253,7 @@
         const store = rememberMe ? localStorage : sessionStorage;
         store.setItem('wp_auth', '1');
         if (data.username) {
-          store.setItem('wp_user', JSON.stringify({ id: data.username, name: data.username }));
+          store.setItem('wp_user', JSON.stringify({ id: data.username, name: data.username, email: data.email || null }));
         }
         showAlert('success', '✔ ' + data.message);
         setTimeout(() => window.location.replace('./index.html'), 800);

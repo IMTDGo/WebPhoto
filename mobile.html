@@ -231,6 +231,10 @@
       <label class="label py-0"><span class="label-text">資料夾名稱</span></label>
       <input type="text" id="uploadName" placeholder="例如: wood_floor_01" class="input input-bordered w-full" maxlength="100" />
       <p class="text-xs text-base-content/40">6 個通道將上傳至同一資料夾</p>
+      <label id="sendEmailLabel" class="hidden flex items-center gap-2 text-sm text-base-content/60 cursor-pointer mt-1">
+        <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
+        <span>📧 上傳完成後寄送材質連結至我的 Email</span>
+      </label>
     </div>
     <div class="mt-4 grid grid-cols-2 gap-2">
       <button class="btn btn-ghost" id="btnCancelUpload">取消</button>

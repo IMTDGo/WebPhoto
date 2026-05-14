@@ -158,9 +158,10 @@ const memUsers = new Map(); // username → { username, password, email }
 
 // ─── Send OTP email ───────────────────────────────────────────────────────────
 // 優先順序：Brevo → Resend → SendGrid → Gmail SMTP (本機 fallback)
-async function sendOtpEmail(to, otp) {
-  const html = `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
-  const text = `您的驗證碼是：${otp}，10 分鐘內有效。`;
+async function sendOtpEmail(to, otp, custom = null) {
+  const subject = custom?.subject || 'WebPhoto 驗證碼';
+  const html    = custom?.html    || `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
+  const text    = custom?.text    || `您的驗證碼是：${otp}，10 分鐘內有效。`;
 
   // ── Brevo HTTPS ───────────────────────────────────────────────────────────
   if (process.env.BREVO_API_KEY) {
@@ -173,7 +174,7 @@ async function sendOtpEmail(to, otp) {
       body: JSON.stringify({
         sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
         to:          [{ email: to }],
-        subject:     'WebPhoto 驗證碼',
+        subject:     subject,
         htmlContent: html,
         textContent: text
       })
@@ -196,7 +197,7 @@ async function sendOtpEmail(to, otp) {
       body: JSON.stringify({
         from:    process.env.RESEND_FROM || 'WebPhoto <onboarding@resend.dev>',
         to:      [to],
-        subject: 'WebPhoto 驗證碼',
+        subject,
         text,
         html
       })
@@ -213,7 +214,7 @@ async function sendOtpEmail(to, otp) {
     });
     await transport.sendMail({
       from: `"WebPhoto" <${process.env.GMAIL_USER}>`,
-      to, subject: 'WebPhoto 驗證碼', text, html
+      to, subject, text, html
     });
     return;
   }
@@ -246,12 +247,14 @@ const server = http.createServer((req, res) => {
         const password = String(body.password || '');
 
         let success = false;
+        let userEmail = null;
 
         if (mongoose.connection.readyState === 1) {
           // ── MongoDB path ─────────────────────────────────────────────────
           const user = await User.findOne({ username }).lean();
           if (user) {
             success = await bcrypt.compare(password, user.password);
+            if (success) userEmail = user.email || null;
           }
         } else {
           // ── Fallback: no DB ──────────────────────────────────────────────
@@ -270,7 +273,7 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
           success
-            ? { ok: true,  message: '登入成功，歡迎回來！', username }
+            ? { ok: true,  message: '登入成功，歡迎回來！', username, email: userEmail }
             : { ok: false, message: '帳號或密碼錯誤，請重試' }
         ));
       })
@@ -400,6 +403,57 @@ const server = http.createServer((req, res) => {
         console.error('[register/verify]', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
+      });
+    return;
+  }
+
+  // ── POST /send-upload-report ───────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/send-upload-report') {
+    readJsonBody(req)
+      .then(async body => {
+        const email  = String(body.email  || '').trim().toLowerCase();
+        const name   = String(body.name   || '').trim();
+        const maps   = body.maps; // { basecolor: url, roughness: url, ... }
+
+        if (!email || !name || !maps || typeof maps !== 'object') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: '缺少必要欄位' }));
+          return;
+        }
+
+        const CHANNEL_LABELS = {
+          basecolor: 'Base Color',
+          roughness: 'Roughness',
+          ao:        'Ambient Occlusion',
+          height:    'Height',
+          metallic:  'Metallic',
+          normal:    'Normal'
+        };
+
+        const rows = Object.entries(maps).map(([ch, url]) => {
+          const label = CHANNEL_LABELS[ch] || ch;
+          return `<tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">${label}</td><td style="padding:6px 12px"><a href="${url}" style="color:#60a5fa">${name}_${ch}</a></td></tr>`;
+        }).join('');
+
+        const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
+<h2 style="margin:0 0 4px">📦 ${name}</h2>
+<p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto 材質貼圖上傳完成</p>
+<table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden">
+<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">下載連結</th></tr></thead>
+<tbody>${rows}</tbody></table>
+<p style="color:#374151;font-size:11px;margin-top:16px">此信由 WebPhoto 系統自動寄出</p></div>`;
+
+        const text = Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
+
+        await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} 上傳完成`, html, text });
+        console.log(`[upload-report] Sent to ${email} for "${name}"`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      })
+      .catch(err => {
+        console.error('[upload-report]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: err.message }));
       });
     return;
   }

@@ -43,6 +43,14 @@ const lockIconOpen     = document.getElementById('lockIconOpen');
 const lockLabel        = document.getElementById('lockLabel');
 
 // ── State ─────────────────────────────────────────────────────────────────────
+// Show email checkbox only if user has email stored
+(function () {
+  try {
+    const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const user = raw ? JSON.parse(raw) : null;
+    if (user?.email) document.getElementById('sendEmailLabel')?.classList.remove('hidden');
+  } catch {}
+})();
 let cropEditor      = null;
 let preview         = null;
 let currentCrop     = null;
@@ -332,10 +340,35 @@ btnConfirmUpload.addEventListener('click', async () => {
   };
 
   try {
-    await uploadAllMaps(name, generatedMaps, onProgress);
+    const result = await uploadAllMaps(name, generatedMaps, onProgress);
     closeUploadSheet();
-    generatedMaps = null;
     showToast('上傳成功！共 6 個通道', 'success');
+
+    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
+    const chkSendEmail = document.getElementById('chkSendEmail');
+    if (chkSendEmail?.checked) {
+      try {
+        const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+        const user = raw ? JSON.parse(raw) : null;
+        if (user?.email) {
+          const maps = {};
+          for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
+          const apiBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? `${location.protocol}//${location.host}`
+            : 'https://webphoto-lidl.onrender.com';
+          await fetch(`${apiBase}/send-upload-report`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ email: user.email, name, maps })
+          });
+          showToast('材質連結已寄至 ' + user.email, 'info');
+        }
+      } catch (mailErr) {
+        showToast('寄信失敗: ' + mailErr.message, 'warning');
+      }
+    }
+
+    generatedMaps = null;
     showStep('entry');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
