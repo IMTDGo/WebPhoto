@@ -48,7 +48,9 @@ export class CropEditor {
 
   /** Load a new image and reset the crop box. */
   load(img) {
-    this.img = img;
+    this.img   = img;
+    this._drag  = null;   // discard any stale pointer state
+    this._pinch = null;
     this._fitCanvas();
     this._resetCrop();
     this._draw();
@@ -270,6 +272,7 @@ export class CropEditor {
         e.preventDefault();
         this._onPointerDown(e.touches[0].clientX, e.touches[0].clientY, e);
       } else if (e.touches.length === 2) {
+        this._drag = null;   // cancel any single-finger drag before entering pinch
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         this._pinch = { startDist: Math.hypot(dx, dy), startW: this.cropW, startH: this.cropH };

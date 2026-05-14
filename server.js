@@ -28,6 +28,14 @@ const mongoose  = require('mongoose');
 const bcrypt    = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const crypto    = require('crypto');
+const AdmZip    = require('adm-zip');
+
+// ─── In-memory ZIP store (TTL 24 h) ──────────────────────────────────────────
+const zipStore = new Map(); // id → { name, buffer, createdAt }
+setInterval(() => {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [id, e] of zipStore) { if (e.createdAt < cutoff) zipStore.delete(id); }
+}, 60 * 60 * 1000).unref();
 
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
@@ -430,31 +438,86 @@ const server = http.createServer((req, res) => {
           normal:    'Normal'
         };
 
+        // ── Build ZIP from Cloudinary URLs ───────────────────────────────
+        let zipUrl = null;
+        try {
+          const zip = new AdmZip();
+          const fetches = await Promise.allSettled(
+            Object.entries(maps).map(async ([ch, url]) => {
+              const r = await fetch(url);
+              if (!r.ok) throw new Error(`HTTP ${r.status} for ${ch}`);
+              const buf = Buffer.from(await r.arrayBuffer());
+              return { ch, buf };
+            })
+          );
+          for (const r of fetches) {
+            if (r.status === 'fulfilled') {
+              zip.addFile(`${name}_${r.value.ch}.png`, r.value.buf);
+            } else {
+              console.warn(`[upload-report] ZIP fetch failed: ${r.reason?.message}`);
+            }
+          }
+          const zipBuffer = zip.toBuffer();
+          const zipId     = crypto.randomUUID();
+          zipStore.set(zipId, { name, buffer: zipBuffer, createdAt: Date.now() });
+          const serverUrl = (process.env.SERVER_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+          zipUrl = `${serverUrl}/download-zip/${zipId}`;
+          console.log(`[upload-report] ZIP ready: ${zipId} (${(zipBuffer.length / 1024).toFixed(0)} KB)`);
+        } catch (zipErr) {
+          console.error('[upload-report] ZIP build failed:', zipErr.message);
+        }
+
         const rows = Object.entries(maps).map(([ch, url]) => {
           const label = CHANNEL_LABELS[ch] || ch;
           return `<tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">${label}</td><td style="padding:6px 12px"><a href="${url}" style="color:#60a5fa">${name}_${ch}</a></td></tr>`;
         }).join('');
 
+        const zipButton = zipUrl
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ 一鍵下載全部 ZIP（24 小時有效）</a></div>`
+          : '';
+
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
 <h2 style="margin:0 0 4px">📦 ${name}</h2>
 <p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto 材質貼圖上傳完成</p>
-<table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden">
-<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">下載連結</th></tr></thead>
+${zipButton}
+<table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden;margin-top:16px">
+<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">個別下載</th></tr></thead>
 <tbody>${rows}</tbody></table>
 <p style="color:#374151;font-size:11px;margin-top:16px">此信由 WebPhoto 系統自動寄出</p></div>`;
 
-        const text = Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
+        const text = (zipUrl ? `下載全部 ZIP：${zipUrl}\n\n` : '') +
+          Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
 
         await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} 上傳完成`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
+        res.end(JSON.stringify({ ok: true, zipUrl }));
       })
       .catch(err => {
         console.error('[upload-report]', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: err.message }));
       });
+    return;
+  }
+
+  // ── GET /download-zip/:id ─────────────────────────────────────────────────
+  if (req.method === 'GET' && rawUrl.startsWith('/download-zip/')) {
+    const id    = rawUrl.slice('/download-zip/'.length).split('?')[0];
+    const entry = zipStore.get(id);
+    if (!entry) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('ZIP 已過期或不存在（有效期 24 小時）');
+      return;
+    }
+    const filename = encodeURIComponent(`${entry.name}_textures.zip`);
+    res.writeHead(200, {
+      'Content-Type':        'application/zip',
+      'Content-Disposition': `attachment; filename*=UTF-8''${filename}`,
+      'Content-Length':       entry.buffer.length,
+      'Cache-Control':       'no-store',
+    });
+    res.end(entry.buffer);
     return;
   }
 

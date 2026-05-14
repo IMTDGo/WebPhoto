@@ -41,6 +41,11 @@ const btnAspectLock    = document.getElementById('btnAspectLock');
 const lockIconClosed   = document.getElementById('lockIconClosed');
 const lockIconOpen     = document.getElementById('lockIconOpen');
 const lockLabel        = document.getElementById('lockLabel');
+const enableSeamless   = document.getElementById('enableSeamless');
+const seamBlendWidth   = document.getElementById('seamBlendWidth');
+const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
+const poissonIter      = document.getElementById('poissonIter');
+const poissonIterVal   = document.getElementById('poissonIterVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 // Show email checkbox only if user has email stored
@@ -54,8 +59,10 @@ const lockLabel        = document.getElementById('lockLabel');
 let cropEditor      = null;
 let preview         = null;
 let currentCrop     = null;
-let generatedMaps   = null;   // { basecolor, roughness, ao, height, metallic, normal } canvases
+let generatedMaps   = null;
 let cameraStream    = null;
+let seamlessEnabled = false;
+let seamlessParams  = { seamBlendWidth: 0.15, iterations: 80 };
 
 
 // ── Initialise editors ────────────────────────────────────────────────────────
@@ -100,6 +107,30 @@ function initEditors() {
     cropEditor?.setAspectLock(locked);
     _updateLockUI(locked);
     if (currentCrop) currentCrop = cropEditor.getCrop();
+  });
+
+  // Seamless controls
+  function _applySeamlessToPreview() {
+    if (!preview || !currentCrop) return;
+    preview.seamlessEnabled = seamlessEnabled;
+    preview.params = { ...seamlessParams };
+    preview.update(currentCrop);
+  }
+  enableSeamless?.addEventListener('change', () => {
+    seamlessEnabled = enableSeamless.checked;
+    _applySeamlessToPreview();
+  });
+  seamBlendWidth?.addEventListener('input', () => {
+    const pct = parseInt(seamBlendWidth.value);
+    if (seamBlendWidthVal) seamBlendWidthVal.textContent = pct + '%';
+    seamlessParams.seamBlendWidth = pct / 100;
+    if (seamlessEnabled) _applySeamlessToPreview();
+  });
+  poissonIter?.addEventListener('input', () => {
+    const n = parseInt(poissonIter.value);
+    if (poissonIterVal) poissonIterVal.textContent = n;
+    seamlessParams.iterations = n;
+    if (seamlessEnabled) _applySeamlessToPreview();
   });
 }
 
@@ -305,7 +336,8 @@ btnShowUpload.addEventListener('click', async () => {
   genOverlay.classList.remove('hidden');
   try {
     const outSize = parseInt(uploadResolution?.value || '1024');
-    generatedMaps = await generateChannels(currentCrop, null, outSize);
+    const params  = seamlessEnabled ? { ...seamlessParams } : null;
+    generatedMaps = await generateChannels(currentCrop, params, outSize);
     paintPreviewThumbnails(generatedMaps);
     showStep('preview');
   } catch (err) {

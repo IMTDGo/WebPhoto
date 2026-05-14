@@ -28,11 +28,19 @@ const lockIconOpen    = document.getElementById('lockIconOpen');
 const lockLabel       = document.getElementById('lockLabel');
 const uvScale         = document.getElementById('uvScale');
 const uvScaleVal      = document.getElementById('uvScaleVal');
+const seamlessPanel   = document.getElementById('seamlessPanel');
+const enableSeamless  = document.getElementById('enableSeamless');
+const seamBlendWidth  = document.getElementById('seamBlendWidth');
+const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
+const poissonIter     = document.getElementById('poissonIter');
+const poissonIterVal  = document.getElementById('poissonIterVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let cropEditor    = null;
 let preview       = null;
 let currentCrop   = null;
+let seamlessParams = { seamBlendWidth: 0.15, iterations: 80 };
+let seamlessEnabled = false;
 let generatedMaps = null;
 let _lastObjUrl   = null;
 
@@ -136,6 +144,7 @@ async function loadImage(file) {
   document.getElementById('infoSize').textContent = `${img.width} \u00d7 ${img.height}`;
   imageInfo.classList.remove('hidden');
   cropPanel.classList.remove('hidden');
+  seamlessPanel.classList.remove('hidden');
   rightCropPanel.style.display = '';
   previewSection.style.display = '';
   uploadPanel.classList.remove('hidden');
@@ -153,6 +162,33 @@ dropZone.addEventListener('drop', (e) => {
   const file = e.dataTransfer.files[0];
   if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
   else showToast('\u8acb\u62d6\u653e\u5716\u7247\u6a94\u6848', 'error');
+});
+
+// ── Seamless controls ──────────────────────────────────────────────────────────────────
+function _applySeamlessToPreview() {
+  if (!preview || !currentCrop) return;
+  preview.seamlessEnabled = seamlessEnabled;
+  preview.params = { ...seamlessParams };
+  preview.update(currentCrop);
+}
+
+enableSeamless.addEventListener('change', () => {
+  seamlessEnabled = enableSeamless.checked;
+  _applySeamlessToPreview();
+});
+
+seamBlendWidth.addEventListener('input', () => {
+  const pct = parseInt(seamBlendWidth.value);
+  seamBlendWidthVal.textContent = pct + '%';
+  seamlessParams.seamBlendWidth = pct / 100;
+  if (seamlessEnabled) _applySeamlessToPreview();
+});
+
+poissonIter.addEventListener('input', () => {
+  const n = parseInt(poissonIter.value);
+  poissonIterVal.textContent = n;
+  seamlessParams.iterations = n;
+  if (seamlessEnabled) _applySeamlessToPreview();
 });
 
 // ── Aspect ratio lock ─────────────────────────────────────────────────────────
@@ -200,13 +236,14 @@ btnUpload.addEventListener('click', async () => {
   const name = uploadNameInput.value.trim();
   if (!name) { showToast('\u8acb\u8f38\u5165\u540d\u7a31', 'warning'); return; }
   const outSize = parseInt(uploadResolution?.value || '1024');
+  const params  = seamlessEnabled ? { ...seamlessParams } : null;
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
   btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> \u751f\u6210\u901a\u9053...';
 
   try {
-    generatedMaps = await generateChannels(currentCrop, null, outSize, cropEditor?.aspectLocked ?? true);
+    generatedMaps = await generateChannels(currentCrop, params, outSize, cropEditor?.aspectLocked ?? true);
     for (const [key, canvas] of Object.entries(generatedMaps)) {
       const el = document.getElementById(`modalCh_${key}`);
       if (!el) continue;
