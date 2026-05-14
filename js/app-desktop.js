@@ -30,17 +30,15 @@ const uvScale         = document.getElementById('uvScale');
 const uvScaleVal      = document.getElementById('uvScaleVal');
 const seamlessPanel   = document.getElementById('seamlessPanel');
 const enableSeamless  = document.getElementById('enableSeamless');
-const seamBlendWidth  = document.getElementById('seamBlendWidth');
+const seamBlendWidth    = document.getElementById('seamBlendWidth');
 const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
-const poissonIter     = document.getElementById('poissonIter');
-const poissonIterVal  = document.getElementById('poissonIterVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let cropEditor    = null;
 let preview       = null;
 let currentCrop   = null;
 let seamlessParams = { seamBlendWidth: 0.15, iterations: 80 };
-let seamlessEnabled = false;
+let seamlessEnabled = true;
 let generatedMaps = null;
 let _lastObjUrl   = null;
 
@@ -134,6 +132,8 @@ async function loadImage(file) {
       displaySize: 1024,
       gridSize: parseInt(uvScale.value) || 3,
     });
+    preview.seamlessEnabled = seamlessEnabled;
+    preview.params = { ...seamlessParams };
   }
 
   cropEditor.load(img);
@@ -184,12 +184,6 @@ seamBlendWidth.addEventListener('input', () => {
   if (seamlessEnabled) _applySeamlessToPreview();
 });
 
-poissonIter.addEventListener('input', () => {
-  const n = parseInt(poissonIter.value);
-  poissonIterVal.textContent = n;
-  seamlessParams.iterations = n;
-  if (seamlessEnabled) _applySeamlessToPreview();
-});
 
 // ── Aspect ratio lock ─────────────────────────────────────────────────────────
 function _updateResolutionLabels(locked) {

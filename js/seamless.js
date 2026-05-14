@@ -148,8 +148,8 @@ function poissonSmooth(px, W, H, iters) {
  * @returns {HTMLCanvasElement}
  */
 // Maximum pixel dimension used for the Poisson solve.
-// Crops larger than this are downscaled before solving to avoid O(n²) cost.
-const MAX_SOLVE = 512;
+// 256 keeps each solve under ~100ms even on slow devices.
+const MAX_SOLVE = 256;
 
 function _prepSolveCanvas(srcCanvas) {
   const W = srcCanvas.width, H = srcCanvas.height;
@@ -211,15 +211,107 @@ export function applyEdgeBlendOnly(srcCanvas, outSize, params = DEFAULT_PARAMS) 
   return out;
 }
 
-// ── Async Poisson via Web Worker ──────────────────────────────────────────────
+// ── Async Poisson via inline Blob Worker ──────────────────────────────────────
+// Inlining the worker as a Blob eliminates all file-serving / CORS / URL
+// resolution issues that can silently hang Promises when a Worker fails to load.
+
+const _workerSrc = `
+function smoothstep(t){t=t<0?0:t>1?1:t;return t*t*(3-2*t);}
+
+function makeEdgeBlended(px,W,H,pct){
+  const buf=new Float32Array(px.length);
+  for(let i=0;i<px.length;i++)buf[i]=px[i];
+  const bx=Math.max(1,Math.round(W*pct));
+  const by=Math.max(1,Math.round(H*pct));
+  for(let y=0;y<H;y++){
+    for(let d=0;d<bx;d++){
+      const t=smoothstep(1-d/bx);
+      const li=(y*W+d)*4,ri=(y*W+(W-1-d))*4;
+      for(let c=0;c<3;c++){
+        buf[li+c]=px[li+c]*(1-t)+px[ri+c]*t;
+        buf[ri+c]=px[ri+c]*(1-t)+px[li+c]*t;
+      }
+    }
+  }
+  for(let x=0;x<W;x++){
+    for(let d=0;d<by;d++){
+      const t=smoothstep(1-d/by);
+      const ti=(d*W+x)*4,bi=((H-1-d)*W+x)*4;
+      for(let c=0;c<3;c++){
+        const tv=buf[ti+c],bv=buf[bi+c];
+        buf[ti+c]=tv*(1-t)+bv*t;
+        buf[bi+c]=bv*(1-t)+tv*t;
+      }
+    }
+  }
+  return buf;
+}
+
+function poissonSmooth(px,W,H,iters){
+  const N=W*H;
+  function idx(x,y){return((y+H)%H)*W+((x+W)%W);}
+  const rhs=new Float32Array(N*3);
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i=idx(x,y);
+      for(let c=0;c<3;c++){
+        const v=px[i*4+c];
+        rhs[i*3+c]=(px[idx(x+1,y)*4+c]-v)-(v-px[idx(x-1,y)*4+c])
+                  +(px[idx(x,y+1)*4+c]-v)-(v-px[idx(x,y-1)*4+c]);
+      }
+    }
+  }
+  const u=new Float32Array(N*3);
+  for(let i=0;i<N;i++)for(let c=0;c<3;c++)u[i*3+c]=px[i*4+c];
+  for(let iter=0;iter<iters;iter++){
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const i=idx(x,y),ir=idx(x+1,y),il=idx(x-1,y),id=idx(x,y+1),iu=idx(x,y-1);
+        for(let c=0;c<3;c++)
+          u[i*3+c]=(u[ir*3+c]+u[il*3+c]+u[id*3+c]+u[iu*3+c]-rhs[i*3+c])*0.25;
+      }
+    }
+  }
+  const ms=[0,0,0],mu=[0,0,0];
+  for(let i=0;i<N;i++)for(let c=0;c<3;c++){ms[c]+=px[i*4+c];mu[c]+=u[i*3+c];}
+  for(let c=0;c<3;c++){ms[c]/=N;mu[c]/=N;}
+  const out=new Uint8ClampedArray(N*4);
+  for(let i=0;i<N;i++){
+    for(let c=0;c<3;c++)
+      out[i*4+c]=Math.max(0,Math.min(255,Math.round(u[i*3+c]+(ms[c]-mu[c]))));
+    out[i*4+3]=px[i*4+3];
+  }
+  return out;
+}
+
+self.onmessage=({data})=>{
+  const{id,pixels,W,H,seamBlendWidth,iterations}=data;
+  const px=new Uint8ClampedArray(pixels);
+  const blended=makeEdgeBlended(px,W,H,seamBlendWidth);
+  const result=poissonSmooth(blended,W,H,iterations);
+  self.postMessage({id,result:result.buffer},[result.buffer]);
+};
+`;
 
 let   _worker   = null;
 let   _latestId = 0;
 const _pending  = new Map(); // id → { resolve, outSize, sW, sH }
 
+function _resolveAllPending(value) {
+  for (const [pid, entry] of _pending) {
+    _pending.delete(pid);
+    entry.resolve(value);
+  }
+}
+
 function _ensureWorker() {
   if (_worker) return _worker;
-  _worker = new Worker(new URL('./seamlessWorker.js', import.meta.url));
+
+  const blob = new Blob([_workerSrc], { type: 'application/javascript' });
+  const url  = URL.createObjectURL(blob);
+  _worker    = new Worker(url);
+  URL.revokeObjectURL(url);
+
   _worker.addEventListener('message', ({ data: { id, result } }) => {
     const entry = _pending.get(id);
     _pending.delete(id);
@@ -237,13 +329,22 @@ function _ensureWorker() {
     out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
     resolve(out);
   });
+
+  // If the worker crashes, unblock all callers with null and reset so
+  // the next call will create a fresh worker.
+  _worker.addEventListener('error', (e) => {
+    console.error('[seamlessWorker] error:', e.message || e);
+    _resolveAllPending(null);
+    _worker = null;
+  });
+
   return _worker;
 }
 
 /**
- * Async version — runs the Poisson solve in a Web Worker.
+ * Async Poisson seamless — runs in an inline Blob Worker.
  * Returns Promise<HTMLCanvasElement|null>.
- * If a newer call arrives before this one completes, resolves with null.
+ * null means the call was superseded by a newer one (safe to ignore).
  *
  * @param {HTMLCanvasElement} srcCanvas
  * @param {number}            outSize
@@ -253,19 +354,16 @@ function _ensureWorker() {
 export function applySeamlessAsync(srcCanvas, outSize, params = DEFAULT_PARAMS) {
   const { seamBlendWidth, iterations } = params;
 
-  // Downscale on the main thread (canvas API not available in worker)
+  // Downscale on the main thread (canvas API not available in Worker)
   const solve = _prepSolveCanvas(srcCanvas);
   const sW = solve.width, sH = solve.height;
   const srcPx = solve.getContext('2d').getImageData(0, 0, sW, sH).data;
 
-  // Cancel all pending — only the latest result matters
-  for (const [pid, entry] of _pending) {
-    _pending.delete(pid);
-    entry.resolve(null);
-  }
+  // Cancel all in-flight requests — only the latest result matters
+  _resolveAllPending(null);
 
-  const id      = ++_latestId;
-  const pixBuf  = new Uint8ClampedArray(srcPx).buffer; // copy for transfer
+  const id     = ++_latestId;
+  const pixBuf = new Uint8ClampedArray(srcPx).buffer; // copy for transfer
 
   return new Promise((resolve) => {
     _pending.set(id, { resolve, outSize, sW, sH });

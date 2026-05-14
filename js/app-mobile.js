@@ -44,8 +44,6 @@ const lockLabel        = document.getElementById('lockLabel');
 const enableSeamless   = document.getElementById('enableSeamless');
 const seamBlendWidth   = document.getElementById('seamBlendWidth');
 const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
-const poissonIter      = document.getElementById('poissonIter');
-const poissonIterVal   = document.getElementById('poissonIterVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 // Show email checkbox only if user has email stored
@@ -61,7 +59,7 @@ let preview         = null;
 let currentCrop     = null;
 let generatedMaps   = null;
 let cameraStream    = null;
-let seamlessEnabled = false;
+let seamlessEnabled = true;
 let seamlessParams  = { seamBlendWidth: 0.15, iterations: 80 };
 
 
@@ -79,6 +77,8 @@ function initEditors() {
   });
 
   preview = new PatternPreview(previewCanvas, { displaySize: 512, gridSize: 3 });
+  preview.seamlessEnabled = seamlessEnabled;
+  preview.params = { ...seamlessParams };
 
   previewGridSlider.addEventListener('input', (e) => {
     const n = parseInt(e.target.value);
@@ -124,12 +124,6 @@ function initEditors() {
     const pct = parseInt(seamBlendWidth.value);
     if (seamBlendWidthVal) seamBlendWidthVal.textContent = pct + '%';
     seamlessParams.seamBlendWidth = pct / 100;
-    if (seamlessEnabled) _applySeamlessToPreview();
-  });
-  poissonIter?.addEventListener('input', () => {
-    const n = parseInt(poissonIter.value);
-    if (poissonIterVal) poissonIterVal.textContent = n;
-    seamlessParams.iterations = n;
     if (seamlessEnabled) _applySeamlessToPreview();
   });
 }
