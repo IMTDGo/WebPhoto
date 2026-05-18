@@ -76,9 +76,9 @@ function initEditors() {
   preview = new PatternPreview(previewCanvas, { displaySize: 1024, gridSize: 3, fitMode: 'width' });
 
   previewGridSlider.addEventListener('input', (e) => {
-    const zoom = parseInt(e.target.value);      // 1 = zoomed out, 10 = zoomed in
+    const zoom = parseInt(e.target.value);      // 1 = 1 tile (original), 10 = zoomed out
     previewGridVal.textContent = zoom;
-    preview.setGridSize(Math.max(1, 11 - zoom)); // invert: zoom 8 → gridSize 3
+    preview.setGridSize(zoom);
   });
 
   // Aspect ratio lock
