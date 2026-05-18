@@ -4,7 +4,7 @@
 
 import { CropEditor }     from './crop-editor.js';
 import { PatternPreview } from './preview.js';
-import { generateChannels, uploadAllMaps } from './upload.js';
+import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }      from './toast.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -26,37 +26,17 @@ const btnAspectLock   = document.getElementById('btnAspectLock');
 const lockIconClosed  = document.getElementById('lockIconClosed');
 const lockIconOpen    = document.getElementById('lockIconOpen');
 const lockLabel       = document.getElementById('lockLabel');
+
 const uvScale         = document.getElementById('uvScale');
 const uvScaleVal      = document.getElementById('uvScaleVal');
-const seamlessPanel   = document.getElementById('seamlessPanel');
-const enableSeamless  = document.getElementById('enableSeamless');
-const seamBlendWidth    = document.getElementById('seamBlendWidth');
-const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
 
-// ── State ─────────────────────────────────────────────────────────────────────
+// ── State ───────────────────────────────────────────────────────────────────
 let cropEditor    = null;
 let preview       = null;
 let currentCrop   = null;
-let seamlessParams = { seamBlendWidth: 0.15, iterations: 80 };
-let seamlessEnabled = true;
-let generatedMaps = null;
 let _lastObjUrl   = null;
 
-// ── Modal refs ────────────────────────────────────────────────────────────────
-const previewModal        = document.getElementById('previewModal');
-const btnPreviewModalClose   = document.getElementById('btnPreviewModalClose');
-const btnPreviewModalConfirm = document.getElementById('btnPreviewModalConfirm');
-const chkSendEmail        = document.getElementById('chkSendEmail');
-const sendEmailLabel      = document.getElementById('sendEmailLabel');
 
-// ── Show email checkbox only if user has email stored ─────────────────────────
-(function initEmailCheckbox() {
-  try {
-    const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-    const user = raw ? JSON.parse(raw) : null;
-    if (user?.email) sendEmailLabel?.classList.remove('hidden');
-  } catch {}
-})();
 function updatePreview() {
   if (!currentCrop?.img || !preview) return;
   preview.update(currentCrop);
@@ -132,8 +112,6 @@ async function loadImage(file) {
       displaySize: 1024,
       gridSize: parseInt(uvScale.value) || 3,
     });
-    preview.seamlessEnabled = seamlessEnabled;
-    preview.params = { ...seamlessParams };
   }
 
   cropEditor.load(img);
@@ -144,7 +122,6 @@ async function loadImage(file) {
   document.getElementById('infoSize').textContent = `${img.width} \u00d7 ${img.height}`;
   imageInfo.classList.remove('hidden');
   cropPanel.classList.remove('hidden');
-  seamlessPanel.classList.remove('hidden');
   rightCropPanel.style.display = '';
   previewSection.style.display = '';
   uploadPanel.classList.remove('hidden');
@@ -163,27 +140,6 @@ dropZone.addEventListener('drop', (e) => {
   if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
   else showToast('\u8acb\u62d6\u653e\u5716\u7247\u6a94\u6848', 'error');
 });
-
-// ── Seamless controls ──────────────────────────────────────────────────────────────────
-function _applySeamlessToPreview() {
-  if (!preview || !currentCrop) return;
-  preview.seamlessEnabled = seamlessEnabled;
-  preview.params = { ...seamlessParams };
-  preview.update(currentCrop);
-}
-
-enableSeamless.addEventListener('change', () => {
-  seamlessEnabled = enableSeamless.checked;
-  _applySeamlessToPreview();
-});
-
-seamBlendWidth.addEventListener('input', () => {
-  const pct = parseInt(seamBlendWidth.value);
-  seamBlendWidthVal.textContent = pct + '%';
-  seamlessParams.seamBlendWidth = pct / 100;
-  if (seamlessEnabled) _applySeamlessToPreview();
-});
-
 
 // ── Aspect ratio lock ─────────────────────────────────────────────────────────
 function _updateResolutionLabels(locked) {
@@ -226,76 +182,19 @@ uvScale.addEventListener('input', (e) => {
 
 // ── Upload ────────────────────────────────────────────────────────────────────
 btnUpload.addEventListener('click', async () => {
-  if (!currentCrop) { showToast('\u8acb\u5148\u9078\u64c7\u5716\u7247', 'warning'); return; }
+  if (!currentCrop) { showToast('請先選取圖片', 'warning'); return; }
   const name = uploadNameInput.value.trim();
-  if (!name) { showToast('\u8acb\u8f38\u5165\u540d\u7a31', 'warning'); return; }
+  if (!name) { showToast('請輸入名稱', 'warning'); return; }
   const outSize = parseInt(uploadResolution?.value || '1024');
-  const params  = seamlessEnabled ? { ...seamlessParams } : null;
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
-  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> \u751f\u6210\u901a\u9053...';
+  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
 
   try {
-    generatedMaps = await generateChannels(currentCrop, params, outSize, cropEditor?.aspectLocked ?? true);
-    for (const [key, canvas] of Object.entries(generatedMaps)) {
-      const el = document.getElementById(`modalCh_${key}`);
-      if (!el) continue;
-      el.width  = canvas.width;
-      el.height = canvas.height;
-      el.getContext('2d').drawImage(canvas, 0, 0);
-      el.style.width  = '100%';
-      el.style.height = 'auto';
-    }
-    previewModal.showModal();
-  } catch (err) {
-    showToast('\u901a\u9053\u751f\u6210\u5931\u6557: ' + err.message, 'error');
-  } finally {
-    btnUpload.disabled = false;
-    btnUpload.innerHTML = origHTML;
-  }
-});
-
-btnPreviewModalClose.addEventListener('click', () => previewModal.close());
-
-btnPreviewModalConfirm.addEventListener('click', async () => {
-  const name = uploadNameInput.value.trim();
-  if (!generatedMaps) return;
-  previewModal.close();
-
-  btnUpload.disabled = true;
-  const origHTML = btnUpload.innerHTML;
-
-  const onProgress = (done, total) => {
-    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
-  };
-
-  try {
-    const result = await uploadAllMaps(name, generatedMaps, onProgress);
-    showToast('上傳成功！共 6 個通道', 'success');
-
-    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
-    if (chkSendEmail?.checked) {
-      try {
-        const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-        const user = raw ? JSON.parse(raw) : null;
-        if (user?.email) {
-          const maps = {};
-          for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
-          const apiBase = window.__API_BASE__;
-          await fetch(`${apiBase}/send-upload-report`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: user.email, name, maps })
-          });
-          showToast('材質連結已寄至 ' + user.email, 'info');
-        }
-      } catch (mailErr) {
-        showToast('寄信失敗: ' + mailErr.message, 'warning');
-      }
-    }
-
-    generatedMaps = null;
+    const canvas = getCropCanvas(currentCrop, outSize, cropEditor?.aspectLocked ?? true);
+    await uploadSingleImage(name, canvas);
+    showToast('上傳成功！', 'success');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
   } finally {

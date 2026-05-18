@@ -217,47 +217,6 @@
     </div>
   </div>
 
-  <!-- Channel preview modal -->
-  <dialog id="previewModal" class="modal">
-    <div class="modal-box max-w-2xl w-full">
-      <h3 class="font-bold text-lg mb-1">確認通道貼圖</h3>
-      <p class="text-xs text-base-content/50 mb-4">確認各通道正確後再上傳</p>
-      <div class="grid grid-cols-3 gap-3 mb-5">
-        <div class="flex flex-col items-center gap-1">
-          <canvas id="modalCh_basecolor" class="rounded w-full aspect-square bg-base-300"></canvas>
-          <span class="text-xs text-base-content/60">Base Color</span>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <canvas id="modalCh_roughness" class="rounded w-full aspect-square bg-base-300"></canvas>
-          <span class="text-xs text-base-content/60">Roughness</span>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <canvas id="modalCh_ao" class="rounded w-full aspect-square bg-base-300"></canvas>
-          <span class="text-xs text-base-content/60">AO</span>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <canvas id="modalCh_height" class="rounded w-full aspect-square bg-base-300"></canvas>
-          <span class="text-xs text-base-content/60">Height</span>
-        </div>
-        <div class="flex flex-col items-center gap-1">
-          <canvas id="modalCh_normal" class="rounded w-full aspect-square bg-base-300"></canvas>
-          <span class="text-xs text-base-content/60">Normal</span>
-        </div>
-      </div>
-      <div class="modal-action flex-col items-stretch gap-3">
-        <label id="sendEmailLabel" class="flex items-center gap-2 text-sm text-base-content/70 cursor-pointer hidden">
-          <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
-          <span>📧 上傳完成後寄送材質連結至我的 Email</span>
-        </label>
-        <div class="flex justify-end gap-2">
-          <button class="btn btn-ghost" id="btnPreviewModalClose">取消</button>
-          <button class="btn btn-primary" id="btnPreviewModalConfirm">確認上傳</button>
-        </div>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
-  </dialog>
-
   <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   <script src="/config.js"></script>
   <script type="module" src="./js/app-desktop.js"></script>

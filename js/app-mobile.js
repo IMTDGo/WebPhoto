@@ -4,7 +4,7 @@
 
 import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
-import { generateChannels, uploadAllMaps } from './upload.js';
+import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }               from './toast.js';
 // seamless.js no longer needed for UI
 
@@ -26,11 +26,6 @@ const previewGridVal    = document.getElementById('previewGridVal');
 const btnRetake      = document.getElementById('btnRetake');
 const btnPickAnother = document.getElementById('btnPickAnother');
 const btnShowUpload  = document.getElementById('btnShowUpload');
-const stepPreview    = document.getElementById('stepPreview');
-const btnPreviewBack    = document.getElementById('btnPreviewBack');
-const btnPreviewConfirm = document.getElementById('btnPreviewConfirm');
-const genOverlay     = document.getElementById('genOverlay');
-const genOverlayLabel = document.getElementById('genOverlayLabel');
 const uploadSheet  = document.getElementById('uploadSheet');
 const uploadSheetBackdrop = document.getElementById('uploadSheetBackdrop');
 const uploadNameInput = document.getElementById('uploadName');
@@ -41,9 +36,6 @@ const btnAspectLock    = document.getElementById('btnAspectLock');
 const lockIconClosed   = document.getElementById('lockIconClosed');
 const lockIconOpen     = document.getElementById('lockIconOpen');
 const lockLabel        = document.getElementById('lockLabel');
-const enableSeamless   = document.getElementById('enableSeamless');
-const seamBlendWidth   = document.getElementById('seamBlendWidth');
-const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
 
 // ── State ─────────────────────────────────────────────────────────────────────
 // Show email checkbox only if user has email stored
@@ -57,33 +49,36 @@ const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
 let cropEditor      = null;
 let preview         = null;
 let currentCrop     = null;
-let generatedMaps   = null;
 let cameraStream    = null;
-let seamlessEnabled = true;
-let seamlessParams  = { seamBlendWidth: 0.15, iterations: 80 };
 
 
 // ── Initialise editors ────────────────────────────────────────────────────────
 function initEditors() {
+  const cropSizeInfo = document.getElementById('cropSizeInfo');
+  function _updateCropSize(crop) {
+    if (cropSizeInfo && crop?.w != null)
+      cropSizeInfo.textContent = `${Math.round(crop.w)} × ${Math.round(crop.h)}`;
+  }
+
   cropEditor = new CropEditor(cropCanvas, {
     onChange: (crop) => {
       currentCrop = crop;
-      preview.updateFast(crop);  // low-res, real-time
+      preview.updateFast(crop);
+      _updateCropSize(crop);
     },
     onChangeEnd: (crop) => {
       currentCrop = crop;
-      preview.update(crop);      // full quality after drag ends
+      preview.update(crop);
+      _updateCropSize(crop);
     },
   });
 
-  preview = new PatternPreview(previewCanvas, { displaySize: 512, gridSize: 3 });
-  preview.seamlessEnabled = seamlessEnabled;
-  preview.params = { ...seamlessParams };
+  preview = new PatternPreview(previewCanvas, { displaySize: 1024, gridSize: 3, fitMode: 'width' });
 
   previewGridSlider.addEventListener('input', (e) => {
-    const n = parseInt(e.target.value);
-    previewGridVal.textContent = n;
-    preview.setGridSize(n);
+    const zoom = parseInt(e.target.value);      // 1 = zoomed out, 10 = zoomed in
+    previewGridVal.textContent = zoom;
+    preview.setGridSize(Math.max(1, 11 - zoom)); // invert: zoom 8 → gridSize 3
   });
 
   // Aspect ratio lock
@@ -109,47 +104,20 @@ function initEditors() {
     if (currentCrop) currentCrop = cropEditor.getCrop();
   });
 
-  // Seamless controls
-  function _applySeamlessToPreview() {
-    if (!preview || !currentCrop) return;
-    preview.seamlessEnabled = seamlessEnabled;
-    preview.params = { ...seamlessParams };
-    preview.update(currentCrop);
-  }
-  enableSeamless?.addEventListener('change', () => {
-    seamlessEnabled = enableSeamless.checked;
-    _applySeamlessToPreview();
-  });
-  seamBlendWidth?.addEventListener('input', () => {
-    const pct = parseInt(seamBlendWidth.value);
-    if (seamBlendWidthVal) seamBlendWidthVal.textContent = pct + '%';
-    seamlessParams.seamBlendWidth = pct / 100;
-    if (seamlessEnabled) _applySeamlessToPreview();
-  });
+  // Seamless controls removed
 }
 
 function showStep(stepName) {
   stepEntry.classList.add('hidden');
   stepCamera.classList.add('hidden');
   stepEdit.classList.add('hidden');
-  stepPreview.classList.add('hidden');
 
   if      (stepName === 'camera')  stepCamera.classList.remove('hidden');
-  else if (stepName === 'edit')    stepEdit.classList.remove('hidden');
-  else if (stepName === 'preview') stepPreview.classList.remove('hidden');
-  else                             stepEntry.classList.remove('hidden');
-}
-
-function paintPreviewThumbnails(maps) {
-  for (const [key, canvas] of Object.entries(maps)) {
-    const el = document.getElementById(`previewCh_${key}`);
-    if (!el) continue;
-    el.width  = canvas.width;
-    el.height = canvas.height;
-    el.getContext('2d').drawImage(canvas, 0, 0);
-    el.style.width  = '100%';
-    el.style.height = 'auto';
+  else if (stepName === 'edit') {
+    stepEdit.classList.remove('hidden');
+    requestAnimationFrame(() => preview?.resize());
   }
+  else                             stepEntry.classList.remove('hidden');
 }
 
 async function startCamera() {
@@ -324,26 +292,8 @@ btnPickAnother.addEventListener('click', () => {
   resetToEntry();
 });
 
-btnShowUpload.addEventListener('click', async () => {
+btnShowUpload.addEventListener('click', () => {
   if (!currentCrop) { showToast('請先展開裁切區域', 'warning'); return; }
-  genOverlayLabel.textContent = '生成通道中...';
-  genOverlay.classList.remove('hidden');
-  try {
-    const outSize = parseInt(uploadResolution?.value || '1024');
-    const params  = seamlessEnabled ? { ...seamlessParams } : null;
-    generatedMaps = await generateChannels(currentCrop, params, outSize);
-    paintPreviewThumbnails(generatedMaps);
-    showStep('preview');
-  } catch (err) {
-    showToast('通道生成失敗: ' + err.message, 'error');
-  } finally {
-    genOverlay.classList.add('hidden');
-  }
-});
-
-btnPreviewBack.addEventListener('click', () => showStep('edit'));
-
-btnPreviewConfirm.addEventListener('click', () => {
   uploadNameInput.value = '';
   openUploadSheet();
 });
@@ -357,42 +307,16 @@ btnConfirmUpload.addEventListener('click', async () => {
   if (!name) { showToast('請輸入名稱', 'warning'); return; }
   if (!currentCrop) { showToast('請先選取裁切範圍', 'warning'); return; }
 
-  if (!generatedMaps) { showToast('請先預覽通道', 'warning'); return; }
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
-
-  const onProgress = (done, total) => {
-    btnConfirmUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
-  };
+  btnConfirmUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
 
   try {
-    const result = await uploadAllMaps(name, generatedMaps, onProgress);
+    const outSize = parseInt(uploadResolution?.value || '1024');
+    const canvas  = getCropCanvas(currentCrop, outSize, true);
+    await uploadSingleImage(name, canvas);
     closeUploadSheet();
-    showToast('上傳成功！共 6 個通道', 'success');
-
-    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
-    const chkSendEmail = document.getElementById('chkSendEmail');
-    if (chkSendEmail?.checked) {
-      try {
-        const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-        const user = raw ? JSON.parse(raw) : null;
-        if (user?.email) {
-          const maps = {};
-          for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
-          const apiBase = window.__API_BASE__;
-          await fetch(`${apiBase}/send-upload-report`, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: user.email, name, maps })
-          });
-          showToast('材質連結已寄至 ' + user.email, 'info');
-        }
-      } catch (mailErr) {
-        showToast('寄信失敗: ' + mailErr.message, 'warning');
-      }
-    }
-
-    generatedMaps = null;
+    showToast('上傳成功！', 'success');
     showStep('entry');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
@@ -404,6 +328,99 @@ btnConfirmUpload.addEventListener('click', async () => {
 
 // ── Resize ────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => cropEditor?.resize());
+
+// ── Vertical split handle ─────────────────────────────────────────────────────
+(function () {
+  const handle   = document.getElementById('splitHandle');
+  const cropCont = document.getElementById('cropContainer');
+  if (!handle || !cropCont) return;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const startY = e.clientY;
+    const startH = cropCont.getBoundingClientRect().height;
+
+    function onMove(me) {
+      const dy   = me.clientY - startY;
+      const newH = Math.max(80, Math.min(window.innerHeight - 220, startH + dy));
+      cropCont.style.flex = `0 0 ${newH}px`;
+      cropEditor?.resize();
+      preview?.resizeFast();
+    }
+    function onUp() {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup',    onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      cropEditor?.resize();
+      preview?.resize();
+    }
+    handle.addEventListener('pointermove',  onMove);
+    handle.addEventListener('pointerup',    onUp);
+    handle.addEventListener('pointercancel', onUp);
+  });
+})();
+// ── Preview pan & pinch-zoom ──────────────────────────────────────────────────
+(function () {
+  const wrap = document.getElementById('previewWrap');
+  if (!wrap) return;
+
+  let _pan   = null;   // { x, y }
+  let _pinch = null;  // { dist }
+
+  wrap.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      _pan   = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      _pinch = null;
+    } else if (e.touches.length === 2) {
+      _pan = null;
+      _pinch = { dist: Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY,
+      )};
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (e.touches.length === 1 && _pan) {
+      const dx = e.touches[0].clientX - _pan.x;
+      const dy = e.touches[0].clientY - _pan.y;
+      _pan.x = e.touches[0].clientX;
+      _pan.y = e.touches[0].clientY;
+      preview?.setPan(dx, dy);
+    } else if (e.touches.length === 2 && _pinch) {
+      const newDist = Math.hypot(
+        e.touches[1].clientX - e.touches[0].clientX,
+        e.touches[1].clientY - e.touches[0].clientY,
+      );
+      const factor = newDist / _pinch.dist;
+      _pinch.dist = newDist;
+      preview?.setPreviewZoom(factor);
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', (e) => {
+    if (e.touches.length === 0) {
+      _pan = null; _pinch = null;
+      if (preview?._lastCrop) preview.update(preview._lastCrop);
+    } else if (e.touches.length === 1) {
+      _pan   = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      _pinch = null;
+    }
+  });
+
+  // Double-tap to reset pan & zoom
+  let _lastTap = 0;
+  wrap.addEventListener('touchend', (e) => {
+    if (e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    if (now - _lastTap < 300) preview?.resetView();
+    _lastTap = now;
+  });
+})();
+
 window.addEventListener('beforeunload', () => stopCamera());
 
 document.addEventListener('visibilitychange', () => {

@@ -169,4 +169,42 @@ export async function uploadAllMaps(name, canvasMap, onProgress = null) {
   return { ok: true, folder: name, maps: Object.fromEntries(results) };
 }
 
+// ── Single-image helpers (no PBR channel generation) ─────────────────────────
+
+/**
+ * Extract & scale the crop to a canvas, respecting aspect lock.
+ */
+export function getCropCanvas(crop, outSize = 1024, aspectLocked = true) {
+  const srcCanvas = extractCrop(crop.img, crop.x, crop.y, crop.w, crop.h);
+  const cropW = srcCanvas.width;
+  const cropH = srcCanvas.height;
+  let outW, outH;
+  if (aspectLocked) {
+    const side = Math.min(cropW, outSize);
+    outW = outH = side;
+  } else {
+    const longest = Math.max(cropW, cropH);
+    if (longest <= outSize) { outW = cropW; outH = cropH; }
+    else {
+      const scale = outSize / longest;
+      outW = Math.max(1, Math.round(cropW * scale));
+      outH = Math.max(1, Math.round(cropH * scale));
+    }
+  }
+  const cvs = document.createElement('canvas');
+  cvs.width  = outW;
+  cvs.height = outH;
+  cvs.getContext('2d').drawImage(srcCanvas, 0, 0, outW, outH);
+  return cvs;
+}
+
+/**
+ * Upload a single canvas as basecolor only.
+ */
+export async function uploadSingleImage(name, canvas, onProgress = null) {
+  const result = await _uploadCanvas(canvas, name, 'basecolor');
+  onProgress?.(1, 1);
+  return { ok: true, folder: name, url: result.url, public_id: result.public_id };
+}
+
 

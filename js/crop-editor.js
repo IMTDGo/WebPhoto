@@ -171,20 +171,78 @@ export class CropEditor {
       ctx.beginPath(); ctx.moveTo(cx, gy); ctx.lineTo(cx + cw2, gy); ctx.stroke();
     }
 
-    // Corner handles
-    const hLen = Math.min(18, Math.min(cw2, ch2) * 0.2);
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth   = 3;
+    // Corner handles — blue filled circles
     const corners = [[cx, cy], [cx + cw2, cy], [cx, cy + ch2], [cx + cw2, cy + ch2]];
+    const R = 7;
     corners.forEach(([px, py]) => {
-      const sx = px === cx ? 1 : -1;
-      const sy = py === cy ? 1 : -1;
       ctx.beginPath();
-      ctx.moveTo(px + sx * hLen, py);
-      ctx.lineTo(px, py);
-      ctx.lineTo(px, py + sy * hLen);
+      ctx.arc(px, py, R, 0, Math.PI * 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     });
+
+    // Magnifier during corner resize
+    if (this._drag?.mode === 'resize' && this._drag.clientX != null) {
+      this._drawMagnifier(this._drag.clientX, this._drag.clientY);
+    }
+  }
+
+  // ── Magnifier ───────────────────────────────────────────────────────────────
+
+  _drawMagnifier(clientX, clientY) {
+    const { canvas, ctx, img } = this;
+    const s = this._scaleToCanvas;
+
+    const imgPos = this._clientToImage(clientX, clientY);
+    const dp     = this._clientToDisplay(clientX, clientY);
+
+    const MAG_R = 58;  // radius in canvas px
+    const ZOOM  = 4;   // zoom factor
+
+    // Prefer top-right of cursor; fall back to other quadrants if out of bounds
+    let mx = dp.x + MAG_R * 1.6;
+    let my = dp.y - MAG_R * 1.6;
+    if (mx + MAG_R > canvas.width)  mx = dp.x - MAG_R * 1.6;
+    if (my - MAG_R < 0)             my = dp.y + MAG_R * 1.6;
+    if (my + MAG_R > canvas.height) my = canvas.height - MAG_R - 4;
+    if (mx - MAG_R < 0)             mx = MAG_R + 4;
+
+    // Source region in image coordinates
+    const imgSrcW = (MAG_R * 2) / (ZOOM * s);
+    const imgSrcX = Math.max(0, Math.min(img.width  - imgSrcW, imgPos.x - imgSrcW / 2));
+    const imgSrcY = Math.max(0, Math.min(img.height - imgSrcW, imgPos.y - imgSrcW / 2));
+
+    // Clip circle and draw magnified image from original
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(mx, my, MAG_R, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = '#111';
+    ctx.fillRect(mx - MAG_R, my - MAG_R, MAG_R * 2, MAG_R * 2);
+    ctx.drawImage(img, imgSrcX, imgSrcY, imgSrcW, imgSrcW,
+                       mx - MAG_R, my - MAG_R, MAG_R * 2, MAG_R * 2);
+    ctx.restore();
+
+    // Blue circular border
+    ctx.beginPath();
+    ctx.arc(mx, my, MAG_R, 0, Math.PI * 2);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth   = 2.5;
+    ctx.stroke();
+
+    // Crosshair (clipped inside circle)
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(mx, my, MAG_R, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.strokeStyle = 'rgba(255, 60, 60, 0.9)';
+    ctx.lineWidth   = 1.2;
+    ctx.beginPath(); ctx.moveTo(mx - MAG_R, my); ctx.lineTo(mx + MAG_R, my); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mx, my - MAG_R); ctx.lineTo(mx, my + MAG_R); ctx.stroke();
+    ctx.restore();
   }
 
   // ── Event helpers ──────────────────────────────────────────────────────────
@@ -263,7 +321,7 @@ export class CropEditor {
     c.addEventListener('mousedown',  (e) => this._onPointerDown(e.clientX, e.clientY, e));
     window.addEventListener('mousemove', (e) => { if (this._drag) this._onPointerMove(e.clientX, e.clientY); });
     window.addEventListener('mouseup',   ()  => {
-      if (this._drag) { this._drag = null; this._emitChangeEnd(); }
+      if (this._drag) { this._drag = null; this._draw(); this._emitChangeEnd(); }
     });
 
     // Touch — single finger
@@ -293,7 +351,7 @@ export class CropEditor {
       const wasPinching = !!this._pinch;
       if (e.touches.length < 2) this._pinch = null;
       if (e.touches.length === 0) this._drag = null;
-      if ((wasDragging || wasPinching) && e.touches.length === 0) this._emitChangeEnd();
+      if ((wasDragging || wasPinching) && e.touches.length === 0) { this._draw(); this._emitChangeEnd(); }
     });
   }
 
@@ -309,6 +367,8 @@ export class CropEditor {
         anchorImgY: corner.anchorImgY,
         xMode:      corner.xMode,
         yMode:      corner.yMode,
+        clientX,
+        clientY,
       };
     } else {
       // Move mode
@@ -326,6 +386,8 @@ export class CropEditor {
   _onPointerMove(clientX, clientY) {
     if (!this._drag || !this.img) return;
     if (this._drag.mode === 'resize') {
+      this._drag.clientX = clientX;
+      this._drag.clientY = clientY;
       this._doResize(clientX, clientY);
     } else {
       this._doMove(clientX, clientY);
