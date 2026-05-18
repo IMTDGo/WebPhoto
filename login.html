@@ -188,6 +188,7 @@
 
   </div>
 
+  <script src="/config.js"></script>
   <script>
     // If already logged in, skip login page
     if (sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth')) {
@@ -195,10 +196,8 @@
     }
 
     // ── API endpoint ───────────────────────────────────────────────────────
-    const BASE_URL  = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? `${window.location.protocol}//${window.location.host}`
-      : 'https://webphoto-lidl.onrender.com';
-    const LOGIN_URL = BASE_URL + '/login';
+    const BASE_URL  = window.__API_BASE__;
+    const LOGIN_URL = BASE_URL + '/api/auth/login';
     const form       = document.getElementById('loginForm');
     const btnLogin   = document.getElementById('btnLogin');
     const btnCancel  = document.getElementById('btnCancel');
@@ -251,9 +250,12 @@
       // ── Save token and redirect helper ──
       function onLoginSuccess(data) {
         const store = rememberMe ? localStorage : sessionStorage;
+        const user  = data.data?.user;
         store.setItem('wp_auth', '1');
-        if (data.username) {
-          store.setItem('wp_user', JSON.stringify({ id: data.username, name: data.username, email: data.email || null }));
+        if (data.data?.token)     store.setItem('wp_token',     data.data.token);
+        if (data.data?.sessionId) store.setItem('wp_sessionId', data.data.sessionId);
+        if (user) {
+          store.setItem('wp_user', JSON.stringify({ id: user.id, name: user.name, email: user.email || null, role: user.role, plan: user.plan }));
         }
         showAlert('success', '✔ ' + data.message);
         setTimeout(() => window.location.replace('./index.html'), 800);
@@ -266,16 +268,21 @@
         const res = await fetch(LOGIN_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password }),
+          body: JSON.stringify({ account: username, password }),
           signal: controller.signal
         });
         clearTimeout(timeout);
         clearTimeout(coldStartTimer);
 
-        const data = await res.json();
+        let data = {};
+        try { data = await res.json(); } catch { /* non-JSON body */ }
 
-        if (data.ok) {
+        if (data.success) {
           onLoginSuccess(data);
+        } else if (res.status === 401 || res.status === 403) {
+          showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試'));
+        } else if (!res.ok) {
+          showAlert('error', '✘ ' + (data.message || `伺服器錯誤 (${res.status})，請稍後再試`));
         } else {
           showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試'));
         }

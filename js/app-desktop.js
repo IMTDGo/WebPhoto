@@ -282,9 +282,7 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
         if (user?.email) {
           const maps = {};
           for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
-          const apiBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-            ? `${location.protocol}//${location.host}`
-            : 'https://webphoto-lidl.onrender.com';
+          const apiBase = window.__API_BASE__;
           await fetch(`${apiBase}/send-upload-report`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },

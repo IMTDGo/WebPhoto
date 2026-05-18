@@ -544,6 +544,14 @@ ${zipButton}
 
   // GET static files
   if (req.method === 'GET') {
+    // ── /config.js — expose env vars to frontend ──────────────────────────
+    if (rawUrl === '/config.js') {
+      const apiBase = process.env.API_BASE || '';
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(`window.__API_BASE__ = ${JSON.stringify(apiBase)};`);
+      return;
+    }
+
     // Only serve files within the project directory
     if (!isInProject) {
       res.writeHead(403, { 'Content-Type': 'text/plain' });
