@@ -188,7 +188,7 @@
 
   </div>
 
-  <script src="/config.js"></script>
+  <script src="./config.js"></script>
   <script>
     // If already logged in, skip login page
     if (sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth')) {
@@ -196,7 +196,7 @@
     }
 
     // ── API endpoint ───────────────────────────────────────────────────────
-    const BASE_URL  = window.__API_BASE__;
+    const BASE_URL  = window.__BACKEND_URL__ || window.__API_BASE__;
     const LOGIN_URL = BASE_URL + '/api/auth/login';
     const form       = document.getElementById('loginForm');
     const btnLogin   = document.getElementById('btnLogin');

@@ -141,9 +141,9 @@
 
   </div>
 
-  <script src="/config.js"></script>
+  <script src="./config.js"></script>
   <script>
-    const BASE_URL = window.__API_BASE__;
+    const BASE_URL = window.__BACKEND_URL__ || window.__API_BASE__;
 
     // ── Helpers ──
     function showAlert(type, msg) {
