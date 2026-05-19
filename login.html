@@ -123,6 +123,125 @@
       margin-right: 4px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Camera Test ──────────────────────────────────────────────────────── */
+    .btn-camera-test {
+      background: none;
+      border: 1px dashed #374151;
+      border-radius: 9999px;
+      padding: 0.35rem 1.1rem;
+      color: #4b5563;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .btn-camera-test:hover { color: #9ca3af; border-color: #6b7280; }
+
+    #camTestOverlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    #camTestOverlay.open { display: flex; }
+
+    .cam-card {
+      background: #1c2333;
+      border-radius: 1.25rem;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 540px;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .cam-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cam-header h2 { color: #e0e6f0; font-size: 1rem; font-weight: 600; margin: 0; }
+    .cam-close-btn {
+      background: none; border: none;
+      color: #6b7280; font-size: 1.3rem;
+      cursor: pointer; line-height: 1; padding: 0.2rem 0.4rem;
+      border-radius: 0.25rem;
+    }
+    .cam-close-btn:hover { color: #e0e6f0; background: #252d3d; }
+
+    #camTestVideo {
+      width: 100%; border-radius: 0.75rem;
+      background: #0d1117; display: block;
+      max-height: 220px; object-fit: cover;
+    }
+    .cam-status {
+      color: #94a3b8; font-size: 0.85rem;
+      text-align: center; min-height: 1.2em;
+    }
+    .cam-dots {
+      display: none; gap: 0.75rem;
+      justify-content: center; align-items: center;
+    }
+    .cam-dot {
+      width: 11px; height: 11px; border-radius: 50%;
+      background: #374151; transition: background 0.25s;
+    }
+    .cam-dot.active { background: #60a5fa; box-shadow: 0 0 6px #60a5fa88; }
+    .cam-dot.done   { background: #22c55e; }
+
+    .cam-results {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 0.6rem;
+    }
+    .cam-thumb-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 0.3rem;
+    }
+    .cam-thumb {
+      width: 100%; height: 80px; object-fit: cover;
+      border-radius: 0.5rem; border: 1px solid #374151;
+      display: block;
+    }
+    .cam-thumb-label {
+      color: #94a3b8; font-size: 0.7rem; text-align: center;
+    }
+    .cam-log {
+      font-size: 0.78rem; color: #94a3b8;
+      display: flex; flex-direction: column; gap: 0.25rem;
+    }
+    .cam-log-link {
+      color: #60a5fa; text-decoration: underline; margin-left: 0.4rem;
+    }
+    .cam-btns {
+      display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .btn-cam-start {
+      border: none; border-radius: 9999px;
+      padding: 0.62rem 1.8rem;
+      background: #3b82f6; color: #fff;
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-cam-start:hover { background: #2563eb; }
+    .btn-cam-start:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cam-hdr-badge {
+      display: inline-block;
+      background: #7c3aed; color: #f5f3ff;
+      font-size: 0.65rem; font-weight: 700;
+      border-radius: 0.25rem; padding: 0.1rem 0.35rem;
+      letter-spacing: 0.05em; vertical-align: middle;
+      margin-left: 0.35rem;
+    }
+    .cam-info-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0.5rem; font-size: 0.75rem; color: #6b7280;
+    }
   </style>
 </head>
 <body>
@@ -186,6 +305,58 @@
 
     </form>
 
+    <!-- Camera test button -->
+    <div class="text-center mt-5 pt-4" style="border-top: 1px solid #1e2a3a;">
+      <button type="button" id="btnCameraTest" class="btn-camera-test">📷 相機測試</button>
+    </div>
+
+  </div>
+
+  <!-- ── Camera Test Overlay ───────────────────────────────────────────── -->
+  <div id="camTestOverlay">
+    <div class="cam-card">
+
+      <!-- Header -->
+      <div class="cam-header">
+        <h2>
+          📷 相機測試
+          <span id="camHdrBadge" class="cam-hdr-badge" style="display:none;">HDR</span>
+        </h2>
+        <button id="btnCamClose" class="cam-close-btn" title="關閉">✕</button>
+      </div>
+
+      <!-- Info row -->
+      <div id="camInfoRow" class="cam-info-row" style="display:none;">
+        <span id="camInfoText"></span>
+      </div>
+
+      <!-- Video preview -->
+      <div id="camPreviewWrap" style="display:none;">
+        <video id="camTestVideo" autoplay playsinline muted></video>
+      </div>
+
+      <!-- Status text -->
+      <div id="camStatus" class="cam-status">正在啟動相機...</div>
+
+      <!-- Progress dots (3 shots) -->
+      <div id="camDots" class="cam-dots">
+        <div id="camDot0" class="cam-dot"></div>
+        <div id="camDot1" class="cam-dot"></div>
+        <div id="camDot2" class="cam-dot"></div>
+      </div>
+
+      <!-- Thumbnails (4 results) -->
+      <div id="camResults" class="cam-results"></div>
+
+      <!-- Upload log -->
+      <div id="camLog" class="cam-log"></div>
+
+      <!-- Action buttons -->
+      <div class="cam-btns">
+        <button id="btnCamShoot" class="btn-cam-start" disabled>啟動中...</button>
+      </div>
+
+    </div>
   </div>
 
   <script src="./config.js"></script>
@@ -293,6 +464,248 @@
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';
+      }
+    });
+  </script>
+
+  <!-- ── Camera Test Module ────────────────────────────────────────────── -->
+  <script type="module">
+    import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './js/hdr.js';
+
+    // ── Cloudinary config (mirrors upload.js) ──────────────────────────────
+    const CLD_CLOUD  = 'dnxqob2cu';
+    const CLD_PRESET = 'WebTexureUpload';
+    const CLD_URL    = `https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`;
+
+    // ── DOM refs ───────────────────────────────────────────────────────────
+    const overlay      = document.getElementById('camTestOverlay');
+    const video        = document.getElementById('camTestVideo');
+    const previewWrap  = document.getElementById('camPreviewWrap');
+    const statusEl     = document.getElementById('camStatus');
+    const dotsWrap     = document.getElementById('camDots');
+    const dots         = [0, 1, 2].map(i => document.getElementById(`camDot${i}`));
+    const resultsEl    = document.getElementById('camResults');
+    const logEl        = document.getElementById('camLog');
+    const hdrBadge     = document.getElementById('camHdrBadge');
+    const infoRow      = document.getElementById('camInfoRow');
+    const infoText     = document.getElementById('camInfoText');
+    const btnShoot     = document.getElementById('btnCamShoot');
+
+    let camStream = null;
+    let isShooting = false;
+
+    // ── Reset overlay to initial state ────────────────────────────────────
+    function _reset() {
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
+      logEl.innerHTML = '';
+      dotsWrap.style.display = 'none';
+      dots.forEach(d => { d.className = 'cam-dot'; });
+      hdrBadge.style.display = 'none';
+      infoRow.style.display = 'none';
+      previewWrap.style.display = 'none';
+      statusEl.textContent = '正在啟動相機...';
+      btnShoot.disabled = true;
+      btnShoot.textContent = '啟動中...';
+      isShooting = false;
+    }
+
+    // ── Open overlay + start camera ───────────────────────────────────────
+    document.getElementById('btnCameraTest').addEventListener('click', async () => {
+      _reset();
+      overlay.classList.add('open');
+
+      try {
+        camStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' },
+            width:  { ideal: 4096 },
+            height: { ideal: 4096 },
+          },
+          audio: false,
+        });
+        video.srcObject = camStream;
+        previewWrap.style.display = 'block';
+
+        const track   = camStream.getVideoTracks()[0];
+        const evCaps  = getHDRCapabilities(track);
+        const settings = track.getSettings();
+
+        if (evCaps) {
+          hdrBadge.style.display = '';
+          infoText.textContent = `HDR 支援 ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
+          btnShoot.textContent = '開始 HDR 拍攝 (3 張)';
+        } else {
+          infoText.textContent = `單張模式（此裝置不支援曝光補償）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
+          btnShoot.textContent = '拍攝照片';
+        }
+        infoRow.style.display = 'flex';
+        statusEl.textContent = '相機已就緒';
+        btnShoot.disabled = false;
+
+      } catch (err) {
+        statusEl.textContent = `相機錯誤：${err.message}`;
+      }
+    });
+
+    // ── Close ─────────────────────────────────────────────────────────────
+    document.getElementById('btnCamClose').addEventListener('click', () => {
+      if (isShooting) return;
+      if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+      video.srcObject = null;
+      overlay.classList.remove('open');
+    });
+
+    // ── Upload helper ─────────────────────────────────────────────────────
+    async function _uploadToCloudinary(source, folder, publicId) {
+      // source = ImageBitmap or HTMLCanvasElement
+      const canvas = document.createElement('canvas');
+      canvas.width  = source.width;
+      canvas.height = source.height;
+      canvas.getContext('2d').drawImage(source, 0, 0);
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.93));
+      const fd = new FormData();
+      fd.append('file',          blob, publicId + '.jpg');
+      fd.append('upload_preset', CLD_PRESET);
+      fd.append('folder',        folder);
+      fd.append('public_id',     publicId);
+      const resp = await fetch(CLD_URL, { method: 'POST', body: fd });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+      return (await resp.json()).secure_url;
+    }
+
+    // ── Thumbnail helper ──────────────────────────────────────────────────
+    function _addThumb(source, label) {
+      const wrap  = document.createElement('div');
+      wrap.className = 'cam-thumb-wrap';
+      const canvas = document.createElement('canvas');
+      const THUMB  = 240;
+      const scale  = THUMB / Math.max(source.width, source.height);
+      canvas.width  = Math.round(source.width  * scale);
+      canvas.height = Math.round(source.height * scale);
+      canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+      canvas.className = 'cam-thumb';
+      const lbl = document.createElement('div');
+      lbl.className = 'cam-thumb-label';
+      lbl.textContent = label;
+      wrap.append(canvas, lbl);
+      resultsEl.appendChild(wrap);
+    }
+
+    // ── Log helper ────────────────────────────────────────────────────────
+    function _log(text, url) {
+      const line = document.createElement('div');
+      line.textContent = text;
+      if (url) {
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank';
+        a.className = 'cam-log-link';
+        a.textContent = '查看 ↗';
+        line.appendChild(a);
+      }
+      logEl.appendChild(line);
+    }
+
+    // ── Shoot + HDR + Upload ──────────────────────────────────────────────
+    btnShoot.addEventListener('click', async () => {
+      if (!camStream || isShooting) return;
+      isShooting = true;
+      btnShoot.disabled = true;
+      logEl.innerHTML = '';
+      resultsEl.innerHTML = '';
+      resultsEl.style.display = 'none';
+
+      const track  = camStream.getVideoTracks()[0];
+      const evCaps = getHDRCapabilities(track);
+      const ts     = Date.now();
+      const folder = 'device-test';
+
+      let shots; // [{ bitmap, id, label }]
+
+      try {
+        if (evCaps) {
+          // ── HDR 3-shot ──────────────────────────────────────────────
+          dotsWrap.style.display = 'flex';
+          dots.forEach(d => { d.className = 'cam-dot'; });
+
+          const [dark, normal, bright] = await captureHDRFrames(
+            track, evCaps,
+            (step, total, label) => {
+              statusEl.textContent = `拍攝 ${step}/${total}：${label}`;
+              dots.forEach((d, i) => {
+                d.className = i + 1 < step  ? 'cam-dot done'
+                            : i + 1 === step ? 'cam-dot active'
+                            : 'cam-dot';
+              });
+            },
+          );
+          dots.forEach(d => { d.className = 'cam-dot done'; });
+
+          statusEl.textContent = '合成 HDR 中...';
+          const hdrCanvas = mergeHDR(dark, normal, bright);
+
+          shots = [
+            { bitmap: dark,      id: `${ts}_dark`,   label: '暗部 −2EV' },
+            { bitmap: normal,    id: `${ts}_normal`,  label: '正常 0EV'  },
+            { bitmap: bright,    id: `${ts}_bright`,  label: '亮部 +2EV' },
+            { bitmap: hdrCanvas, id: `${ts}_hdr`,     label: 'HDR 合成'  },
+          ];
+
+        } else {
+          // ── Single-shot fallback ────────────────────────────────────
+          statusEl.textContent = '拍攝中...';
+          let normal;
+
+          if (typeof ImageCapture !== 'undefined') {
+            const ic   = new ImageCapture(track);
+            const blob = await ic.takePhoto();
+            normal = await createImageBitmap(blob);
+          } else {
+            // Canvas snapshot from video (iOS fallback)
+            const snap = document.createElement('canvas');
+            snap.width  = video.videoWidth;
+            snap.height = video.videoHeight;
+            snap.getContext('2d').drawImage(video, 0, 0);
+            normal = await createImageBitmap(snap);
+          }
+
+          shots = [
+            { bitmap: normal, id: `${ts}_normal`, label: '照片' },
+          ];
+        }
+
+        // ── Show thumbnails ───────────────────────────────────────────
+        resultsEl.style.display = 'grid';
+        for (const { bitmap, label } of shots) {
+          _addThumb(bitmap, label);
+        }
+
+        // ── Upload all to Cloudinary ──────────────────────────────────
+        statusEl.textContent = `上傳 ${shots.length} 張至 Cloudinary...`;
+        let allOk = true;
+
+        for (const { bitmap, id, label } of shots) {
+          try {
+            const url = await _uploadToCloudinary(bitmap, folder, id);
+            _log(`✔ ${label}  `, url);
+          } catch (err) {
+            _log(`✘ ${label}：${err.message}`);
+            allOk = false;
+          }
+        }
+
+        statusEl.textContent = allOk ? '✔ 全部上傳完成！' : '⚠ 部分上傳失敗';
+        dotsWrap.style.display = 'none';
+        btnShoot.textContent = '再次測試';
+        btnShoot.disabled = false;
+
+      } catch (err) {
+        statusEl.textContent = `錯誤：${err.message}`;
+        dotsWrap.style.display = 'none';
+        btnShoot.textContent = '重試';
+        btnShoot.disabled = false;
+      } finally {
+        isShooting = false;
       }
     });
   </script>
