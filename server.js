@@ -603,9 +603,13 @@ ${zipButton}
   if (req.method === 'GET') {
     // ── /config.js — expose env vars to frontend ──────────────────────────
     if (rawUrl === '/config.js') {
-      const apiBase = process.env.API_BASE || '';
+      const apiBase     = process.env.API_BASE     || '';
+      const backendUrl  = process.env.BACKEND_URL  || '';
       res.writeHead(200, { 'Content-Type': 'application/javascript' });
-      res.end(`window.__API_BASE__ = ${JSON.stringify(apiBase)};`);
+      res.end(
+        `window.__API_BASE__    = ${JSON.stringify(apiBase)};\n` +
+        `window.__BACKEND_URL__ = ${JSON.stringify(backendUrl || apiBase)};\n`
+      );
       return;
     }
 
