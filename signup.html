@@ -103,6 +103,12 @@
         </div>
 
         <div class="mb-3">
+          <input id="s1Name" name="name" type="text"
+            class="login-input" placeholder="顯示名稱"
+            autocomplete="name" required />
+        </div>
+
+        <div class="mb-3">
           <input id="s1Password" name="password" type="password"
             class="login-input" placeholder="密碼（至少 8 個字元）"
             autocomplete="new-password" required />
@@ -116,13 +122,9 @@
 
         <div class="mb-4">
           <input id="s1Email" name="email" type="email"
-            class="login-input" placeholder="Gmail 地址（每個 Gmail 只能註冊一次）"
+            class="login-input" placeholder="Email 地址"
             autocomplete="email" required />
         </div>
-
-        <p class="text-xs text-slate-500 mb-5">
-          ✉ 系統會向您的 Gmail 發送 6 位數驗證碼，10 分鐘內有效。
-        </p>
 
         <div class="text-center mb-5">
           <span class="text-sm text-slate-400">Already have an account? </span>
@@ -131,39 +133,7 @@
 
         <div class="flex justify-end gap-3">
           <button type="button" class="btn-cancel" id="btnCancel1">Cancel</button>
-          <button type="submit" class="btn-primary-action" id="btnSendOtp">Send OTP</button>
-        </div>
-
-      </form>
-    </div>
-
-    <!-- ── STEP 2: OTP verification ── -->
-    <div id="step2" class="hidden">
-      <h1 class="text-center text-white font-bold text-2xl mb-2">Verify Email</h1>
-      <p class="text-center text-slate-400 text-sm mb-1">驗證碼已寄送至</p>
-      <p class="text-center text-blue-400 font-medium text-sm mb-6" id="displayEmail"></p>
-
-      <div id="alertBox2" class="alert-box mb-4"></div>
-
-      <form id="step2Form" novalidate>
-
-        <div class="mb-2">
-          <input id="s2Otp" type="text" inputmode="numeric" maxlength="6"
-            class="login-input otp-input" placeholder="______" required />
-        </div>
-
-        <p class="text-xs text-slate-500 mb-5 text-center">輸入 6 位數字驗證碼</p>
-
-        <div class="text-center mb-5">
-          <span class="text-sm text-slate-400">沒收到？</span>
-          <button type="button" id="btnResend"
-            class="text-sm text-blue-400 hover:underline ml-1">重新發送</button>
-          <span id="resendCooldown" class="text-sm text-slate-500 ml-1 hidden"></span>
-        </div>
-
-        <div class="flex justify-end gap-3">
-          <button type="button" class="btn-cancel" id="btnBack2">Back</button>
-          <button type="submit" class="btn-primary-action" id="btnVerify">Verify</button>
+          <button type="submit" class="btn-primary-action" id="btnRegister">Register</button>
         </div>
 
       </form>
@@ -175,176 +145,73 @@
   <script>
     const BASE_URL = window.__API_BASE__;
 
-    // ── State ──
-    let currentEmail    = '';
-    let currentUsername = '';
-    let currentPassword = '';
-
     // ── Helpers ──
-    function showAlert(boxId, type, msg) {
-      const el = document.getElementById(boxId);
-      el.className = 'alert-box ' + (
-        type === 'success' ? 'alert-success' :
-        type === 'info'    ? 'alert-info'    : 'alert-error'
-      );
+    function showAlert(type, msg) {
+      const el = document.getElementById('alertBox1');
+      el.className = 'alert-box ' + (type === 'success' ? 'alert-success' : 'alert-error');
       el.style.display = 'block';
       el.textContent   = msg;
     }
-    function hideAlert(boxId) {
-      document.getElementById(boxId).style.display = 'none';
-    }
-    function showStep(n) {
-      document.getElementById('step1').classList.toggle('hidden', n !== 1);
-      document.getElementById('step2').classList.toggle('hidden', n !== 2);
+    function hideAlert() {
+      document.getElementById('alertBox1').style.display = 'none';
     }
 
-    // ── Cancel / Back ──
+    // ── Cancel ──
     document.getElementById('btnCancel1').addEventListener('click', () => {
       if (history.length > 1) history.back();
       else window.location.href = './login.html';
     });
-    document.getElementById('btnBack2').addEventListener('click', () => {
-      hideAlert('alertBox2');
-      showStep(1);
-    });
 
-    // ── STEP 1: Send OTP ──
+    // ── Register ──
     document.getElementById('step1Form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      hideAlert('alertBox1');
+      hideAlert();
 
-      const username = document.getElementById('s1Username').value.trim();
+      const account  = document.getElementById('s1Username').value.trim();
+      const name     = document.getElementById('s1Name').value.trim();
       const password = document.getElementById('s1Password').value;
       const confirm  = document.getElementById('s1Confirm').value;
       const email    = document.getElementById('s1Email').value.trim();
 
-      if (!username || !password || !confirm || !email) {
-        showAlert('alertBox1', 'error', '請填寫所有欄位');
+      if (!account || !name || !password || !confirm || !email) {
+        showAlert('error', '請填寫所有欄位');
         return;
       }
-      if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
-        showAlert('alertBox1', 'error', '帳號只能使用英數字和底線，長度 3–30 字元');
+      if (!/^[a-zA-Z0-9_]{3,30}$/.test(account)) {
+        showAlert('error', '帳號只能使用英數字和底線，長度 3–30 字元');
         return;
       }
       if (password.length < 8) {
-        showAlert('alertBox1', 'error', '密碼至少需要 8 個字元');
+        showAlert('error', '密碼至少需要 8 個字元');
         return;
       }
       if (password !== confirm) {
-        showAlert('alertBox1', 'error', '兩次密碼輸入不一致');
-        return;
-      }
-      if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
-        showAlert('alertBox1', 'error', '請輸入有效的 Gmail 地址（需以 @gmail.com 結尾）');
+        showAlert('error', '兩次密碼輸入不一致');
         return;
       }
 
-      const btn = document.getElementById('btnSendOtp');
-      btn.disabled    = true;
-      btn.innerHTML   = '<span class="spinner"></span>寄送中...';
-
-      try {
-        const res = await fetch(`${BASE_URL}/register/send-otp`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ username, password, email })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          currentEmail    = email;
-          currentUsername = username;
-          currentPassword = password;
-          document.getElementById('displayEmail').textContent = email;
-          showStep(2);
-          startResendCooldown();
-        } else {
-          showAlert('alertBox1', 'error', '✘ ' + data.message);
-        }
-      } catch (err) {
-        showAlert('alertBox1', 'error', '✘ 連線失敗，請稍後再試');
-      } finally {
-        btn.disabled  = false;
-        btn.innerHTML = 'Send OTP';
-      }
-    });
-
-    // ── STEP 2: Verify OTP ──
-    document.getElementById('step2Form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideAlert('alertBox2');
-
-      const otp = document.getElementById('s2Otp').value.trim();
-      if (!/^\d{6}$/.test(otp)) {
-        showAlert('alertBox2', 'error', '請輸入 6 位數驗證碼');
-        return;
-      }
-
-      const btn = document.getElementById('btnVerify');
+      const btn = document.getElementById('btnRegister');
       btn.disabled  = true;
-      btn.innerHTML = '<span class="spinner"></span>驗證中...';
+      btn.innerHTML = '<span class="spinner"></span>註冊中...';
 
       try {
-        const res = await fetch(`${BASE_URL}/register/verify`, {
+        const res = await fetch(`${BASE_URL}/api/auth/register`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ email: currentEmail, otp })
+          body:    JSON.stringify({ account, password, name, email, permission: 'viewer' })
         });
         const data = await res.json();
         if (data.ok) {
-          showAlert('alertBox2', 'success', '✔ ' + data.message);
+          showAlert('success', '✔ ' + data.message);
           setTimeout(() => window.location.replace('./login.html'), 1500);
         } else {
-          showAlert('alertBox2', 'error', '✘ ' + data.message);
+          showAlert('error', '✘ ' + data.message);
         }
       } catch (err) {
-        showAlert('alertBox2', 'error', '✘ 連線失敗，請稍後再試');
+        showAlert('error', '✘ 連線失敗，請稍後再試');
       } finally {
         btn.disabled  = false;
-        btn.innerHTML = 'Verify';
-      }
-    });
-
-    // ── Resend cooldown ──
-    let resendTimer = null;
-    function startResendCooldown(seconds = 60) {
-      const btn = document.getElementById('btnResend');
-      const cd  = document.getElementById('resendCooldown');
-      btn.disabled = true;
-      btn.classList.add('opacity-40', 'cursor-not-allowed');
-      cd.classList.remove('hidden');
-      let remaining = seconds;
-      cd.textContent = `(${remaining}s)`;
-      if (resendTimer) clearInterval(resendTimer);
-      resendTimer = setInterval(() => {
-        remaining--;
-        if (remaining <= 0) {
-          clearInterval(resendTimer);
-          btn.disabled = false;
-          btn.classList.remove('opacity-40', 'cursor-not-allowed');
-          cd.classList.add('hidden');
-        } else {
-          cd.textContent = `(${remaining}s)`;
-        }
-      }, 1000);
-    }
-
-    document.getElementById('btnResend').addEventListener('click', async () => {
-      hideAlert('alertBox2');
-      try {
-        const res = await fetch(`${BASE_URL}/register/send-otp`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ username: currentUsername, password: currentPassword, email: currentEmail })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          showAlert('alertBox2', 'info', '✉ 驗證碼已重新寄出');
-          startResendCooldown();
-        } else {
-          showAlert('alertBox2', 'error', '✘ ' + data.message);
-        }
-      } catch (err) {
-        showAlert('alertBox2', 'error', '✘ 連線失敗');
+        btn.innerHTML = 'Register';
       }
     });
   </script>

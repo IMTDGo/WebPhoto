@@ -52,9 +52,11 @@ if (process.env.MONGODB_URI) {
 
 // ─── User schema ──────────────────────────────────────────────────────────────
 const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // bcrypt hash
-  email:    { type: String, unique: true, sparse: true }
+  username:   { type: String, required: true, unique: true },
+  password:   { type: String, required: true }, // bcrypt hash
+  name:       { type: String, default: '' },
+  email:      { type: String, unique: true, sparse: true },
+  permission: { type: String, default: 'viewer' }
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
@@ -288,6 +290,61 @@ const server = http.createServer((req, res) => {
       .catch(err => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
+    return;
+  }
+
+  // ── POST /api/auth/register ──────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/api/auth/register') {
+    readJsonBody(req)
+      .then(async body => {
+        const account    = String(body.account    || '').trim();
+        const password   = String(body.password   || '');
+        const name       = String(body.name       || '').trim();
+        const email      = String(body.email      || '').trim().toLowerCase();
+        const permission = String(body.permission || 'viewer').trim();
+
+        const fail = (code, msg) => {
+          res.writeHead(code, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: msg }));
+        };
+
+        if (!account || !password || !name || !email) return fail(400, '請填寫所有欄位');
+        if (!/^[a-zA-Z0-9_]{3,30}$/.test(account)) return fail(400, '帳號只能使用英數字和底線，長度 3–30 字元');
+        if (password.length < 8) return fail(400, '密碼至少需要 8 個字元');
+
+        const dbReady = mongoose.connection.readyState === 1;
+
+        if (dbReady) {
+          const [existingUser, existingEmail] = await Promise.all([
+            User.findOne({ username: account }).lean(),
+            User.findOne({ email }).lean()
+          ]);
+          if (existingUser)  return fail(409, '此帳號名稱已被使用');
+          if (existingEmail) return fail(409, '此 Email 已被註冊');
+        } else {
+          if (memUsers.has(account)) return fail(409, '此帳號名稱已被使用（測試模式）');
+          const emailUsed = [...memUsers.values()].some(u => u.email === email);
+          if (emailUsed) return fail(409, '此 Email 已被註冊（測試模式）');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        if (dbReady) {
+          await User.create({ username: account, password: hashedPassword, name, email, permission });
+        } else {
+          memUsers.set(account, { username: account, password: hashedPassword, name, email, permission });
+        }
+
+        console.log(`[register] User created: "${account}" (${email}) permission=${permission} (${dbReady ? 'DB' : 'memory'})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
+      })
+      .catch(err => {
+        console.error('[api/auth/register]', err.message);
+        const msg = process.env.NODE_ENV !== 'production' ? err.message : '伺服器錯誤，請稍後再試';
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: msg }));
       });
     return;
   }

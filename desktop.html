@@ -77,20 +77,54 @@
     <!-- ── Left: Controls ──────────────────────────────────────────── -->
     <div class="w-80 shrink-0 bg-base-100 flex flex-col gap-4 p-5 overflow-y-auto border-r border-base-300 shadow-lg">
 
-      <h2 class="text-lg font-bold">圖片選擇</h2>
+      <!-- ── BOM 選擇 ── -->
+      <div class="flex flex-col gap-3">
+        <h2 class="text-lg font-bold">BOM 選擇</h2>
 
-      <!-- Drop zone -->
-      <div id="dropZone"
-        class="drop-zone border-base-content/30 rounded-xl p-6 flex flex-col items-center gap-3 cursor-pointer text-center text-base-content/60 hover:border-primary">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-        </svg>
-        <p class="text-sm">拖放圖片至此<br/>或點擊選擇檔案</p>
-        <input type="file" accept="image/*,.tif,.tiff" id="fileInput" class="hidden" />
-        <button class="btn btn-outline btn-sm btn-primary"
-          onclick="document.getElementById('fileInput').click()">選擇圖片</button>
+        <!-- Project dropdown -->
+        <div class="form-control gap-1">
+          <label class="label py-0"><span class="label-text text-xs">專案</span></label>
+          <select id="deskProjectSelect" class="select select-bordered select-sm w-full">
+            <option value="">— 載入中 —</option>
+          </select>
+        </div>
+
+        <!-- BOM dropdown (populated from bom-list API) -->
+        <div id="deskBomSelectWrap" class="form-control gap-1" style="display:none">
+          <label class="label py-0"><span class="label-text text-xs">BOM</span></label>
+          <select id="deskBomSelect" class="select select-bordered select-sm w-full">
+            <option value="">— 選擇 BOM —</option>
+          </select>
+        </div>
+
+        <!-- BOM manual input (fallback when bom-list returns 404) -->
+        <div id="deskBomInputWrap" class="form-control gap-1" style="display:none">
+          <label class="label py-0"><span class="label-text text-xs">BOM 編號（手動輸入）</span></label>
+          <div class="flex gap-2">
+            <input id="deskBomInput" type="text" placeholder="bom_id"
+              class="input input-bordered input-sm flex-1" autocomplete="off" />
+            <button id="deskBomConfirm" class="btn btn-sm btn-primary">確認</button>
+          </div>
+          <div id="deskBomError" class="hidden text-xs text-error mt-1"></div>
+        </div>
+
+        <!-- Category accordion (shown after BOM confirmed) -->
+        <div id="deskCategoryWrap" class="flex flex-col gap-1" style="display:none">
+          <label class="label py-0"><span class="label-text text-xs">選擇材質</span></label>
+          <div id="deskCategoryList"
+            class="overflow-y-auto"
+            style="max-height:22rem;-webkit-overflow-scrolling:touch"></div>
+        </div>
+
+        <!-- Selected material chip -->
+        <div id="deskMaterialChip" class="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 text-xs flex items-center gap-2" style="display:none">
+          <span class="text-primary/60">已選：</span>
+          <span id="deskMaterialLabel" class="font-semibold text-primary flex-1 truncate"></span>
+          <button id="deskClearMaterial" class="text-base-content/30 hover:text-error transition-colors">✕</button>
+        </div>
       </div>
+
+      <div class="divider my-0"></div>
 
       <!-- Image info -->
       <div id="imageInfo" class="hidden">
@@ -132,11 +166,8 @@
             </label>
             <input type="range" id="seamBlendWidth" min="3" max="40" step="1" value="15" class="range range-primary range-xs" />
           </div>
-
         </div>
       </div>
-
-
 
       <!-- Upload -->
       <div id="uploadPanel" class="hidden flex flex-col gap-2 mt-auto pt-3 border-t border-base-300">
@@ -166,20 +197,28 @@
       <!-- ── Right: 3-panel view ────────────────────────────────────────── -->
     <div class="flex-1 flex flex-col overflow-hidden" style="min-height:0">
 
-      <!-- Top row: original image (left) | crop editor (right) -->
+      <!-- Top row: original image / drop zone (left) | crop editor (right) -->
       <div class="flex-1 flex min-h-0 border-b border-base-300">
 
-        <!-- Top-left: original image -->
+        <!-- Top-left: drop zone + original image -->
         <div class="flex-1 flex flex-col min-w-0 border-r border-base-300">
-          <div class="panel-hd">原始圖片</div>
-          <div class="flex-1 flex items-center justify-center bg-base-300 overflow-hidden relative">
-            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-base-content/20 select-none pointer-events-none gap-3">
+          <div class="panel-hd">
+            原始圖片
+            <div class="panel-hd-extra">
+              <label class="btn btn-xs btn-outline btn-primary cursor-pointer">
+                選擇圖片
+                <input type="file" accept="image/*,.tif,.tiff" id="fileInput" class="hidden" />
+              </label>
+            </div>
+          </div>
+          <div id="dropZone" class="drop-zone border-base-content/15 flex-1 flex items-center justify-center bg-base-300 overflow-hidden relative hover:border-primary/40">
+            <label for="fileInput" id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-base-content/20 gap-3 cursor-pointer select-none">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
-              <p class="text-sm">選擇圖片後開始</p>
-            </div>
-            <img id="originalImg" class="hidden max-w-full max-h-full object-contain" alt="原始圖片" />
+              <p class="text-sm">拖放圖片至此，或點擊選擇</p>
+            </label>
+            <img id="originalImg" class="hidden max-w-full max-h-full object-contain relative z-10" alt="原始圖片" />
           </div>
         </div>
 

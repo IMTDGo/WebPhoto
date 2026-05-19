@@ -6,6 +6,7 @@ import { CropEditor }     from './crop-editor.js';
 import { PatternPreview } from './preview.js';
 import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }      from './toast.js';
+import { renderCategoryAccordion, escapeHtml, highlightMaterial, clearAccordionHighlight } from './bom-ui.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const dropZone        = document.getElementById('dropZone');
@@ -253,3 +254,173 @@ window.addEventListener('keydown', (e) => {
 
 // ── Resize ────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => cropEditor?.resize());
+
+// ════════════════════════════════════════════════════════════════════════════════
+// BOM / Material selection
+// ════════════════════════════════════════════════════════════════════════════════
+
+// State
+let deskProjectId      = null;
+let deskTextureRecord  = null;
+let deskMaterialItem   = null;
+
+function _deskGetToken() {
+  return sessionStorage.getItem('wp_token') || localStorage.getItem('wp_token') || '';
+}
+
+// ── Load project list ─────────────────────────────────────────────────────────
+async function loadDeskProjects() {
+  const sel = document.getElementById('deskProjectSelect');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— 載入中 —</option>';
+  try {
+    const res  = await fetch(`${window.__API_BASE__}/api/projects/list?page=1&pageSize=100`,
+      { headers: { 'Authorization': `Bearer ${_deskGetToken()}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const items = Array.isArray(json) ? json
+      : Array.isArray(json.items)      ? json.items
+      : Array.isArray(json.data?.list) ? json.data.list
+      : [];
+    sel.innerHTML = '<option value="">— 選擇專案 —</option>'
+      + items.map(p => `<option value="${escapeHtml(p._id ?? p.id)}">${escapeHtml(p.name)}</option>`).join('');
+  } catch (err) {
+    sel.innerHTML = `<option value="">載入失敗: ${escapeHtml(err.message)}</option>`;
+  }
+}
+
+document.getElementById('deskProjectSelect')?.addEventListener('change', (e) => {
+  deskProjectId     = e.target.value || null;
+  deskTextureRecord = null;
+  deskMaterialItem  = null;
+
+  try { _deskClearMaterialUI(); } catch (_) {}
+
+  // Helper: show/hide via style (bypasses any CSS-class priority issues)
+  function _deskShow(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+  function _deskHide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
+  _deskHide('deskBomSelectWrap');
+  _deskHide('deskBomInputWrap');
+  _deskHide('deskCategoryWrap');
+  _deskHide('deskBomError');
+
+  if (!deskProjectId) return;
+
+  // Show BOM manual input immediately
+  const inputEl = document.getElementById('deskBomInput');
+  if (inputEl) inputEl.value = '';
+  _deskShow('deskBomInputWrap');
+
+  // Background: try bom-list API; if it works, upgrade to dropdown
+  (async () => {
+    try {
+      const res = await fetch(
+        `${window.__API_BASE__}/api/projects/bom-list?project_id=${encodeURIComponent(deskProjectId)}`,
+        { headers: { 'Authorization': `Bearer ${_deskGetToken()}` } }
+      );
+      if (!res.ok) return;
+      const json = await res.json();
+      const raw  = json.data ?? json;
+      const items = Array.isArray(raw) ? raw
+        : Array.isArray(raw?.list)  ? raw.list
+        : Array.isArray(raw?.items) ? raw.items
+        : (raw?.bom_id !== undefined ? [raw] : []);
+      if (!items.length) return;
+
+      const sel = document.getElementById('deskBomSelect');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">— 選擇 BOM —</option>'
+        + items.map(b => `<option value="${escapeHtml(b.bom_id ?? b._id ?? b.id)}">${escapeHtml(b.bomFileName ?? b.bomName ?? b.name ?? b.bom_id)}</option>`).join('');
+      _deskHide('deskBomInputWrap');
+      _deskShow('deskBomSelectWrap');
+
+      if (items.length === 1) {
+        sel.value = items[0].bom_id ?? items[0]._id ?? items[0].id;
+        lookupDeskBom(sel.value);
+      }
+    } catch (_) { /* keep manual input */ }
+  })();
+});
+
+// BOM dropdown change → auto load categories
+document.getElementById('deskBomSelect')?.addEventListener('change', (e) => {
+  const bomId = e.target.value;
+  if (bomId && deskProjectId) lookupDeskBom(bomId);
+});
+
+// BOM lookup via project-parse ──────────────────────────────────────────────
+async function lookupDeskBom(bomId) {
+  const errEl = document.getElementById('deskBomError');
+  const btn   = document.getElementById('deskBomConfirm');
+  errEl?.classList.add('hidden');
+  if (btn) { btn.disabled = true; btn.textContent = '查詢中…'; }
+
+  try {
+    const url = `${window.__API_BASE__}/api/texture/project-parse`
+      + `?project_id=${encodeURIComponent(deskProjectId)}`
+      + `&bom_id=${encodeURIComponent(bomId)}`;
+    const res  = await fetch(url, { headers: { 'Authorization': `Bearer ${_deskGetToken()}` } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.success === false) throw new Error(json.message ?? '查詢失敗');
+    const record = json.data?.textureRecord;
+    if (!record) throw new Error('無法取得 textureRecord');
+    deskTextureRecord = record;
+    renderDeskCategories(record);
+  } catch (err) {
+    if (errEl) { errEl.textContent = '查詢失敗：' + err.message; errEl.classList.remove('hidden'); }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '確認'; }
+  }
+}
+
+document.getElementById('deskBomConfirm')?.addEventListener('click', () => {
+  const val = document.getElementById('deskBomInput')?.value.trim();
+  if (!val || !deskProjectId) return;
+  lookupDeskBom(val);
+});
+document.getElementById('deskBomInput')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('deskBomConfirm')?.click();
+});
+
+// ── Category accordion (delegates to shared bom-ui.js) ───────────────────────
+function renderDeskCategories(record) {
+  const wrap = document.getElementById('deskCategoryWrap');
+  const list = document.getElementById('deskCategoryList');
+  if (!list || !wrap) return;
+
+  _deskClearMaterialUI();
+  renderCategoryAccordion(list, record.texture ?? [], selectDeskMaterial);
+  wrap.style.display = '';   // show
+}
+
+// ── Material select ───────────────────────────────────────────────────────────
+function selectDeskMaterial(item) {
+  deskMaterialItem = item;
+  highlightMaterial(item._id);
+
+  // Show chip
+  const chip  = document.getElementById('deskMaterialChip');
+  const label = document.getElementById('deskMaterialLabel');
+  if (label) label.textContent = item.material || item.material_origin || '—';
+  if (chip) chip.style.display = '';  // show
+
+  // Auto-fill upload name
+  if (uploadNameInput) uploadNameInput.value = item.material || item.material_origin || '';
+}
+
+function _deskClearMaterialUI() {
+  deskMaterialItem = null;
+  const chip = document.getElementById('deskMaterialChip');
+  if (chip) chip.style.display = 'none';
+  clearAccordionHighlight();
+}
+
+document.getElementById('deskClearMaterial')?.addEventListener('click', () => {
+  _deskClearMaterialUI();
+  if (uploadNameInput) uploadNameInput.value = '';
+});
+
+// ── Init: load projects on page load ─────────────────────────────────────────
+loadDeskProjects();

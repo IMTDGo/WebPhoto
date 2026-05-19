@@ -29,6 +29,11 @@
     #previewCanvas { image-rendering: pixelated; display: block; }
     #cameraVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
     .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
+    .scroll-area {
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
+    }
   </style>
 </head>
 <body class="text-base-content min-h-screen flex flex-col">
@@ -62,36 +67,130 @@
     })();
   </script>
 
+  <!-- Tab bar -->
+  <div id="mainTabBar" class="shrink-0 flex bg-base-100/80 backdrop-blur border-b border-base-content/10">
+    <button id="tabBtnPhoto" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-primary text-primary transition-colors">📷 拍照上傳</button>
+    <button id="tabBtnAdmin" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-transparent text-base-content/40 transition-colors">⚙️ 管理</button>
+  </div>
+
   <main class="flex-1 relative overflow-hidden" style="min-height:0">
+    <div id="tabPhoto" class="h-full relative">
+
+    <!-- Step: Select Project -->
+    <section id="stepProject" class="h-full flex flex-col">
+      <div class="shrink-0 px-4 pt-4 pb-2">
+        <h2 class="text-lg font-bold">選擇專案</h2>
+        <p class="text-xs text-base-content/50 mt-0.5">請先選擇要拍攝的專案</p>
+      </div>
+      <div id="projectLoading" class="flex-1 flex items-center justify-center">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+      <div id="projectError" class="hidden flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <p class="text-sm text-base-content/50" id="projectErrorMsg">載入失敗</p>
+        <button id="btnRetryProjects" class="btn btn-sm btn-outline">重試</button>
+      </div>
+      <div id="projectList" class="hidden flex-1 min-h-0 overflow-y-auto scroll-area px-4 py-3"></div>
+    </section>
+
+    <!-- Step: Select BOM -->
+    <section id="stepBOM" class="hidden h-full flex flex-col">
+      <div class="shrink-0 flex items-center gap-2 px-2 py-2 border-b border-base-content/10">
+        <button id="btnBomBack" class="btn btn-sm btn-ghost btn-circle">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="min-w-0">
+          <p class="text-xs text-base-content/40">專案</p>
+          <h2 class="text-sm font-bold leading-tight truncate" id="bomProjectName">—</h2>
+        </div>
+      </div>
+      <p class="shrink-0 text-xs text-base-content/50 px-4 pt-2 pb-1">選擇 BOM 部件</p>
+      <div id="bomLoading" class="flex-1 flex items-center justify-center">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+      <div id="bomError" class="hidden flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+        <p class="text-sm text-base-content/50" id="bomErrorMsg">載入失敗</p>
+        <button id="btnRetryBom" class="btn btn-sm btn-outline">重試</button>
+      </div>
+      <div id="bomList" class="hidden flex-1 min-h-0 overflow-y-auto scroll-area px-4 py-2"></div>
+    </section>
+
     <!-- Step 1: entry -->
-    <section id="stepEntry" class="h-full flex flex-col p-4 gap-4">
-      <div class="rounded-2xl bg-base-100/90 backdrop-blur shadow-xl border border-base-content/10 p-4">
-        <h1 class="text-xl font-bold">快速開始</h1>
-        <p class="text-sm text-base-content/60 mt-1">先拍一張，或從相簿選擇，再拖曳調整裁切區域。</p>
+    <section id="stepEntry" class="hidden h-full flex flex-col">
+      <!-- Header chip -->
+      <div class="shrink-0 px-4 pt-4 pb-2">
+        <div class="rounded-2xl bg-base-100/90 backdrop-blur shadow-xl border border-base-content/10 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-1 min-w-0">
+              <button id="btnEntryBack" class="btn btn-sm btn-ghost btn-circle -ml-2 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div class="min-w-0">
+              <h1 class="text-xl font-bold">快速開始</h1>
+              <p class="text-xs text-base-content/50 mt-0.5 truncate">
+                <span id="entryProjectLabel" class="text-primary/80"></span><span id="entryBomSep" class="hidden mx-1 text-base-content/30">›</span><span id="entryBomLabel" class="font-semibold text-base-content/80"></span>
+              </p>
+              </div>
+            </div>
+            <button id="btnChangeBom" class="btn btn-xs btn-ghost shrink-0 text-base-content/40 mt-0.5">更換</button>
+          </div>
+        </div>
       </div>
 
-      <button id="btnOpenCamera" class="btn btn-primary btn-lg h-16 justify-start text-base gap-3 rounded-2xl shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-        直接拍照
-      </button>
+      <!-- Category list (shown when textureRecord has texture items) -->
+      <div id="entryCategoryList" class="hidden flex-1 min-h-0 overflow-y-auto scroll-area px-4 py-2" style="padding-bottom:7rem"></div>
 
-      <label class="btn btn-outline btn-lg h-16 justify-start text-base gap-3 rounded-2xl bg-base-100/80 border-base-content/20">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-        </svg>
-        從相簿選擇
-        <input type="file" accept="image/*,.tif,.tiff" class="hidden" id="fileInputGallery" />
-      </label>
+      <!-- Fallback: no texture data — show direct camera buttons -->
+      <div id="entryNoTexture" class="flex-1 flex flex-col gap-4 px-4 pb-4">
+        <button id="btnOpenCamera" class="btn btn-primary btn-lg h-16 justify-start text-base gap-3 rounded-2xl shadow-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          直接拍照
+        </button>
+        <label class="btn btn-outline btn-lg h-16 justify-start text-base gap-3 rounded-2xl bg-base-100/80 border-base-content/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          從相簿選擇
+          <input type="file" accept="image/*,.tif,.tiff" class="hidden" id="fileInputGallery" />
+        </label>
+        <div class="mt-auto rounded-xl bg-base-100/70 p-3 text-xs text-base-content/60 border border-base-content/10">
+          小提示: 裁切頁可拖曳移動，拉角縮放，雙指可縮放裁切範圍。
+        </div>
+      </div>
 
-      <!-- Fallback when camera permission is unavailable -->
+      <!-- Action bar: shown after selecting a material -->
+      <div id="entryActions" class="hidden shrink-0 border-t border-base-content/10 bg-base-300/90 backdrop-blur-md px-4 pt-3 pb-5">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-xs text-base-content/40">已選材質：</span>
+          <span id="entryMaterialLabel" class="text-sm font-semibold flex-1 truncate"></span>
+          <button id="btnClearMaterial" class="btn btn-xs btn-ghost text-base-content/30">取消</button>
+        </div>
+        <div class="flex gap-3">
+          <button id="btnOpenCameraEntry" class="btn btn-primary flex-1 gap-2 rounded-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            直接拍照
+          </button>
+          <label class="btn btn-outline flex-1 gap-2 rounded-xl bg-base-100/60">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            從相簿選擇
+            <input type="file" accept="image/*,.tif,.tiff" class="hidden" id="fileInputGalleryEntry" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Hidden file inputs -->
       <input type="file" accept="image/*" capture="environment" class="hidden" id="fileInputCapture" />
-
-      <div class="mt-auto rounded-xl bg-base-100/70 p-3 text-xs text-base-content/60 border border-base-content/10">
-        小提示: 裁切頁可拖曳移動，拉角縮放，雙指可縮放裁切範圍。
-      </div>
     </section>
 
     <!-- Step 2: camera -->
@@ -175,19 +274,27 @@
       </details>
 
       <div class="shrink-0 p-3 safe-bottom bg-base-100/95 border-t border-base-content/10 grid grid-cols-3 gap-2">
+        <button class="btn btn-error btn-soft" id="btnPickAnother">上一頁</button>
         <button class="btn btn-ghost" id="btnRetake">重拍</button>
-        <button class="btn btn-outline" id="btnPickAnother">重選</button>
         <button class="btn btn-primary" id="btnShowUpload">下一步 →</button>
       </div>
     </section>
 
+    </div><!-- /tabPhoto -->
+
+    <!-- Admin tab -->
+    <div id="tabAdmin" class="hidden h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <div class="text-5xl opacity-20">⚙️</div>
+      <p class="text-base-content/30 text-sm font-medium">管理功能</p>
+      <p class="text-base-content/20 text-xs">即將推出</p>
+    </div>
   </main>
 
   <!-- Upload bottom sheet -->
   <div id="uploadSheetBackdrop" class="hidden fixed inset-0 bg-black/45 z-40"></div>
   <section id="uploadSheet" class="hidden fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-base-100 shadow-2xl border-t border-base-content/10 p-4 safe-bottom">
     <div class="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4"></div>
-    <h3 class="font-bold text-lg mb-3">命名並上傳</h3>
+    <h3 class="font-bold text-lg mb-3">確認上傳</h3>
     <div class="form-control gap-2">
       <label class="label py-0"><span class="label-text">輸出解析度</span></label>
       <select id="uploadResolution" class="select select-bordered w-full">
@@ -196,8 +303,9 @@
         <option value="2048">2048 × 2048</option>
         <option value="4096">4096 × 4096</option>
       </select>
-      <label class="label py-0"><span class="label-text">資料夾名稱</span></label>
-      <input type="text" id="uploadName" placeholder="例如: wood_floor_01" class="input input-bordered w-full" maxlength="100" />
+      <label class="label py-0"><span class="label-text">部件名稱</span></label>
+      <div id="uploadNameDisplay" class="rounded-lg border border-base-content/20 bg-base-200/50 px-4 py-3 text-sm font-mono text-primary min-h-[2.75rem]"></div>
+      <input type="text" id="uploadName" class="hidden" />
       <p class="text-xs text-base-content/40">圖片將上傳至 Cloudinary</p>
       <label id="sendEmailLabel" class="hidden flex items-center gap-2 text-sm text-base-content/60 cursor-pointer mt-1">
         <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
