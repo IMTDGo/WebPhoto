@@ -533,11 +533,11 @@
 
         if (evCaps) {
           hdrBadge.style.display = '';
-          infoText.textContent = `HDR 支援 ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
-          btnShoot.textContent = '開始 HDR 拍攝 (3 張)';
+          infoText.textContent = `原生 HDR ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
+          btnShoot.textContent = '拍攝 HDR（1 張）';
         } else {
-          infoText.textContent = `單張模式（此裝置不支援曝光補償）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
-          btnShoot.textContent = '拍攝照片';
+          infoText.textContent = `軟體 HDR（3 張合成）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
+          btnShoot.textContent = '拍攝 3 張合成';
         }
         infoRow.style.display = 'flex';
         statusEl.textContent = '相機已就緒';
@@ -624,53 +624,70 @@
 
       try {
         if (evCaps) {
-          // ── HDR 3-shot ──────────────────────────────────────────────
-          dotsWrap.style.display = 'flex';
-          dots.forEach(d => { d.className = 'cam-dot'; });
+          // ── 原生 HDR：直接拍 1 張，裝置自行處理 HDR ────────────────
+          statusEl.textContent = 'HDR 拍攝中...';
 
-          const [dark, normal, bright] = await captureHDRFrames(
-            track, evCaps,
-            (step, total, label) => {
-              statusEl.textContent = `拍攝 ${step}/${total}：${label}`;
-              dots.forEach((d, i) => {
-                d.className = i + 1 < step  ? 'cam-dot done'
-                            : i + 1 === step ? 'cam-dot active'
-                            : 'cam-dot';
-              });
-            },
-          );
-          dots.forEach(d => { d.className = 'cam-dot done'; });
-
-          statusEl.textContent = '合成 HDR 中...';
-          const hdrCanvas = mergeHDR(dark, normal, bright);
-
-          shots = [
-            { bitmap: dark,      id: `${ts}_dark`,   label: '暗部 −2EV' },
-            { bitmap: normal,    id: `${ts}_normal`,  label: '正常 0EV'  },
-            { bitmap: bright,    id: `${ts}_bright`,  label: '亮部 +2EV' },
-            { bitmap: hdrCanvas, id: `${ts}_hdr`,     label: 'HDR 合成'  },
-          ];
-
-        } else {
-          // ── Single-shot fallback ────────────────────────────────────
-          statusEl.textContent = '拍攝中...';
-          let normal;
-
+          let hdrBitmap;
           if (typeof ImageCapture !== 'undefined') {
             const ic   = new ImageCapture(track);
             const blob = await ic.takePhoto();
-            normal = await createImageBitmap(blob);
+            hdrBitmap = await createImageBitmap(blob);
           } else {
-            // Canvas snapshot from video (iOS fallback)
+            // Canvas snapshot fallback
             const snap = document.createElement('canvas');
             snap.width  = video.videoWidth;
             snap.height = video.videoHeight;
             snap.getContext('2d').drawImage(video, 0, 0);
-            normal = await createImageBitmap(snap);
+            hdrBitmap = await createImageBitmap(snap);
           }
 
           shots = [
-            { bitmap: normal, id: `${ts}_normal`, label: '照片' },
+            { bitmap: hdrBitmap, id: `${ts}_hdr`, label: 'HDR 拍攝' },
+          ];
+
+        } else {
+          // ── 無原生 HDR：拍 3 張合成軟體 HDR ────────────────────────
+          dotsWrap.style.display = 'flex';
+          dots.forEach(d => { d.className = 'cam-dot'; });
+
+          const frames = [];
+          const shotLabels = ['第 1 張', '第 2 張', '第 3 張'];
+
+          for (let i = 0; i < 3; i++) {
+            statusEl.textContent = `拍攝 ${i + 1}/3：${shotLabels[i]}`;
+            dots.forEach((d, j) => {
+              d.className = j < i  ? 'cam-dot done'
+                          : j === i ? 'cam-dot active'
+                          : 'cam-dot';
+            });
+
+            let bitmap;
+            if (typeof ImageCapture !== 'undefined') {
+              const ic   = new ImageCapture(track);
+              const blob = await ic.takePhoto();
+              bitmap = await createImageBitmap(blob);
+            } else {
+              const snap = document.createElement('canvas');
+              snap.width  = video.videoWidth;
+              snap.height = video.videoHeight;
+              snap.getContext('2d').drawImage(video, 0, 0);
+              bitmap = await createImageBitmap(snap);
+            }
+            frames.push(bitmap);
+
+            if (i < 2) await new Promise(r => setTimeout(r, 350));
+          }
+
+          dots.forEach(d => { d.className = 'cam-dot done'; });
+
+          statusEl.textContent = '合成 HDR 中...';
+          const merged = mergeHDR(frames[0], frames[1], frames[2]);
+
+          shots = [
+            { bitmap: frames[0], id: `${ts}_shot1`,  label: '第 1 張' },
+            { bitmap: frames[1], id: `${ts}_shot2`,  label: '第 2 張' },
+            { bitmap: frames[2], id: `${ts}_shot3`,  label: '第 3 張' },
+            { bitmap: merged,    id: `${ts}_merged`, label: 'HDR 合成' },
           ];
         }
 
