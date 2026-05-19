@@ -7,6 +7,7 @@ import { PatternPreview }           from './preview.js';
 import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }               from './toast.js';
 import { renderCategoryAccordion, highlightMaterial } from './bom-ui.js';
+import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
 // seamless.js no longer needed for UI
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -63,6 +64,10 @@ let cropEditor      = null;
 let preview         = null;
 let currentCrop     = null;
 let cameraStream    = null;
+
+// HDR state
+let hdrMode         = false;
+let hdrCapabilities = null;  // null = not supported / not yet checked
 
 // BOM / texture selection state
 let currentProjectId    = null;
@@ -428,6 +433,20 @@ async function startCamera() {
     cameraVideo.addEventListener('loadedmetadata', res, { once: true });
   });
   await cameraVideo.play();
+
+  // Detect HDR support on this track
+  const track = cameraStream.getVideoTracks()[0];
+  hdrCapabilities = getHDRCapabilities(track);
+  const hdrBtn = document.getElementById('btnHDRToggle');
+  if (hdrBtn) {
+    if (hdrCapabilities) {
+      hdrBtn.style.display = '';
+      _updateHDRButton();
+    } else {
+      hdrBtn.style.display = 'none';
+      hdrMode = false;
+    }
+  }
 }
 
 function stopCamera() {
@@ -579,7 +598,91 @@ btnCameraBack.addEventListener('click', () => {
   showStep('entry');
 });
 
+// ── HDR helpers ───────────────────────────────────────────────────────────────
+function _updateHDRButton() {
+  const btn = document.getElementById('btnHDRToggle');
+  if (!btn) return;
+  if (hdrMode) {
+    btn.textContent = 'HDR ✓';
+    btn.classList.remove('text-white/50', 'border-white/20');
+    btn.classList.add('text-primary', 'border-primary/60');
+  } else {
+    btn.textContent = 'HDR';
+    btn.classList.remove('text-primary', 'border-primary/60');
+    btn.classList.add('text-white/50', 'border-white/20');
+  }
+}
+
+document.getElementById('btnHDRToggle')?.addEventListener('click', () => {
+  if (!hdrCapabilities) return;
+  hdrMode = !hdrMode;
+  _updateHDRButton();
+});
+
 btnTakePhoto.addEventListener('click', async () => {
+  // ── HDR path ──
+  if (hdrMode && hdrCapabilities) {
+    const overlay  = document.getElementById('hdrOverlay');
+    const progText = document.getElementById('hdrProgressText');
+    const dots     = [0, 1, 2].map(i => document.getElementById(`hdrDot${i}`));
+
+    function setDot(step) {
+      dots.forEach((d, i) => {
+        if (!d) return;
+        d.className = `w-3 h-3 rounded-full transition-colors duration-200 ${i < step ? 'bg-primary' : 'bg-white/20'}`;
+      });
+    }
+
+    btnTakePhoto.disabled = true;
+    document.getElementById('btnHDRToggle').disabled = true;
+    if (overlay) overlay.style.display = '';
+
+    try {
+      const track = cameraStream.getVideoTracks()[0];
+      const frames = await captureHDRFrames(track, hdrCapabilities, (step, total, label) => {
+        if (progText) progText.textContent = `拍攝 ${step}/${total}：${label}`;
+        setDot(step);
+      });
+
+      if (progText) progText.textContent = 'HDR 合成中…';
+      setDot(3);
+
+      const [dark, normal, bright] = frames;
+      const merged = mergeHDR(dark, normal, bright);
+      frames.forEach(f => f.close?.());
+
+      stopCamera();
+      const img = await canvasToImage(merged);
+      if (!cropEditor) initEditors();
+      cropEditor.load(img);
+      currentCrop = cropEditor.getCrop();
+      preview.update(currentCrop);
+      showStep('edit');
+    } catch (err) {
+      showToast('HDR 拍攝失敗，改用普通模式', 'warning');
+      // Fallback: single shot from video
+      try {
+        const canvas = captureFromVideo();
+        const img    = await canvasToImage(canvas);
+        stopCamera();
+        if (!cropEditor) initEditors();
+        cropEditor.load(img);
+        currentCrop = cropEditor.getCrop();
+        preview.update(currentCrop);
+        showStep('edit');
+      } catch {
+        showToast('拍照失敗，請重試', 'error');
+      }
+    } finally {
+      btnTakePhoto.disabled = false;
+      const hdrBtn = document.getElementById('btnHDRToggle');
+      if (hdrBtn) hdrBtn.disabled = false;
+      if (overlay) overlay.style.display = 'none';
+    }
+    return;
+  }
+
+  // ── Single-shot path (original) ──
   try {
     const captureCanvas = captureFromVideo();
     const img = await canvasToImage(captureCanvas);

@@ -2,7 +2,7 @@
 node_modules/
 
 # Environment variables — NEVER commit this file
-.env
+# .env
 
 # Upload folder contents (keep directory, ignore files)
 upload/*
