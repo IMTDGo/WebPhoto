@@ -161,6 +161,7 @@
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
+      position: relative;
     }
     .cam-header {
       display: flex; align-items: center; justify-content: space-between;
@@ -242,6 +243,63 @@
       display: flex; align-items: center; justify-content: center;
       gap: 0.5rem; font-size: 0.75rem; color: #6b7280;
     }
+
+    /* Rename dialog */
+    .cam-rename-overlay {
+      position: absolute; inset: 0;
+      background: rgba(13,17,23,0.9);
+      border-radius: 1.25rem;
+      z-index: 5;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .cam-rename-box {
+      background: #252d3d;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      width: 88%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .cam-rename-title {
+      color: #e0e6f0;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .cam-rename-input {
+      width: 100%;
+      background: #1c2333;
+      border: 1.5px solid #374151;
+      border-radius: 0.5rem;
+      color: #e0e6f0;
+      font-size: 0.9rem;
+      padding: 0.65rem 0.85rem;
+      outline: none;
+      transition: border-color 0.18s;
+      box-sizing: border-box;
+    }
+    .cam-rename-input:focus { border-color: #3b82f6; }
+    .cam-rename-hint {
+      color: #6b7280;
+      font-size: 0.72rem;
+      line-height: 1.5;
+    }
+    .btn-rename-ok {
+      border: none;
+      border-radius: 9999px;
+      padding: 0.65rem 1.4rem;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      width: 100%;
+    }
+    .btn-rename-ok:hover { background: #2563eb; }
   </style>
 </head>
 <body>
@@ -354,6 +412,20 @@
       <!-- Action buttons -->
       <div class="cam-btns">
         <button id="btnCamShoot" class="btn-cam-start" disabled>啟動中...</button>
+      </div>
+
+      <!-- Rename dialog (overlaid after capture, before upload) -->
+      <div id="camRenameOverlay" class="cam-rename-overlay">
+        <div class="cam-rename-box">
+          <div class="cam-rename-title">💾 為這次拍攝命名</div>
+          <input id="camRenameInput" type="text" class="cam-rename-input"
+            placeholder="輸入名稱（英數字、中文）" maxlength="40" />
+          <div class="cam-rename-hint">
+            檔案將命名為：<br>
+            {名稱}_origin_&nbsp;&nbsp;{名稱}_-2EV_&nbsp;&nbsp;{名稱}_+2EV_&nbsp;&nbsp;{名稱}_hdr_
+          </div>
+          <button id="btnRenameConfirm" class="btn-rename-ok">確認，開始上傳</button>
+        </div>
       </div>
 
     </div>
@@ -533,11 +605,11 @@
 
         if (evCaps) {
           hdrBadge.style.display = '';
-          infoText.textContent = `原生 HDR ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
-          btnShoot.textContent = '拍攝 HDR（1 張）';
+          infoText.textContent = `HDR 支援 ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
+          btnShoot.textContent = '開始 HDR 拍攝 (3 張)';
         } else {
-          infoText.textContent = `軟體 HDR（3 張合成）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
-          btnShoot.textContent = '拍攝 3 張合成';
+          infoText.textContent = `單張模式（此裝置不支援曝光補償）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
+          btnShoot.textContent = '拍攝照片';
         }
         infoRow.style.display = 'flex';
         statusEl.textContent = '相機已就緒';
@@ -628,6 +700,31 @@
       logEl.appendChild(line);
     }
 
+    // ── Rename dialog ──────────────────────────────────────────────────────
+    function _askFileName(defaultName) {
+      return new Promise((resolve) => {
+        const dlg   = document.getElementById('camRenameOverlay');
+        const input = document.getElementById('camRenameInput');
+        const btn   = document.getElementById('btnRenameConfirm');
+        input.value = defaultName;
+        dlg.style.display = 'flex';
+        setTimeout(() => { input.focus(); input.select(); }, 80);
+
+        function _confirm() {
+          // sanitise: keep CJK, alphanumeric, underscore, hyphen
+          const raw  = input.value.trim();
+          const name = raw.replace(/[^\w\u4e00-\u9fff-]/g, '_') || defaultName;
+          dlg.style.display = 'none';
+          btn.removeEventListener('click', _confirm);
+          input.removeEventListener('keydown', _onKey);
+          resolve(name);
+        }
+        function _onKey(e) { if (e.key === 'Enter') _confirm(); }
+        btn.addEventListener('click', _confirm);
+        input.addEventListener('keydown', _onKey);
+      });
+    }
+
     // ── Shoot + HDR + Upload ──────────────────────────────────────────────
     btnShoot.addEventListener('click', async () => {
       if (!camStream || isShooting) return;
@@ -639,53 +736,48 @@
 
       const track  = camStream.getVideoTracks()[0];
       const evCaps = getHDRCapabilities(track);
-      const ts     = Date.now();
-      const folder = 'device-test';
 
-      let shots; // [{ bitmap, id, label }]
+      // Default filename: test_YYYYMMDD_HHmmss
+      const _now = new Date();
+      const _p   = n => String(n).padStart(2, '0');
+      const defaultName = `test_${_now.getFullYear()}${_p(_now.getMonth()+1)}${_p(_now.getDate())}_${_p(_now.getHours())}${_p(_now.getMinutes())}${_p(_now.getSeconds())}`;
+
+      let shots; // [{ bitmap, suffix, label }]
 
       try {
         if (evCaps) {
-          // ── 原生 HDR：直接拍 1 張，裝置自行處理 HDR ────────────────
-          statusEl.textContent = 'HDR 拍攝中...';
-
-          const hdrBitmap = await _captureFrame();
-
-          shots = [
-            { bitmap: hdrBitmap, id: `${ts}_hdr`, label: 'HDR 拍攝' },
-          ];
-
-        } else {
-          // ── 無原生 HDR：拍 3 張合成軟體 HDR ────────────────────────
+          // ── 3-shot HDR (EV −2 / 0 / +2) ───────────────────────────
           dotsWrap.style.display = 'flex';
           dots.forEach(d => { d.className = 'cam-dot'; });
 
-          const frames = [];
-          const shotLabels = ['第 1 張', '第 2 張', '第 3 張'];
-
-          for (let i = 0; i < 3; i++) {
-            statusEl.textContent = `拍攝 ${i + 1}/3：${shotLabels[i]}`;
-            dots.forEach((d, j) => {
-              d.className = j < i  ? 'cam-dot done'
-                          : j === i ? 'cam-dot active'
-                          : 'cam-dot';
-            });
-
-            frames.push(await _captureFrame());
-
-            if (i < 2) await new Promise(r => setTimeout(r, 350));
-          }
-
+          const [dark, normal, bright] = await captureHDRFrames(
+            track, evCaps,
+            (step, total, label) => {
+              statusEl.textContent = `拍攝 ${step}/${total}：${label}`;
+              dots.forEach((d, i) => {
+                d.className = i + 1 < step  ? 'cam-dot done'
+                            : i + 1 === step ? 'cam-dot active'
+                            : 'cam-dot';
+              });
+            },
+          );
           dots.forEach(d => { d.className = 'cam-dot done'; });
 
           statusEl.textContent = '合成 HDR 中...';
-          const merged = mergeHDR(frames[0], frames[1], frames[2]);
+          const hdrCanvas = mergeHDR(dark, normal, bright);
 
           shots = [
-            { bitmap: frames[0], id: `${ts}_shot1`,  label: '第 1 張' },
-            { bitmap: frames[1], id: `${ts}_shot2`,  label: '第 2 張' },
-            { bitmap: frames[2], id: `${ts}_shot3`,  label: '第 3 張' },
-            { bitmap: merged,    id: `${ts}_merged`, label: 'HDR 合成' },
+            { bitmap: normal,    suffix: '_origin_', label: '正常 0EV'  },
+            { bitmap: dark,      suffix: '_-2EV_',   label: '暗部 −2EV' },
+            { bitmap: bright,    suffix: '_+2EV_',   label: '亮部 +2EV' },
+            { bitmap: hdrCanvas, suffix: '_hdr_',    label: 'HDR 合成'  },
+          ];
+
+        } else {
+          // ── Single-shot fallback (no EV control) ───────────────────
+          statusEl.textContent = '拍攝中...';
+          shots = [
+            { bitmap: await _captureFrame(), suffix: '_origin_', label: '照片' },
           ];
         }
 
@@ -695,13 +787,19 @@
           _addThumb(bitmap, label);
         }
 
+        // ── Ask for filename ──────────────────────────────────────────
+        statusEl.textContent = '請為這次拍攝命名...';
+        const baseName = await _askFileName(defaultName);
+        const folder   = `device-test/${baseName}`;
+
         // ── Upload all to Cloudinary ──────────────────────────────────
         statusEl.textContent = `上傳 ${shots.length} 張至 Cloudinary...`;
         let allOk = true;
 
-        for (const { bitmap, id, label } of shots) {
+        for (const { bitmap, suffix, label } of shots) {
+          const publicId = `${baseName}${suffix}`;
           try {
-            const url = await _uploadToCloudinary(bitmap, folder, id);
+            const url = await _uploadToCloudinary(bitmap, folder, publicId);
             _log(`✔ ${label}  `, url);
           } catch (err) {
             _log(`✘ ${label}：${err.message}`);
