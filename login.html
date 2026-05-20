@@ -697,15 +697,14 @@
     }
 
     // ── Capture helper (ImageCapture → canvas fallback) ──────────────────
-    // "setPhotoOptions failed" is a known Android Chrome bug on some devices;
-    // we silently fall back to a canvas snapshot of the live video frame.
+    // Use grabFrame() instead of takePhoto() to avoid the "setPhotoOptions failed"
+    // bug in Chrome Android. Fall back to a canvas snapshot if grabFrame() fails.
     async function _captureFrame() {
       if (typeof ImageCapture !== 'undefined') {
         try {
           const track = camStream.getVideoTracks()[0];
           const ic    = new ImageCapture(track);
-          const blob  = await ic.takePhoto();
-          return createImageBitmap(blob);
+          return await ic.grabFrame();
         } catch {
           // fall through to canvas snapshot
         }
@@ -831,23 +830,18 @@
 
             await new Promise(r => setTimeout(r, 500));
 
-            // Step B: capture (takePhoto → grabFrame fallback)
-            _dbg(`[${i+1}] takePhoto()...`);
+            // Step B: capture via grabFrame() only.
+            // Never use takePhoto() — it triggers setPhotoOptions in Chrome Android
+            // and leaves the photo pipeline in a dirty state that makes subsequent
+            // applyConstraints calls fail with "setPhotoOptions failed".
+            _dbg(`[${i+1}] grabFrame()...`);
             let bitmap;
             try {
-              const blob = await ic.takePhoto();
-              bitmap = await createImageBitmap(blob);
-              _dbg(`  ✔ takePhoto OK → ${bitmap.width}×${bitmap.height}`, 'ok');
+              bitmap = await ic.grabFrame();
+              _dbg(`  ✔ grabFrame OK → ${bitmap.width}×${bitmap.height}`, 'ok');
             } catch (e) {
-              _dbg(`  ✘ takePhoto FAIL: ${e.name}: ${e.message}`, 'err');
-              _dbg(`  → fallback grabFrame()...`);
-              try {
-                bitmap = await ic.grabFrame();
-                _dbg(`  ✔ grabFrame OK → ${bitmap.width}×${bitmap.height}`, 'ok');
-              } catch (e2) {
-                _dbg(`  ✘ grabFrame FAIL: ${e2.name}: ${e2.message}`, 'err');
-                throw new Error(`拍攝第${i+1}張失敗: ${e2.message}`);
-              }
+              _dbg(`  ✘ grabFrame FAIL: ${e.name}: ${e.message}`, 'err');
+              throw new Error(`拍攝第${i+1}張失敗: ${e.message}`);
             }
             rawFrames[key] = bitmap;
           }

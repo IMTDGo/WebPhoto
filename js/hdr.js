@@ -70,17 +70,14 @@ export async function captureHDRFrames(track, evCaps, onProgress, maxSize = 2048
     });
     await _delay(500);
 
-    let bitmap;
-    try {
-      const blob = await imageCapture.takePhoto();
-      bitmap = await _resizeBitmap(blob, maxSize);
-    } catch {
-      // takePhoto() fails with "setPhotoOptions failed" on some Android devices.
-      // grabFrame() reads directly from the video stream, bypassing the photo
-      // pipeline entirely — no setPhotoOptions, no failure.
-      const frame = await imageCapture.grabFrame();
-      bitmap = await _resizeBitmap(frame, maxSize);
-    }
+    // Always use grabFrame() instead of takePhoto().
+    // takePhoto() triggers setPhotoOptions internally in Chrome Android;
+    // after the first call succeeds, subsequent applyConstraints calls
+    // fail with "setPhotoOptions failed" because the photo pipeline is
+    // left in a dirty state. grabFrame() reads directly from the video
+    // stream and never touches the photo pipeline.
+    const frame = await imageCapture.grabFrame();
+    const bitmap = await _resizeBitmap(frame, maxSize);
     frames.push(bitmap);
   }
 
