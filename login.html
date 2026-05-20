@@ -592,6 +592,28 @@
       resultsEl.appendChild(wrap);
     }
 
+    // ── Capture helper (ImageCapture → canvas fallback) ──────────────────
+    // "setPhotoOptions failed" is a known Android Chrome bug on some devices;
+    // we silently fall back to a canvas snapshot of the live video frame.
+    async function _captureFrame() {
+      if (typeof ImageCapture !== 'undefined') {
+        try {
+          const track = camStream.getVideoTracks()[0];
+          const ic    = new ImageCapture(track);
+          const blob  = await ic.takePhoto();
+          return createImageBitmap(blob);
+        } catch {
+          // fall through to canvas snapshot
+        }
+      }
+      // Canvas snapshot from live video
+      const snap = document.createElement('canvas');
+      snap.width  = video.videoWidth;
+      snap.height = video.videoHeight;
+      snap.getContext('2d').drawImage(video, 0, 0);
+      return createImageBitmap(snap);
+    }
+
     // ── Log helper ────────────────────────────────────────────────────────
     function _log(text, url) {
       const line = document.createElement('div');
@@ -627,19 +649,7 @@
           // ── 原生 HDR：直接拍 1 張，裝置自行處理 HDR ────────────────
           statusEl.textContent = 'HDR 拍攝中...';
 
-          let hdrBitmap;
-          if (typeof ImageCapture !== 'undefined') {
-            const ic   = new ImageCapture(track);
-            const blob = await ic.takePhoto();
-            hdrBitmap = await createImageBitmap(blob);
-          } else {
-            // Canvas snapshot fallback
-            const snap = document.createElement('canvas');
-            snap.width  = video.videoWidth;
-            snap.height = video.videoHeight;
-            snap.getContext('2d').drawImage(video, 0, 0);
-            hdrBitmap = await createImageBitmap(snap);
-          }
+          const hdrBitmap = await _captureFrame();
 
           shots = [
             { bitmap: hdrBitmap, id: `${ts}_hdr`, label: 'HDR 拍攝' },
@@ -661,19 +671,7 @@
                           : 'cam-dot';
             });
 
-            let bitmap;
-            if (typeof ImageCapture !== 'undefined') {
-              const ic   = new ImageCapture(track);
-              const blob = await ic.takePhoto();
-              bitmap = await createImageBitmap(blob);
-            } else {
-              const snap = document.createElement('canvas');
-              snap.width  = video.videoWidth;
-              snap.height = video.videoHeight;
-              snap.getContext('2d').drawImage(video, 0, 0);
-              bitmap = await createImageBitmap(snap);
-            }
-            frames.push(bitmap);
+            frames.push(await _captureFrame());
 
             if (i < 2) await new Promise(r => setTimeout(r, 350));
           }
