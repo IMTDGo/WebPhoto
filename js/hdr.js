@@ -67,8 +67,17 @@ export async function captureHDRFrames(track, evCaps, onProgress, maxSize = 2048
     });
     await _delay(380);
 
-    const blob   = await imageCapture.takePhoto();
-    const bitmap = await _resizeBitmap(blob, maxSize);
+    let bitmap;
+    try {
+      const blob = await imageCapture.takePhoto();
+      bitmap = await _resizeBitmap(blob, maxSize);
+    } catch {
+      // takePhoto() fails with "setPhotoOptions failed" on some Android devices.
+      // grabFrame() reads directly from the video stream, bypassing the photo
+      // pipeline entirely — no setPhotoOptions, no failure.
+      const frame = await imageCapture.grabFrame();
+      bitmap = await _resizeBitmap(frame, maxSize);
+    }
     frames.push(bitmap);
   }
 
@@ -162,12 +171,13 @@ export function mergeHDR(dark, normal, bright) {
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 /**
- * Decode a Blob into an ImageBitmap, scaling down so the longest edge ≤ maxSize.
+ * Decode a Blob or ImageBitmap, scaling down so the longest edge ≤ maxSize.
  * Uses the browser's built-in resizing (hardware-accelerated where available).
  */
-async function _resizeBitmap(blob, maxSize) {
-  // First decode to get natural dimensions
-  const natural = await createImageBitmap(blob);
+async function _resizeBitmap(source, maxSize) {
+  // Normalise: Blob → ImageBitmap first
+  const isBlob  = source instanceof Blob;
+  const natural = isBlob ? await createImageBitmap(source) : source;
   const { width: nw, height: nh } = natural;
 
   if (nw <= maxSize && nh <= maxSize) return natural;
@@ -175,7 +185,14 @@ async function _resizeBitmap(blob, maxSize) {
   const scale = maxSize / Math.max(nw, nh);
   const tw    = Math.round(nw * scale);
   const th    = Math.round(nh * scale);
-  natural.close();
 
-  return createImageBitmap(blob, { resizeWidth: tw, resizeHeight: th, resizeQuality: 'high' });
+  if (isBlob) {
+    natural.close(); // safe: original source is still the Blob
+    return createImageBitmap(source, { resizeWidth: tw, resizeHeight: th, resizeQuality: 'high' });
+  } else {
+    // ImageBitmap (e.g. from grabFrame): resize then close the original
+    const resized = await createImageBitmap(natural, { resizeWidth: tw, resizeHeight: th, resizeQuality: 'high' });
+    natural.close();
+    return resized;
+  }
 }
