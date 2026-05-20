@@ -816,11 +816,12 @@
               d.className = j < i ? 'cam-dot done' : j === i ? 'cam-dot active' : 'cam-dot';
             });
 
-            // Step A: apply EV
-            _dbg(`[${i+1}] applyConstraints EV=${ev}`);
+            // Step A: apply EV offset only (no exposureMode:'manual' — it triggers
+            // setPhotoOptions in Chrome Android and crashes the track)
+            _dbg(`[${i+1}] applyConstraints exposureCompensation=${ev}`);
             try {
               await track.applyConstraints({
-                advanced: [{ exposureMode: 'manual', exposureCompensation: ev }],
+                advanced: [{ exposureCompensation: ev }],
               });
               _dbg(`  ✔ applyConstraints OK`, 'ok');
             } catch (e) {
@@ -828,7 +829,7 @@
               // non-fatal — device may still capture at current EV
             }
 
-            await new Promise(r => setTimeout(r, 380));
+            await new Promise(r => setTimeout(r, 500));
 
             // Step B: capture (takePhoto → grabFrame fallback)
             _dbg(`[${i+1}] takePhoto()...`);
@@ -851,12 +852,12 @@
             rawFrames[key] = bitmap;
           }
 
-          // Restore auto-exposure
+          // Restore EV to 0
           try {
-            await track.applyConstraints({ advanced: [{ exposureMode: 'continuous' }] });
-            _dbg('自動曝光已恢復', 'ok');
+            await track.applyConstraints({ advanced: [{ exposureCompensation: 0 }] });
+            _dbg('EV 已恢復為 0', 'ok');
           } catch (e) {
-            _dbg(`曝光恢復失敗 (非致命): ${e.message}`, 'err');
+            _dbg(`EV 恢復失敗 (非致命): ${e.message}`, 'err');
           }
 
           dots.forEach(d => { d.className = 'cam-dot done'; });

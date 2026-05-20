@@ -61,11 +61,14 @@ export async function captureHDRFrames(track, evCaps, onProgress, maxSize = 2048
     const { ev, label } = shots[i];
     onProgress?.(i + 1, shots.length, label);
 
-    // Apply exposure and wait for the sensor to settle
+    // Apply exposure offset and wait for the sensor to settle.
+    // NOTE: We set exposureCompensation only (no exposureMode:'manual').
+    // Setting exposureMode:'manual' triggers setPhotoOptions in Chrome Android,
+    // which crashes the track with InvalidStateError on many devices.
     await track.applyConstraints({
-      advanced: [{ exposureMode: 'manual', exposureCompensation: ev }],
+      advanced: [{ exposureCompensation: ev }],
     });
-    await _delay(380);
+    await _delay(500);
 
     let bitmap;
     try {
@@ -81,9 +84,9 @@ export async function captureHDRFrames(track, evCaps, onProgress, maxSize = 2048
     frames.push(bitmap);
   }
 
-  // Restore auto-exposure
+  // Restore EV to 0
   try {
-    await track.applyConstraints({ advanced: [{ exposureMode: 'continuous' }] });
+    await track.applyConstraints({ advanced: [{ exposureCompensation: 0 }] });
   } catch { /* best-effort */ }
 
   return frames; // [dark, normal, bright]
