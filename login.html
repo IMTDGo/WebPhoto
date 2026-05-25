@@ -6,6 +6,7 @@
   <title>Sign In - WebPhoto</title>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./css/camera.css" />
   <style>
     body {
       background: radial-gradient(ellipse at 50% 40%, #1e2a3a 0%, #0d1117 100%);
@@ -175,11 +176,7 @@
     }
     .cam-close-btn:hover { color: #e0e6f0; background: #252d3d; }
 
-    #camTestVideo {
-      width: 100%; border-radius: 0.75rem;
-      background: #0d1117; display: block;
-      max-height: 220px; object-fit: cover;
-    }
+    /* #camTestVideo styling is now handled by css/camera.css (.cam-viewfinder video) */
     .cam-status {
       color: #94a3b8; font-size: 0.85rem;
       text-align: center; min-height: 1.2em;
@@ -415,8 +412,26 @@
       </div>
 
       <!-- Video preview -->
-      <div id="camPreviewWrap" style="display:none;">
-        <video id="camTestVideo" autoplay playsinline muted></video>
+      <!-- Camera viewfinder — same HTML structure as stepCamera in mobile.html.
+           Edit css/camera.css + js/camera-ruler.js to update both together. -->
+      <div id="camPreviewWrap" style="display:none; position:relative; aspect-ratio:4/3; border-radius:0.75rem; overflow:hidden; background:#000;">
+        <div class="cam-viewfinder" style="position:absolute;inset:0;">
+          <video id="camTestVideo" autoplay playsinline muted></video>
+          <!-- Ruler corner block (top-left) -->
+          <div class="cam-ruler-corner"></div>
+          <!-- Horizontal ruler (top) — drawn by camera-ruler.js -->
+          <canvas class="cam-ruler-h"></canvas>
+          <!-- Vertical ruler (left) — drawn by camera-ruler.js -->
+          <canvas class="cam-ruler-v"></canvas>
+          <!-- Frame border + corner brackets -->
+          <div class="cam-frame">
+            <div class="cam-frame-border"></div>
+            <div class="cam-frame-corner tl"></div>
+            <div class="cam-frame-corner tr"></div>
+            <div class="cam-frame-corner bl"></div>
+            <div class="cam-frame-corner br"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Status text -->
@@ -575,6 +590,7 @@
   <!-- ── Camera Test Module ────────────────────────────────────────────── -->
   <script type="module">
     import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './js/hdr.js';
+    import { drawCameraRulers } from './js/camera-ruler.js';
 
     // ── Cloudinary config (mirrors upload.js) ──────────────────────────────
     const CLD_CLOUD  = 'dnxqob2cu';
@@ -630,6 +646,9 @@
         });
         video.srcObject = camStream;
         previewWrap.style.display = 'block';
+        // Redraw rulers now that the viewfinder is visible and has dimensions
+        const _vf = previewWrap.querySelector('.cam-viewfinder');
+        if (_vf) drawCameraRulers(_vf);
 
         const track   = camStream.getVideoTracks()[0];
         const evCaps  = getHDRCapabilities(track);

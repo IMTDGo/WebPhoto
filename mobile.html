@@ -17,6 +17,7 @@
   </script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./css/camera.css" />
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -195,11 +196,35 @@
 
     <!-- Step 2: camera -->
     <section id="stepCamera" class="hidden h-full bg-black relative">
-      <video id="cameraVideo" playsinline autoplay muted></video>
-      <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90">
+
+      <!-- ── Shared camera viewfinder: video + 10 cm rulers + frame ────── -->
+      <!-- Edit css/camera.css + js/camera-ruler.js to change this UI.      -->
+      <!-- Changes here are mirrored automatically in the login test overlay. -->
+      <div class="cam-viewfinder absolute inset-0">
+        <video id="cameraVideo" playsinline autoplay muted></video>
+        <!-- Ruler corner block (top-left) -->
+        <div class="cam-ruler-corner"></div>
+        <!-- Horizontal ruler (top) —— drawn by camera-ruler.js -->
+        <canvas class="cam-ruler-h"></canvas>
+        <!-- Vertical ruler (left) —— drawn by camera-ruler.js -->
+        <canvas class="cam-ruler-v"></canvas>
+        <!-- Frame border + corner brackets -->
+        <div class="cam-frame">
+          <div class="cam-frame-border"></div>
+          <div class="cam-frame-corner tl"></div>
+          <div class="cam-frame-corner tr"></div>
+          <div class="cam-frame-corner bl"></div>
+          <div class="cam-frame-corner br"></div>
+        </div>
+      </div>
+
+      <!-- Hint text overlay (above viewfinder) -->
+      <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90" style="z-index:10">
         對準材質後按下拍照
       </div>
-      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-6">
+
+      <!-- Bottom controls (above viewfinder) -->
+      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-6" style="z-index:10">
         <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
         <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
         <!-- HDR toggle — shown only when hardware supports it -->
@@ -207,7 +232,7 @@
       </div>
 
       <!-- HDR progress overlay (shown during multi-shot capture) -->
-      <div id="hdrOverlay" class="absolute inset-0 bg-black/85 flex flex-col items-center justify-center gap-5" style="display:none">
+      <div id="hdrOverlay" class="absolute inset-0 bg-black/85 flex flex-col items-center justify-center gap-5" style="display:none;z-index:20">
         <span class="loading loading-ring loading-lg text-primary"></span>
         <p id="hdrProgressText" class="text-white text-sm font-medium tracking-wide">HDR 拍攝中…</p>
         <!-- 3 step dots -->

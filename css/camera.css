@@ -1,0 +1,116 @@
+/* ── Shared Camera Viewfinder Styles ──────────────────────────────────────── */
+/* Used by mobile.html (production) and login.html (camera test overlay).    */
+/* Edit this file to change the viewfinder appearance in both places at once. */
+
+:root {
+  --cam-ruler-sz:    22px;
+  --cam-frame-col:   rgba(255, 255, 255, 0.20);
+  --cam-corner-col:  rgba(255, 255, 255, 0.55);
+  --cam-ruler-bg:    rgba(6, 8, 14, 0.92);
+}
+
+/* ── Viewfinder wrapper ─────────────────────────────────────────────────────
+   Always placed with position:absolute/relative so that child absolutes work.
+   Use with Tailwind "absolute inset-0" in mobile.html, or inline
+   "position:absolute;inset:0" in login.html. */
+.cam-viewfinder {
+  overflow: hidden;
+  background: #000;
+  isolation: isolate; /* keep ruler z-indices scoped inside this layer */
+}
+
+/* Video fills the whole viewfinder */
+.cam-viewfinder video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Rulers ─────────────────────────────────────────────────────────────────
+
+   Layout (all absolute, inside .cam-viewfinder):
+
+   ┌──────────┬──────────────────────────────────┐
+   │  corner  │  horizontal ruler  (cam-ruler-h)  │  ← var(--cam-ruler-sz) tall
+   ├──────────┼──────────────────────────────────┤
+   │          │                                  │
+   │ vertical │          video                   │
+   │  ruler   │                                  │
+   │(cam-     │                                  │
+   │ ruler-v) │                                  │
+   └──────────┴──────────────────────────────────┘
+*/
+
+/* Top-left corner block */
+.cam-ruler-corner {
+  position: absolute;
+  top:    0;
+  left:   0;
+  width:  var(--cam-ruler-sz);
+  height: var(--cam-ruler-sz);
+  background: var(--cam-ruler-bg);
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* Horizontal ruler canvas — top edge */
+canvas.cam-ruler-h {
+  position: absolute;
+  top:    0;
+  left:   var(--cam-ruler-sz);
+  width:  calc(100% - var(--cam-ruler-sz));
+  height: var(--cam-ruler-sz);
+  z-index: 4;
+  pointer-events: none;
+  display: block;
+}
+
+/* Vertical ruler canvas — left edge */
+canvas.cam-ruler-v {
+  position: absolute;
+  top:    var(--cam-ruler-sz);
+  left:   0;
+  width:  var(--cam-ruler-sz);
+  height: calc(100% - var(--cam-ruler-sz));
+  z-index: 4;
+  pointer-events: none;
+  display: block;
+}
+
+/* ── Frame ──────────────────────────────────────────────────────────────────
+   Border + corner-bracket accents, inset to sit just inside the rulers.     */
+
+.cam-frame {
+  position: absolute;
+  top:    var(--cam-ruler-sz);
+  left:   var(--cam-ruler-sz);
+  right:  0;
+  bottom: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Thin full border */
+.cam-frame-border {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--cam-frame-col);
+}
+
+/* Corner bracket accents */
+.cam-frame-corner {
+  position: absolute;
+  width:  20px;
+  height: 20px;
+  border-color: var(--cam-corner-col);
+  border-style: solid;
+  border-width: 0;
+}
+
+.cam-frame-corner.tl { top: -1px;    left: -1px;   border-top-width: 2.5px;    border-left-width: 2.5px;   }
+.cam-frame-corner.tr { top: -1px;    right: -1px;  border-top-width: 2.5px;    border-right-width: 2.5px;  }
+.cam-frame-corner.bl { bottom: -1px; left: -1px;   border-bottom-width: 2.5px; border-left-width: 2.5px;   }
+.cam-frame-corner.br { bottom: -1px; right: -1px;  border-bottom-width: 2.5px; border-right-width: 2.5px;  }

@@ -8,7 +8,7 @@ import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }               from './toast.js';
 import { renderCategoryAccordion, highlightMaterial } from './bom-ui.js';
 import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
-// seamless.js no longer needed for UI
+import { drawCameraRulers } from './camera-ruler.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const stepEntry    = document.getElementById('stepEntry');
@@ -466,6 +466,9 @@ async function enterCameraStep() {
   try {
     showStep('camera');
     await startCamera();
+    // Redraw rulers now that stepCamera is visible and the viewfinder is sized
+    const _vf = stepCamera.querySelector('.cam-viewfinder');
+    if (_vf) drawCameraRulers(_vf);
   } catch (err) {
     showToast('無法啟用相機，改用系統拍照', 'warning');
     showStep('entry');
