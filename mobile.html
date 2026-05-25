@@ -202,11 +202,28 @@
       <!-- Changes here are mirrored automatically in the login test overlay. -->
       <div class="cam-viewfinder absolute inset-0">
         <video id="cameraVideo" playsinline autoplay muted></video>
+
+        <!-- SVG white-balance filter (live preview on video element) -->
+        <svg id="camWbSvg" style="position:absolute;width:0;height:0;overflow:visible" aria-hidden="true">
+          <defs>
+            <filter id="camWbFilter" color-interpolation-filters="sRGB">
+              <feColorMatrix id="camWbMatrix" type="matrix"
+                values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+            </filter>
+          </defs>
+        </svg>
+
+        <!-- 1:1 crop guide overlay — drawn by JS (drawCropGuide) -->
+        <canvas id="camCropGuide" style="position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;display:block"></canvas>
+
+        <!-- White balance loupe (shown when dragging during WB mode) -->
+        <canvas id="camWbLoupe" style="position:absolute;display:none;z-index:25;pointer-events:none;border-radius:50%;border:3px solid #38bdf8;box-shadow:0 2px 12px rgba(0,0,0,0.5)"></canvas>
+
         <!-- Ruler corner block (top-left) -->
         <div class="cam-ruler-corner"></div>
-        <!-- Horizontal ruler (top) —— drawn by camera-ruler.js -->
+        <!-- Horizontal ruler (top) — drawn by camera-ruler.js -->
         <canvas class="cam-ruler-h"></canvas>
-        <!-- Vertical ruler (left) —— drawn by camera-ruler.js -->
+        <!-- Vertical ruler (left) — drawn by camera-ruler.js -->
         <canvas class="cam-ruler-v"></canvas>
         <!-- Frame border + corner brackets -->
         <div class="cam-frame">
@@ -218,17 +235,31 @@
         </div>
       </div>
 
-      <!-- Hint text overlay (above viewfinder) -->
-      <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90" style="z-index:10">
-        對準材質後按下拍照
+      <!-- Hint text (above viewfinder, offset to sit below top ruler) -->
+      <div class="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90"
+           style="z-index:10;padding:calc(22px + 0.4rem) 1rem 1rem calc(22px + 0.5rem)">
+        <span id="camHintText">對準材質後按下拍照</span>
       </div>
 
-      <!-- Bottom controls (above viewfinder) -->
-      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-6" style="z-index:10">
-        <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
-        <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
-        <!-- HDR toggle — shown only when hardware supports it -->
-        <button id="btnHDRToggle" class="btn btn-sm btn-ghost text-white/50 border border-white/20 min-w-[3.5rem]" style="display:none">HDR</button>
+      <!-- Bottom controls -->
+      <div class="absolute inset-x-0 bottom-0 safe-bottom flex flex-col" style="z-index:10">
+        <!-- WB mode instruction (visible only during WB mode) -->
+        <div id="camWbHint" class="text-center text-xs text-yellow-200/90 bg-black/60 px-4 py-2" style="display:none">
+          點選畫面中純白色物件進行白平衡
+        </div>
+        <!-- WB done row (visible after WB applied) -->
+        <div id="camWbDoneRow" class="flex items-center justify-center gap-3 bg-black/60 px-4 py-1.5" style="display:none">
+          <span class="text-xs text-emerald-300/90 font-medium">✔ 已完成白平衡</span>
+          <button id="btnWbRetry" class="btn btn-xs btn-ghost text-yellow-300/80 border border-yellow-500/30 h-6 min-h-0 px-2 text-xs">再次白平衡</button>
+        </div>
+        <!-- Main button row -->
+        <div class="p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-5">
+          <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
+          <button id="btnWbMode" class="btn btn-sm btn-ghost text-white/60 border border-white/20 min-w-[3rem]" title="白平衡模式">WB</button>
+          <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
+          <!-- HDR toggle — shown only when hardware supports it -->
+          <button id="btnHDRToggle" class="btn btn-sm btn-ghost text-white/50 border border-white/20 min-w-[3.5rem]" style="display:none">HDR</button>
+        </div>
       </div>
 
       <!-- HDR progress overlay (shown during multi-shot capture) -->
