@@ -447,7 +447,7 @@ function drawCropGuide() {
   const videoAreaH  = vfH - CAM_RULER_SZ;
   const squareSide  = Math.min(videoAreaW, videoAreaH);
   const squareX     = CAM_RULER_SZ + (videoAreaW - squareSide) / 2;
-  const squareY     = CAM_RULER_SZ + (videoAreaH - squareSide) / 2;
+  const squareY     = CAM_RULER_SZ; // align to top ruler
 
   // ── Clip the video element to the 1:1 square only ───────────────────────
   const rightInset  = vfW - squareX - squareSide;
@@ -507,7 +507,7 @@ function _cropToSquare(src, srcVideoW, srcVideoH) {
   const videoAreaH  = vfH - CAM_RULER_SZ;
   const squareSide_css = Math.min(videoAreaW, videoAreaH);
   const squareLeft_css = CAM_RULER_SZ + (videoAreaW - squareSide_css) / 2;
-  const squareTop_css  = CAM_RULER_SZ + (videoAreaH - squareSide_css) / 2;
+  const squareTop_css  = CAM_RULER_SZ; // align to top ruler
 
   // How the native video is laid out in the CSS container (object-fit: cover)
   const videoAspect     = srcVideoW / srcVideoH;
@@ -794,6 +794,7 @@ function _enterWbMode() {
   }
 
   document.getElementById('camHintText').textContent = '';
+  document.getElementById('camHintText').closest('div').style.display = 'none';
   document.getElementById('camWbHint').style.display    = '';
   document.getElementById('camWbDoneRow').style.display = 'none';
 
@@ -816,6 +817,7 @@ function _exitWbMode(applied) {
   }
 
   document.getElementById('camHintText').textContent = '對準材質後按下拍照';
+  document.getElementById('camHintText').closest('div').style.display = '';
   document.getElementById('camWbHint').style.display  = 'none';
   document.getElementById('camWbLoupe').style.display  = 'none';
   document.getElementById('camWbDot').style.display    = 'none';

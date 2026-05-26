@@ -229,14 +229,12 @@
         <div id="camWbDot" style="position:absolute;display:none;z-index:26;pointer-events:none;width:16px;height:16px;margin-left:-8px;margin-top:-8px;border-radius:50%;background:rgba(255,20,20,0.95);border:2.5px solid #fff;box-shadow:0 0 0 2px rgba(255,0,0,0.45),0 2px 8px rgba(0,0,0,0.6)"></div>
       </div>
 
-      <!-- Hint text (above viewfinder, offset to sit below top ruler) -->
-      <div class="absolute inset-x-0 top-0 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90"
-           style="z-index:10;padding:calc(22px + 0.4rem) 1rem 1rem calc(22px + 0.5rem)">
-        <span id="camHintText">對準材質後按下拍照</span>
-      </div>
-
       <!-- Bottom controls -->
       <div class="absolute inset-x-0 bottom-0 safe-bottom flex flex-col" style="z-index:10">
+        <!-- General hint (hidden during WB mode) -->
+        <div class="text-center text-xs text-white/75 bg-black/50 px-4 py-1.5">
+          <span id="camHintText">對準材質後按下拍照</span>
+        </div>
         <!-- WB mode instruction (visible only during WB mode) -->
         <div id="camWbHint" class="text-center text-xs text-yellow-200/90 bg-black/60 px-4 py-2" style="display:none">
           點選畫面中純白色物件進行白平衡
