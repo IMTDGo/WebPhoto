@@ -225,14 +225,8 @@
         <canvas class="cam-ruler-h"></canvas>
         <!-- Vertical ruler (left) — drawn by camera-ruler.js -->
         <canvas class="cam-ruler-v"></canvas>
-        <!-- Frame border + corner brackets -->
-        <div class="cam-frame">
-          <div class="cam-frame-border"></div>
-          <div class="cam-frame-corner tl"></div>
-          <div class="cam-frame-corner tr"></div>
-          <div class="cam-frame-corner bl"></div>
-          <div class="cam-frame-corner br"></div>
-        </div>
+        <!-- Sampling point indicator (red dot shown during WB drag) -->
+        <div id="camWbDot" style="position:absolute;display:none;z-index:26;pointer-events:none;width:16px;height:16px;margin-left:-8px;margin-top:-8px;border-radius:50%;background:rgba(255,20,20,0.95);border:2.5px solid #fff;box-shadow:0 0 0 2px rgba(255,0,0,0.45),0 2px 8px rgba(0,0,0,0.6)"></div>
       </div>
 
       <!-- Hint text (above viewfinder, offset to sit below top ruler) -->
@@ -248,9 +242,8 @@
           點選畫面中純白色物件進行白平衡
         </div>
         <!-- WB done row (visible after WB applied) -->
-        <div id="camWbDoneRow" class="flex items-center justify-center gap-3 bg-black/60 px-4 py-1.5" style="display:none">
-          <span class="text-xs text-emerald-300/90 font-medium">✔ 已完成白平衡</span>
-          <button id="btnWbRetry" class="btn btn-xs btn-ghost text-yellow-300/80 border border-yellow-500/30 h-6 min-h-0 px-2 text-xs">再次白平衡</button>
+        <div id="camWbDoneRow" class="flex items-center justify-center bg-black/60 px-4 py-1.5" style="display:none">
+          <span class="text-xs text-emerald-300/90 font-medium">✔ 已完成白平衡（點 WB 可重設）</span>
         </div>
         <!-- Main button row -->
         <div class="p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-5">

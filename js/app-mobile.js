@@ -75,6 +75,10 @@ let wbApplied = false;                  // gains have been sampled at least once
 let wbActive  = false;                  // WB-pick mode is open
 let wbDragging = false;                 // pointer is currently held down
 
+// Offset applied to raw touch point so the sample lands upper-right of finger
+const WB_SAMPLE_DX =  35;  // CSS px to the right
+const WB_SAMPLE_DY = -50;  // CSS px upward
+
 // BOM / texture selection state
 let currentProjectId    = null;
 let currentProjectName  = '';
@@ -442,26 +446,21 @@ function drawCropGuide() {
   const videoAreaW  = vfW - CAM_RULER_SZ;
   const videoAreaH  = vfH - CAM_RULER_SZ;
   const squareSide  = Math.min(videoAreaW, videoAreaH);
-  // center the square in the video area
   const squareX     = CAM_RULER_SZ + (videoAreaW - squareSide) / 2;
   const squareY     = CAM_RULER_SZ + (videoAreaH - squareSide) / 2;
 
+  // ── Clip the video element to the 1:1 square only ───────────────────────
+  const rightInset  = vfW - squareX - squareSide;
+  const bottomInset = vfH - squareY - squareSide;
+  cameraVideo.style.clipPath =
+    `inset(${squareY}px ${rightInset}px ${bottomInset}px ${squareX}px)`;
+
+  // ── Draw the crop-guide canvas (border + corner brackets only) ───────────
   const dpr = window.devicePixelRatio || 1;
   canvas.width  = Math.round(vfW * dpr);
   canvas.height = Math.round(vfH * dpr);
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-
-  // Dim areas outside the 1:1 square (do not dim the ruler strips)
-  ctx.fillStyle = 'rgba(0,0,0,0.50)';
-  if (squareY > CAM_RULER_SZ)                        // top gap
-    ctx.fillRect(CAM_RULER_SZ, CAM_RULER_SZ, videoAreaW, squareY - CAM_RULER_SZ);
-  if (squareY + squareSide < vfH)                     // bottom gap
-    ctx.fillRect(CAM_RULER_SZ, squareY + squareSide, videoAreaW, vfH - squareY - squareSide);
-  if (squareX > CAM_RULER_SZ)                         // left gap
-    ctx.fillRect(CAM_RULER_SZ, squareY, squareX - CAM_RULER_SZ, squareSide);
-  if (squareX + squareSide < vfW)                     // right gap
-    ctx.fillRect(squareX + squareSide, squareY, vfW - squareX - squareSide, squareSide);
 
   // Thin border around the square
   ctx.strokeStyle = 'rgba(255,255,255,0.45)';
@@ -769,6 +768,8 @@ function _resetWbState() {
   if (matrix) matrix.setAttribute('values', '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0');
   const loupe = document.getElementById('camWbLoupe');
   if (loupe)  loupe.style.display = 'none';
+  const dot = document.getElementById('camWbDot');
+  if (dot)    dot.style.display   = 'none';
   document.getElementById('camWbHint')?.style.setProperty('display', 'none');
   document.getElementById('camWbDoneRow')?.style.setProperty('display', 'none');
   const btn = document.getElementById('btnWbMode');
@@ -815,8 +816,9 @@ function _exitWbMode(applied) {
   }
 
   document.getElementById('camHintText').textContent = '對準材質後按下拍照';
-  document.getElementById('camWbHint').style.display = 'none';
-  document.getElementById('camWbLoupe').style.display = 'none';
+  document.getElementById('camWbHint').style.display  = 'none';
+  document.getElementById('camWbLoupe').style.display  = 'none';
+  document.getElementById('camWbDot').style.display    = 'none';
 
   if (applied) {
     document.getElementById('camWbDoneRow').style.display = '';
@@ -891,12 +893,16 @@ function _applyWhiteBalance(r, g, b) {
 }
 
 /** Show/update the magnifier loupe at the pointer position. */
-function _showWbLoupe(clientX, clientY) {
+function _showWbLoupe(rawClientX, rawClientY) {
+  // Shift sample point to upper-right of finger so user can see it
+  const clientX = rawClientX + WB_SAMPLE_DX;
+  const clientY = rawClientY + WB_SAMPLE_DY;
+
   const loupe  = document.getElementById('camWbLoupe');
   if (!loupe) return;
 
-  const RADIUS = 56;          // CSS px radius
-  const ZOOM   = 4;
+  const RADIUS = 80;         // larger loupe radius (px)
+  const ZOOM   = 5;
   const SIZE   = RADIUS * 2;
   const dpr    = window.devicePixelRatio || 1;
 
@@ -906,18 +912,23 @@ function _showWbLoupe(clientX, clientY) {
   loupe.height        = SIZE * dpr;
   loupe.style.display = 'block';
 
-  // Position: prefer top-right of finger, staying within viewfinder
+  // Position loupe above + centered on the sample point
   const vfRect = stepCamera.querySelector('.cam-viewfinder').getBoundingClientRect();
-  let lx = clientX - vfRect.left - RADIUS + RADIUS * 1.8;
-  let ly = clientY - vfRect.top  - RADIUS - RADIUS * 1.8;
-  if (lx + SIZE > vfRect.width)  lx = clientX - vfRect.left - SIZE - 12;
-  if (ly < CAM_RULER_SZ)         ly = clientY - vfRect.top  + RADIUS * 0.4;
-  lx = Math.max(CAM_RULER_SZ, lx);
+  const sampleRelX = clientX - vfRect.left;
+  const sampleRelY = clientY - vfRect.top;
+  let lx = sampleRelX - RADIUS;               // center loupe on sample X
+  let ly = sampleRelY - SIZE - RADIUS * 0.6;  // place loupe above the sample point
+
+  // Boundary clamps: keep inside viewfinder
+  if (lx + SIZE > vfRect.width)  lx = vfRect.width - SIZE - 4;
+  if (lx < CAM_RULER_SZ)         lx = CAM_RULER_SZ;
+  if (ly < CAM_RULER_SZ)         ly = sampleRelY + RADIUS * 0.4; // flip below if too high
   ly = Math.max(CAM_RULER_SZ, ly);
+
   loupe.style.left = lx + 'px';
   loupe.style.top  = ly + 'px';
 
-  // Draw zoomed video frame into loupe
+  // Draw zoomed video frame centred on the sample point
   const { vx, vy } = _clientToVideoCoords(clientX, clientY);
   const vw = cameraVideo.videoWidth;
   const vh = cameraVideo.videoHeight;
@@ -933,12 +944,20 @@ function _showWbLoupe(clientX, clientY) {
   ctx.clip();
   ctx.drawImage(cameraVideo, srcX, srcY, srcSide, srcSide, 0, 0, SIZE, SIZE);
 
-  // Crosshair
+  // Crosshair at centre
   ctx.strokeStyle = 'rgba(255, 50, 50, 0.9)';
   ctx.lineWidth   = 1.5;
   ctx.beginPath(); ctx.moveTo(0, RADIUS); ctx.lineTo(SIZE, RADIUS); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(RADIUS, 0); ctx.lineTo(RADIUS, SIZE); ctx.stroke();
   ctx.restore();
+
+  // Red dot on the video at the actual sample point
+  const dot = document.getElementById('camWbDot');
+  if (dot) {
+    dot.style.left    = sampleRelX + 'px';
+    dot.style.top     = sampleRelY + 'px';
+    dot.style.display = 'block';
+  }
 }
 
 // WB pointer events on the live camera video
@@ -960,7 +979,9 @@ cameraVideo.addEventListener('pointerup', (e) => {
   if (!wbActive) return;
   wbDragging = false;
   document.getElementById('camWbLoupe').style.display = 'none';
-  const { r, g, b } = _sampleVideoPixel(e.clientX, e.clientY);
+  document.getElementById('camWbDot').style.display   = 'none';
+  // Sample at the adjusted point (upper-right of finger)
+  const { r, g, b } = _sampleVideoPixel(e.clientX + WB_SAMPLE_DX, e.clientY + WB_SAMPLE_DY);
   const ok = _applyWhiteBalance(r, g, b);
   _exitWbMode(ok);
 });
@@ -969,18 +990,13 @@ cameraVideo.addEventListener('pointercancel', () => {
   if (!wbActive) return;
   wbDragging = false;
   document.getElementById('camWbLoupe').style.display = 'none';
+  document.getElementById('camWbDot').style.display   = 'none';
   _exitWbMode(false);
 });
 
 // WB button toggle
 document.getElementById('btnWbMode')?.addEventListener('click', () => {
   if (wbActive) { _exitWbMode(false); } else { _enterWbMode(); }
-});
-
-// WB retry button
-document.getElementById('btnWbRetry')?.addEventListener('click', () => {
-  document.getElementById('camWbDoneRow').style.display = 'none';
-  _enterWbMode();
 });
 
 // ── HDR helpers ───────────────────────────────────────────────────────────────
