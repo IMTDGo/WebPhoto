@@ -193,8 +193,9 @@ btnUpload.addEventListener('click', async () => {
   btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
 
   try {
-    const canvas = getCropCanvas(currentCrop, outSize, cropEditor?.aspectLocked ?? true);
-    await uploadSingleImage(name, canvas);
+    const canvas     = getCropCanvas(currentCrop, outSize, cropEditor?.aspectLocked ?? true);
+    const textureId  = deskMaterialItem?._id || name;
+    await uploadSingleImage(textureId, canvas, _deskGetToken());
     showToast('上傳成功！', 'success');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');

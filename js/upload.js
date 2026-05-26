@@ -25,23 +25,24 @@ import {
   canvasFromData,
 } from './textureGenerator.js';
 
-const CLOUDINARY_CLOUD_NAME    = 'dnxqob2cu';
-const CLOUDINARY_UPLOAD_PRESET = 'WebTexureUpload';
-const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+// ── Texture upload API ───────────────────────────────────────────────────────
+const TEXTURE_UPLOAD_PATH = '/api/texture/upload-texture-images';
 
-// ── Internal helpers ──────────────────────────────────────────────────────────
-
+// ── Internal helpers (PBR uploadAllMaps pipeline) ────────────────────────────
 async function _uploadCanvas(canvas, folder, suffix) {
   const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
   const fd = new FormData();
-  fd.append('file', blob, `${folder}_${suffix}.png`);  // explicit filename fixes Cloudinary naming
-  fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  fd.append('folder', folder);
-  fd.append('public_id', `${folder}_${suffix}`);
-  const resp = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
+  fd.append('texure_id', folder);
+  fd.append('images[]', blob, `${folder}_${suffix}.png`);
+  const resp = await fetch(
+    `${window.__API_BASE__ || ''}${TEXTURE_UPLOAD_PATH}`,
+    { method: 'POST', body: fd }
+  );
   if (!resp.ok) throw new Error(await resp.text());
   const data = await resp.json();
-  return { url: data.secure_url, public_id: data.public_id };
+  if (!data.success) throw new Error(data.message ?? '上傳失敗');
+  const img = data.data?.images?.[0];
+  return { url: img?.url ?? '', public_id: img?.id ?? '' };
 }
 
 function _workerResults(workerData, w, h, baseCanvas) {
@@ -199,12 +200,66 @@ export function getCropCanvas(crop, outSize = 1024, aspectLocked = true) {
 }
 
 /**
- * Upload a single canvas as basecolor only.
+ * Encode canvas as JPEG, iteratively reducing quality until the blob fits within
+ * maxBytes. Starts at startQuality and steps down by 0.05 each iteration.
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} maxBytes       - size ceiling in bytes (default 1 MB)
+ * @param {number} startQuality   - initial JPEG quality 0–1 (default 0.92)
+ * @returns {Promise<Blob>}
  */
-export async function uploadSingleImage(name, canvas, onProgress = null) {
-  const result = await _uploadCanvas(canvas, name, 'basecolor');
+async function _compressJpeg(canvas, maxBytes = 1024 * 1024, startQuality = 0.92) {
+  const toBlob = (q) => new Promise((res) => canvas.toBlob(res, 'image/jpeg', q));
+  let quality = startQuality;
+  let blob = await toBlob(quality);
+  while (blob.size > maxBytes && quality > 0.20) {
+    quality = Math.round((quality - 0.05) * 100) / 100;
+    blob = await toBlob(quality);
+  }
+  return blob;
+}
+
+/**
+ * Upload a single texture photo to /api/texture/upload-texture-images.
+ * @param {string}           textureId  - texture record _id
+ * @param {HTMLCanvasElement} canvas
+ * @param {string}           token      - bearer auth token
+ * @param {function}         [onProgress]
+ */
+export async function uploadSingleImage(textureId, canvas, token, onProgress = null) {
+  const blob  = await _compressJpeg(canvas);
+  const safeId = String(textureId ?? '').replace(/[^a-zA-Z0-9_-]/g, '_');
+
+  const fd = new FormData();
+  fd.append('texture_id', textureId);
+  fd.append('images',     blob, `${safeId}_photo.jpg`);
+
+  console.log('[upload] texture_id =', textureId, '| blob', blob.size, 'bytes | token:', token ? token.slice(0,12) + '…' : '(empty)');
+
+  const resp = await fetch(
+    `${window.__API_BASE__ || ''}${TEXTURE_UPLOAD_PATH}`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: fd,
+    }
+  );
+
+  let text = '';
+  try { text = await resp.text(); } catch (_) { text = '(empty)'; }
+
+  if (!resp.ok) {
+    console.error('[upload] server error', resp.status, text);
+    throw new Error(`HTTP ${resp.status}: ${text}`);
+  }
+
+  let data;
+  try { data = JSON.parse(text); } catch (_) {
+    throw new Error(`伺服器回傳非 JSON: ${text.slice(0, 200)}`);
+  }
+
+  if (!data.success) throw new Error(data.message ?? '上傳失敗');
   onProgress?.(1, 1);
-  return { ok: true, folder: name, url: result.url, public_id: result.public_id };
+  return { ok: true, data: data.data };
 }
 
 

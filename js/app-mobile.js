@@ -6,7 +6,7 @@ import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
 import { getCropCanvas, uploadSingleImage } from './upload.js';
 import { showToast }               from './toast.js';
-import { renderCategoryAccordion, highlightMaterial } from './bom-ui.js';
+import { renderCategoryAccordion, highlightMaterial, renderMaterialGroupList } from './bom-ui.js';
 import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
 import { drawCameraRulers } from './camera-ruler.js';
 
@@ -48,9 +48,7 @@ const bomList        = document.getElementById('bomList');
 const bomLoading     = document.getElementById('bomLoading');
 const bomError       = document.getElementById('bomError');
 const tabBtnPhoto    = document.getElementById('tabBtnPhoto');
-const tabBtnAdmin    = document.getElementById('tabBtnAdmin');
 const tabPhoto       = document.getElementById('tabPhoto');
-const tabAdmin       = document.getElementById('tabAdmin');
 // ── State ─────────────────────────────────────────────────────────────────────
 // Show email checkbox only if user has email stored
 (function () {
@@ -87,6 +85,8 @@ let currentBomName      = '';
 let currentTexturePath  = null;
 let currentTextureRecord = null;   // full textureRecord from project-parse
 let currentMaterialItem  = null;   // selected texture item {_id, category, material, material_origin}
+let currentMaterialGroup = null;   // selected material group { key, items, representativeItem }
+const uploadedMaterials  = new Set(); // material keys uploaded in this session
 
 
 // ── Initialise editors ────────────────────────────────────────────────────────
@@ -393,6 +393,8 @@ function _renderCategoryList() {
   const categoryList  = document.getElementById('entryCategoryList');
   const noTexture     = document.getElementById('entryNoTexture');
   const entryActions  = document.getElementById('entryActions');
+  const searchWrap    = document.getElementById('entrySearchWrap');
+  const searchInput   = document.getElementById('entrySearchInput');
 
   // Reset material selection
   currentMaterialItem = null;
@@ -401,33 +403,73 @@ function _renderCategoryList() {
   const textures = currentTextureRecord?.texture;
   if (!textures?.length) {
     // No texture data — show plain camera buttons
-    if (categoryList) categoryList.classList.add('hidden');
-    if (noTexture)    noTexture.classList.remove('hidden');
+    if (categoryList)  categoryList.classList.add('hidden');
+    if (searchWrap)    searchWrap.classList.add('hidden');
+    if (noTexture)     noTexture.classList.remove('hidden');
     return;
   }
 
   if (noTexture)    noTexture.classList.add('hidden');
   if (categoryList) categoryList.classList.remove('hidden');
+  if (searchWrap)   searchWrap.classList.remove('hidden');
 
-  renderCategoryAccordion(categoryList, textures, _selectMaterial);
+  renderMaterialGroupList(categoryList, textures, _selectMaterialItem, uploadedMaterials);
+
+  // Wire up search — clone to remove any previous listener
+  if (searchInput) {
+    const fresh = searchInput.cloneNode(true);
+    searchInput.replaceWith(fresh);
+    fresh.value = '';
+    fresh.addEventListener('input', () => {
+      const q = fresh.value.trim().toLowerCase();
+      if (!q) {
+        // Clear filter: show everything, restore collapsed state
+        categoryList.querySelectorAll('.mat-group-row').forEach(r => r.classList.remove('hidden'));
+        categoryList.querySelectorAll('.cat-section').forEach(s => s.classList.remove('hidden'));
+        return;
+      }
+      // Filter material rows
+      categoryList.querySelectorAll('.mat-group-row').forEach(row => {
+        row.classList.toggle('hidden', !row.dataset.searchtext?.includes(q));
+      });
+      // Auto-expand categories with hits, hide empty ones
+      categoryList.querySelectorAll('.cat-section').forEach(section => {
+        const hasVisible = [...section.querySelectorAll('.mat-group-row')].some(r => !r.classList.contains('hidden'));
+        section.classList.toggle('hidden', !hasVisible);
+        if (hasVisible) {
+          section.querySelector('.cat-body')?.classList.remove('hidden');
+          const chev = section.querySelector('.cat-chevron');
+          if (chev) chev.style.transform = 'rotate(180deg)';
+          section.querySelector('.cat-header')?.classList.add('bg-primary/15', 'text-primary');
+        }
+      });
+    });
+  }
 }
 
 function _selectMaterial(item) {
   currentMaterialItem = item;
-
-  // Highlight selected button
   highlightMaterial(item._id);
-
-  // Show action bar
   const actions = document.getElementById('entryActions');
   const label   = document.getElementById('entryMaterialLabel');
   if (label)   label.textContent = item.material || item.material_origin || '—';
   if (actions) actions.classList.remove('hidden');
 }
 
+/**
+ * Called when the user taps 拍照上傳 on an individual material row.
+ * Stores the item in state and immediately opens the camera.
+ */
+function _selectMaterialItem(item) {
+  currentMaterialItem  = item;
+  currentMaterialGroup = null;
+  enterCameraStep();
+}
+
 // ── Crop guide + 1:1 square capture ─────────────────────────────────────────
 
-const CAM_RULER_SZ = 22; // must match css/camera.css --cam-ruler-sz
+const CAM_RULER_SZ   = 22; // must match css/camera.css --cam-ruler-sz
+const CAPTURE_SIZE   = 2048; // forced capture resolution (square)
 
 /**
  * Draw the 1:1 crop guide (dimmed vignette + white corner brackets)
@@ -535,14 +577,14 @@ function _cropToSquare(src, srcVideoW, srcVideoH) {
   const clampedSz  = Math.min(rawSize, sw - sx, sh - sy, sw, sh);
 
   const out = document.createElement('canvas');
-  out.width  = clampedSz;
-  out.height = clampedSz;
+  out.width  = CAPTURE_SIZE;
+  out.height = CAPTURE_SIZE;
   const ctx  = out.getContext('2d');
-  ctx.drawImage(src, sx, sy, clampedSz, clampedSz, 0, 0, clampedSz, clampedSz);
+  ctx.drawImage(src, sx, sy, clampedSz, clampedSz, 0, 0, CAPTURE_SIZE, CAPTURE_SIZE);
 
   // Apply white-balance gains per-pixel at capture time (CSS filter is visual only)
   if (wbApplied && (wbGains.r !== 1 || wbGains.g !== 1 || wbGains.b !== 1)) {
-    _applyWbToCanvas(ctx, clampedSz, clampedSz);
+    _applyWbToCanvas(ctx, CAPTURE_SIZE, CAPTURE_SIZE);
   }
   return out;
 }
@@ -669,7 +711,9 @@ function closeUploadSheet() {
 function resetToEntry() {
   closeUploadSheet();
   // Reset material selection and re-render category list
-  currentMaterialItem = null;
+  currentMaterialItem  = null;
+  currentMaterialGroup = null;
+  document.getElementById('entrySearchWrap')?.classList.add('hidden');
   _renderCategoryList();
   showStep('entry');
   fileInputCapture.value = '';
@@ -1133,16 +1177,25 @@ btnConfirmUpload.addEventListener('click', async () => {
   btnConfirmUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
 
   try {
-    const outSize = parseInt(uploadResolution?.value || '1024');
-    const canvas  = getCropCanvas(currentCrop, outSize, true);
-    await uploadSingleImage(name, canvas);
+    const canvas   = getCropCanvas(currentCrop, Infinity, true);
+    console.log('[upload] currentMaterialItem =', JSON.stringify(currentMaterialItem));
+    const textureId = currentMaterialItem?.texture_id
+                   || currentMaterialItem?._id
+                   || name;
+    await uploadSingleImage(textureId, canvas, getAuthToken());
+
+    // Mark this material item as done and refresh the list
+    if (currentMaterialItem?._id) uploadedMaterials.add(currentMaterialItem._id);
+
     closeUploadSheet();
     showToast('上傳成功！', 'success');
-    // 回到 BOM 列表，方便選取下一個部件
     fileInputCapture.value = '';
     fileInputGallery.value = '';
-    currentCrop = null;
-    showStep('bom');
+    currentCrop          = null;
+    currentMaterialGroup = null;
+    currentMaterialItem  = null;
+    _renderCategoryList();   // re-render to show 已拍攝上傳 badge
+    showStep('entry');
   } catch (err) {
     showToast('上傳失敗: ' + err.message, 'error');
   } finally {
@@ -1255,20 +1308,8 @@ document.addEventListener('visibilitychange', () => {
 // ── Tab switching ─────────────────────────────────────────────────────────────
 tabBtnPhoto?.addEventListener('click', () => {
   tabPhoto?.classList.remove('hidden');
-  tabAdmin?.classList.add('hidden');
   tabBtnPhoto.classList.add('border-primary', 'text-primary');
   tabBtnPhoto.classList.remove('border-transparent', 'text-base-content/40');
-  tabBtnAdmin?.classList.remove('border-primary', 'text-primary');
-  tabBtnAdmin?.classList.add('border-transparent', 'text-base-content/40');
-});
-
-tabBtnAdmin?.addEventListener('click', () => {
-  tabPhoto?.classList.add('hidden');
-  tabAdmin?.classList.remove('hidden');
-  tabBtnAdmin.classList.add('border-primary', 'text-primary');
-  tabBtnAdmin.classList.remove('border-transparent', 'text-base-content/40');
-  tabBtnPhoto?.classList.remove('border-primary', 'text-primary');
-  tabBtnPhoto?.classList.add('border-transparent', 'text-base-content/40');
 });
 
 // ── BOM navigation listeners ──────────────────────────────────────────────────

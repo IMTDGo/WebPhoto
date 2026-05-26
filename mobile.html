@@ -71,7 +71,6 @@
   <!-- Tab bar -->
   <div id="mainTabBar" class="shrink-0 flex bg-base-100/80 backdrop-blur border-b border-base-content/10">
     <button id="tabBtnPhoto" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-primary text-primary transition-colors">📷 拍照上傳</button>
-    <button id="tabBtnAdmin" class="flex-1 py-2.5 text-sm font-semibold border-b-2 border-transparent text-base-content/40 transition-colors">⚙️ 管理</button>
   </div>
 
   <main class="flex-1 relative overflow-hidden" style="min-height:0">
@@ -138,6 +137,16 @@
             </div>
             <button id="btnChangeBom" class="btn btn-xs btn-ghost shrink-0 text-base-content/40 mt-0.5">更換</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Search bar for texture/material list -->
+      <div id="entrySearchWrap" class="hidden shrink-0 px-4 pb-2">
+        <div class="flex items-center gap-2 rounded-xl bg-base-100/80 border border-base-content/15 px-3 py-2.5">
+          <svg class="h-4 w-4 text-base-content/40 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input id="entrySearchInput" type="search" class="flex-1 bg-transparent text-sm outline-none placeholder:text-base-content/40" placeholder="搜尋材料名稱…" />
         </div>
       </div>
 
@@ -344,12 +353,7 @@
 
     </div><!-- /tabPhoto -->
 
-    <!-- Admin tab -->
-    <div id="tabAdmin" class="hidden h-full flex flex-col items-center justify-center gap-4 p-6 text-center">
-      <div class="text-5xl opacity-20">⚙️</div>
-      <p class="text-base-content/30 text-sm font-medium">管理功能</p>
-      <p class="text-base-content/20 text-xs">即將推出</p>
-    </div>
+
   </main>
 
   <!-- Upload bottom sheet -->
@@ -358,17 +362,14 @@
     <div class="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4"></div>
     <h3 class="font-bold text-lg mb-3">確認上傳</h3>
     <div class="form-control gap-2">
-      <label class="label py-0"><span class="label-text">輸出解析度</span></label>
-      <select id="uploadResolution" class="select select-bordered w-full">
-        <option value="512">512 × 512</option>
-        <option value="1024" selected>1024 × 1024</option>
-        <option value="2048">2048 × 2048</option>
-        <option value="4096">4096 × 4096</option>
+      <label class="label py-0 hidden"><span class="label-text">輸出解析度</span></label>
+      <select id="uploadResolution" class="hidden">
+        <option value="2048" selected>2048 × 2048</option>
       </select>
       <label class="label py-0"><span class="label-text">部件名稱</span></label>
       <div id="uploadNameDisplay" class="rounded-lg border border-base-content/20 bg-base-200/50 px-4 py-3 text-sm font-mono text-primary min-h-[2.75rem]"></div>
       <input type="text" id="uploadName" class="hidden" />
-      <p class="text-xs text-base-content/40">圖片將上傳至 Cloudinary</p>
+      <p class="text-xs text-base-content/40">圖片將以裁切實際像素尺寸上傳</p>
       <label id="sendEmailLabel" class="hidden flex items-center gap-2 text-sm text-base-content/60 cursor-pointer mt-1">
         <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
         <span>📧 上傳完成後寄送材質連結至我的 Email</span>
