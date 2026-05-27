@@ -56,7 +56,10 @@ const userSchema = new mongoose.Schema({
   password:   { type: String, required: true }, // bcrypt hash
   name:       { type: String, default: '' },
   email:      { type: String, unique: true, sparse: true },
-  permission: { type: String, default: 'viewer' }
+  permission:    { type: String, default: 'viewer' },
+  currentToken:  { type: String, default: null },
+  lastLoginAt:   { type: Date,   default: null },
+  lastLogoutAt:  { type: Date,   default: null }
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
@@ -152,14 +155,17 @@ function appendLoginLog(username, success) {
 }
 
 // ─── In-memory fallback stores (used when MongoDB is not connected) ─────────
-const memUsers = new Map(); // username → { username, password, email }
+// username → { username, password, name, email, permission, currentToken, lastLoginAt, lastLogoutAt }
+const memUsers = new Map();
+// token → { username, sessionId, createdAt }  (active sessions, both DB and memory modes)
+const sessions = new Map();
 
 // ─── Send email ─────────────────────────────────────────────────────────────
-// 優先順序：Resend → SendGrid → Gmail SMTP (本機 fallback)
+// Priority: Resend → SendGrid → Gmail SMTP (local fallback)
 async function sendOtpEmail(to, otp, custom = null) {
-  const subject = custom?.subject || 'WebPhoto 驗證碼';
-  const html    = custom?.html    || `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
-  const text    = custom?.text    || `您的驗證碼是：${otp}，10 分鐘內有效。`;
+  const subject = custom?.subject || 'WebPhoto Verification Code';
+  const html    = custom?.html    || `<p>Your WebPhoto registration verification code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. Do not share it with anyone.</p>`;
+  const text    = custom?.text    || `Your verification code is: ${otp}. Valid for 10 minutes.`;
 
   // ── Resend HTTPS ──────────────────────────────────────────────────────────
   if (process.env.RESEND_API_KEY) {
@@ -181,7 +187,7 @@ async function sendOtpEmail(to, otp, custom = null) {
     return;
   }
 
-  // ── Gmail SMTP（本機開發 fallback）────────────────────────────────────────
+  // ── Gmail SMTP (local development fallback) ──────────────────────────────
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
     const transport = nodemailer.createTransport({
       service: 'gmail',
@@ -214,44 +220,116 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // ── POST /login ────────────────────────────────────────────────────────────
-  if (req.method === 'POST' && rawUrl === '/login') {
+  // ── POST /api/auth/login ──────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/api/auth/login') {
     readJsonBody(req)
       .then(async body => {
-        const username = String(body.username || '').trim();
+        const account  = String(body.account  || '').trim();
         const password = String(body.password || '');
 
-        let success = false;
-        let userEmail = null;
+        let success    = false;
+        let userRecord = null; // { username, name, email, permission }
 
         if (mongoose.connection.readyState === 1) {
           // ── MongoDB path ─────────────────────────────────────────────────
-          const user = await User.findOne({ username }).lean();
+          const user = await User.findOne({ username: account }).lean();
           if (user) {
             success = await bcrypt.compare(password, user.password);
-            if (success) userEmail = user.email || null;
+            if (success) userRecord = { username: user.username, name: user.name, email: user.email || null, permission: user.permission };
           }
         } else {
-          // ── Fallback: no DB ──────────────────────────────────────────────
-          const devUser = devAccounts[username];
+          // ── Fallback: dev accounts then memUsers ─────────────────────────
+          const devUser = devAccounts[account];
           if (devUser) {
             success = await bcrypt.compare(password, devUser.password);
+            if (success) userRecord = { username: account, name: devUser.name || account, email: devUser.email || null, permission: devUser.permission || 'viewer' };
+          } else if (memUsers.has(account)) {
+            const mu = memUsers.get(account);
+            success  = await bcrypt.compare(password, mu.password);
+            if (success) userRecord = { username: account, name: mu.name, email: mu.email, permission: mu.permission };
           }
         }
 
-        appendLoginLog(username, success);
-        console.log(`[login] user=${username} → ${success ? 'SUCCESS' : 'FAILED'}`);
+        appendLoginLog(account, success);
+        console.log(`[login] user=${account} → ${success ? 'SUCCESS' : 'FAILED'}`);
+
+        if (!success) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, message: 'Incorrect username or password, please try again' }));
+          return;
+        }
+
+        // ── Generate token + sessionId ────────────────────────────────────
+        const token     = crypto.randomUUID();
+        const sessionId = crypto.randomUUID();
+        const now       = new Date();
+        sessions.set(token, { username: userRecord.username, sessionId, createdAt: now });
+
+        if (mongoose.connection.readyState === 1) {
+          await User.updateOne({ username: userRecord.username }, { currentToken: token, lastLoginAt: now });
+        } else {
+          const mu = memUsers.get(userRecord.username) || {};
+          memUsers.set(userRecord.username, { ...mu, currentToken: token, lastLoginAt: now });
+        }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(
-          success
-            ? { ok: true,  message: '登入成功，歡迎回來！', username, email: userEmail }
-            : { ok: false, message: '帳號或密碼錯誤，請重試' }
-        ));
+        res.end(JSON.stringify({
+          success: true,
+          message: 'Login successful, welcome back!',
+          data: {
+            token,
+            sessionId,
+            user: {
+              id:    userRecord.username,
+              name:  userRecord.name,
+              email: userRecord.email,
+              role:  userRecord.permission,
+              plan:  'free'
+            }
+          }
+        }));
       })
       .catch(err => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: err.message }));
+        res.end(JSON.stringify({ success: false, message: err.message }));
+      });
+    return;
+  }
+
+  // ── POST /api/auth/logout ─────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/api/auth/logout') {
+    const authHeader = req.headers['authorization'] || '';
+    const token      = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+
+    if (!token || !sessions.has(token)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, data: null, message: 'Invalid or expired token' }));
+      return;
+    }
+
+    readJsonBody(req)
+      .then(async () => {
+        const sessionEntry = sessions.get(token);
+        sessions.delete(token);
+        const now = new Date();
+
+        if (mongoose.connection.readyState === 1) {
+          await User.updateOne(
+            { username: sessionEntry.username, currentToken: token },
+            { currentToken: null, lastLogoutAt: now }
+          );
+        } else {
+          const mu = memUsers.get(sessionEntry.username);
+          if (mu) memUsers.set(sessionEntry.username, { ...mu, currentToken: null, lastLogoutAt: now });
+        }
+
+        console.log(`[logout] user=${sessionEntry.username}`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: null, message: 'Logged out' }));
+      })
+      .catch(err => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, data: null, message: err.message }));
       });
     return;
   }
@@ -271,9 +349,9 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: false, message: msg }));
         };
 
-        if (!account || !password || !name || !email) return fail(400, '請填寫所有欄位');
-        if (!/^[a-zA-Z0-9_]{3,30}$/.test(account)) return fail(400, '帳號只能使用英數字和底線，長度 3–30 字元');
-        if (password.length < 8) return fail(400, '密碼至少需要 8 個字元');
+        if (!account || !password || !name || !email) return fail(400, 'Please fill in all fields');
+        if (!/^[a-zA-Z0-9_]{3,30}$/.test(account)) return fail(400, 'Username must be alphanumeric or underscore, 3–30 characters');
+        if (password.length < 8) return fail(400, 'Password must be at least 8 characters');
 
         const dbReady = mongoose.connection.readyState === 1;
 
@@ -282,12 +360,11 @@ const server = http.createServer((req, res) => {
             User.findOne({ username: account }).lean(),
             User.findOne({ email }).lean()
           ]);
-          if (existingUser)  return fail(409, '此帳號名稱已被使用');
-          if (existingEmail) return fail(409, '此 Email 已被註冊');
+          if (existingUser || existingEmail) return fail(400, 'Username or email already exists');
         } else {
-          if (memUsers.has(account)) return fail(409, '此帳號名稱已被使用（測試模式）');
+          if (memUsers.has(account)) return fail(400, 'Username or email already exists');
           const emailUsed = [...memUsers.values()].some(u => u.email === email);
-          if (emailUsed) return fail(409, '此 Email 已被註冊（測試模式）');
+          if (emailUsed) return fail(400, 'Username or email already exists');
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -300,11 +377,11 @@ const server = http.createServer((req, res) => {
 
         console.log(`[register] User created: "${account}" (${email}) permission=${permission} (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
+        res.end(JSON.stringify({ ok: true, message: 'Registration successful! Welcome to WebPhoto' + (dbReady ? '' : ' (test mode, cleared on restart)') }));
       })
       .catch(err => {
         console.error('[api/auth/register]', err.message);
-        const msg = process.env.NODE_ENV !== 'production' ? err.message : '伺服器錯誤，請稍後再試';
+        const msg = process.env.NODE_ENV !== 'production' ? err.message : 'Server error, please try again later';
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: msg }));
       });
@@ -321,7 +398,7 @@ const server = http.createServer((req, res) => {
 
         if (!email || !name || !maps || typeof maps !== 'object') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '缺少必要欄位' }));
+          res.end(JSON.stringify({ ok: false, message: 'Missing required fields' }));
           return;
         }
 
@@ -369,22 +446,22 @@ const server = http.createServer((req, res) => {
         }).join('');
 
         const zipButton = zipUrl
-          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ 一鍵下載全部 ZIP（24 小時有效）</a></div>`
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All ZIP (valid 24 hours)</a></div>`
           : '';
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
 <h2 style="margin:0 0 4px">📦 ${name}</h2>
-<p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto 材質貼圖上傳完成</p>
+<p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto texture upload complete</p>
 ${zipButton}
 <table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden;margin-top:16px">
-<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">個別下載</th></tr></thead>
+<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Channel</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Individual Download</th></tr></thead>
 <tbody>${rows}</tbody></table>
-<p style="color:#374151;font-size:11px;margin-top:16px">此信由 WebPhoto 系統自動寄出</p></div>`;
+<p style="color:#374151;font-size:11px;margin-top:16px">This message was sent automatically by the WebPhoto system</p></div>`;
 
-        const text = (zipUrl ? `下載全部 ZIP：${zipUrl}\n\n` : '') +
+        const text = (zipUrl ? `Download all ZIP: ${zipUrl}\n\n` : '') +
           Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
 
-        await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} 上傳完成`, html, text });
+        await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, zipUrl }));
@@ -403,7 +480,7 @@ ${zipButton}
     const entry = zipStore.get(id);
     if (!entry) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('ZIP 已過期或不存在（有效期 24 小時）');
+      res.end('ZIP has expired or does not exist (valid for 24 hours)');
       return;
     }
     const filename = encodeURIComponent(`${entry.name}_textures.zip`);
