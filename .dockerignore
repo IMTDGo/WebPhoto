@@ -11,11 +11,7 @@ login_log.txt
 # Development-only files
 dev-accounts.json
 test_source/
-add-dev-account.js
-seed.js
-start.ps1
-start-public.ps1
-*.ps1
+scripts/
 
 # Secrets — never bake into image
 .env

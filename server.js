@@ -60,17 +60,6 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
-// ─── OTP schema (temporary records for email verification) ───────────────────
-const otpSchema = new mongoose.Schema({
-  email:    { type: String, required: true, unique: true },
-  username: { type: String, required: true },
-  password: { type: String, required: true }, // pre-hashed with bcrypt
-  otp:      { type: String, required: true },
-  expiresAt:{ type: Date,   required: true }
-});
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
-const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
-
 // ─── Dev accounts (local testing without MongoDB) ────────────────────────────
 const DEV_ACCOUNTS_FILE = path.join(__dirname, 'dev-accounts.json');
 let devAccounts = {};
@@ -163,38 +152,14 @@ function appendLoginLog(username, success) {
 }
 
 // ─── In-memory fallback stores (used when MongoDB is not connected) ─────────
-const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
 const memUsers = new Map(); // username → { username, password, email }
 
-// ─── Send OTP email ───────────────────────────────────────────────────────────
-// 優先順序：Brevo → Resend → SendGrid → Gmail SMTP (本機 fallback)
+// ─── Send email ─────────────────────────────────────────────────────────────
+// 優先順序：Resend → SendGrid → Gmail SMTP (本機 fallback)
 async function sendOtpEmail(to, otp, custom = null) {
   const subject = custom?.subject || 'WebPhoto 驗證碼';
   const html    = custom?.html    || `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
   const text    = custom?.text    || `您的驗證碼是：${otp}，10 分鐘內有效。`;
-
-  // ── Brevo HTTPS ───────────────────────────────────────────────────────────
-  if (process.env.BREVO_API_KEY) {
-    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method:  'POST',
-      headers: {
-        'api-key':      process.env.BREVO_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
-        to:          [{ email: to }],
-        subject:     subject,
-        htmlContent: html,
-        textContent: text
-      })
-    });
-    if (!r.ok) {
-      const errText = await r.text();
-      throw new Error(`Brevo ${r.status}: ${errText}`);
-    }
-    return;
-  }
 
   // ── Resend HTTPS ──────────────────────────────────────────────────────────
   if (process.env.RESEND_API_KEY) {
@@ -271,9 +236,6 @@ const server = http.createServer((req, res) => {
           const devUser = devAccounts[username];
           if (devUser) {
             success = await bcrypt.compare(password, devUser.password);
-          } else {
-            console.warn('[login] No DB — using hardcoded fallback');
-            success = (username === '123456' && password === '123456');
           }
         }
 
@@ -345,129 +307,6 @@ const server = http.createServer((req, res) => {
         const msg = process.env.NODE_ENV !== 'production' ? err.message : '伺服器錯誤，請稍後再試';
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: msg }));
-      });
-    return;
-  }
-
-  // ── POST /register/send-otp ──────────────────────────────────────────────
-  if (req.method === 'POST' && rawUrl === '/register/send-otp') {
-    readJsonBody(req)
-      .then(async body => {
-        const username = String(body.username || '').trim();
-        const password = String(body.password || '');
-        const email    = String(body.email    || '').trim().toLowerCase();
-
-        const fail = (code, msg) => {
-          res.writeHead(code, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: msg }));
-        };
-
-        if (!username || !password || !email) return fail(400, '請填寫所有欄位');
-        if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, '請輸入有效的 Gmail 地址');
-
-        const dbReady = mongoose.connection.readyState === 1;
-
-        if (dbReady) {
-          const [existingUser, existingEmail] = await Promise.all([
-            User.findOne({ username }).lean(),
-            User.findOne({ email }).lean()
-          ]);
-          if (existingUser)  return fail(409, '此帳號名稱已被使用');
-          if (existingEmail) return fail(409, '此 Gmail 已被註冊');
-        } else {
-          // In-memory fallback
-          if (memUsers.has(username)) return fail(409, '此帳號名稱已被使用（測試模式）');
-          const emailUsed = [...memUsers.values()].some(u => u.email === email);
-          if (emailUsed) return fail(409, '此 Gmail 已被註冊（測試模式）');
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const otp       = String(crypto.randomInt(100000, 1000000));
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-
-        if (dbReady) {
-          await OtpRecord.findOneAndUpdate(
-            { email },
-            { username, password: hashedPassword, otp, expiresAt },
-            { upsert: true, new: true }
-          );
-        } else {
-          memOtp.set(email, { username, password: hashedPassword, otp, expiresAt });
-        }
-
-        try {
-          await sendOtpEmail(email, otp);
-          writeLastSent(); // 更新 keepalive 時間戳
-        } catch (mailErr) {
-          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, '郵件服務未設定，請聯繫管理員');
-          throw mailErr;
-        }
-
-        console.log(`[register] OTP sent to ${email} for user "${username}" (${dbReady ? 'DB' : 'memory'})`);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '驗證碼已寄出' }));
-      })
-      .catch(err => {
-        console.error('[register/send-otp]', err.message);
-        const msg = process.env.NODE_ENV !== 'production'
-          ? err.message
-          : '伺服器錯誤，請稍後再試';
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: msg }));
-      });
-    return;
-  }
-
-  // ── POST /register/verify ────────────────────────────────────────────────
-  if (req.method === 'POST' && rawUrl === '/register/verify') {
-    readJsonBody(req)
-      .then(async body => {
-        const email = String(body.email || '').trim().toLowerCase();
-        const otp   = String(body.otp   || '').trim();
-
-        if (!email || !otp) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '請提供 email 與驗證碼' }));
-          return;
-        }
-
-        const dbReady = mongoose.connection.readyState === 1;
-        const record  = dbReady
-          ? await OtpRecord.findOne({ email }).lean()
-          : memOtp.get(email);
-
-        if (!record) {
-          res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '找不到驗證請求，請重新發送' }));
-          return;
-        }
-        if (new Date() > record.expiresAt) {
-          if (dbReady) await OtpRecord.deleteOne({ email }); else memOtp.delete(email);
-          res.writeHead(410, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼已過期，請重新發送' }));
-          return;
-        }
-        if (record.otp !== otp) {
-          res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼錯誤，請重試' }));
-          return;
-        }
-
-        if (dbReady) {
-          await User.create({ username: record.username, password: record.password, email });
-          await OtpRecord.deleteOne({ email });
-        } else {
-          memUsers.set(record.username, { username: record.username, password: record.password, email });
-          memOtp.delete(email);
-        }
-        console.log(`[register] User created: "${record.username}" (${email}) (${dbReady ? 'DB' : 'memory'})`);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
-      })
-      .catch(err => {
-        console.error('[register/verify]', err.message);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
       });
     return;
   }
@@ -631,61 +470,5 @@ ${zipButton}
 server.listen(PORT, () => {
   console.log(`\nWebPhoto server running at http://localhost:${PORT}`);
   console.log(`Upload directory: ${UPLOAD_DIR}\n`);
-  checkBrevoKeepalive();
 });
-
-// ─── Brevo API key keepalive ──────────────────────────────────────────────────
-// 每次 server 啟動時檢查：若距離上次寄信已超過 89 天，自動寄一封保活信
-// 同時每 24 小時再檢查一次（以防 server 長時間不重啟）
-const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
-const KEEPALIVE_DAYS = 89;
-const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
-
-function readLastSent() {
-  try {
-    if (fs.existsSync(KEEPALIVE_FILE)) {
-      return new Date(fs.readFileSync(KEEPALIVE_FILE, 'utf8').trim());
-    }
-  } catch {}
-  return null;
-}
-
-function writeLastSent() {
-  try { fs.writeFileSync(KEEPALIVE_FILE, new Date().toISOString()); } catch {}
-}
-
-async function checkBrevoKeepalive() {
-  if (!process.env.BREVO_API_KEY || !KEEPALIVE_TO) return;
-
-  const last     = readLastSent();
-  const daysSince = last ? (Date.now() - last.getTime()) / 86400000 : Infinity;
-
-  if (daysSince >= KEEPALIVE_DAYS) {
-    try {
-      const r = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method:  'POST',
-        headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
-          to:          [{ email: KEEPALIVE_TO }],
-          subject:     '[WebPhoto] 系統保活通知',
-          textContent: `此信由 WebPhoto 系統自動寄出以維持 Brevo API Key 活躍狀態。\n時間：${new Date().toISOString()}`
-        })
-      });
-      if (r.ok) {
-        writeLastSent();
-        console.log(`[keepalive] Brevo keepalive email sent to ${KEEPALIVE_TO}`);
-      } else {
-        console.warn('[keepalive] Failed:', await r.text());
-      }
-    } catch (e) {
-      console.warn('[keepalive] Error:', e.message);
-    }
-  } else {
-    console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
-  }
-
-  // 每 24 小時重新檢查一次
-  setTimeout(checkBrevoKeepalive, 24 * 60 * 60 * 1000);
-}
 

@@ -4,7 +4,7 @@
 
 import { CropEditor }     from './crop-editor.js';
 import { PatternPreview } from './preview.js';
-import { getCropCanvas, uploadSingleImage } from './upload.js';
+import { getCropCanvas, uploadSingleImage, fileToImage, _isTiff } from './upload.js';
 import { showToast }      from './toast.js';
 import { renderCategoryAccordion, escapeHtml, highlightMaterial, clearAccordionHighlight } from './bom-ui.js';
 
@@ -41,39 +41,6 @@ let _lastObjUrl   = null;
 function updatePreview() {
   if (!currentCrop?.img || !preview) return;
   preview.update(currentCrop);
-}
-
-// ── TIFF decode helper ────────────────────────────────────────────────────────
-function _isTiff(file) {
-  return /\.tiff?$/i.test(file.name) || file.type === 'image/tiff' || file.type === 'image/x-tiff';
-}
-
-async function fileToImage(file) {
-  if (_isTiff(file) && typeof UTIF !== 'undefined') {
-    const buf  = await file.arrayBuffer();
-    const ifds = UTIF.decode(buf);
-    UTIF.decodeImage(buf, ifds[0]);
-    const ifd = ifds[0];
-    const cvs = document.createElement('canvas');
-    cvs.width  = ifd.width;
-    cvs.height = ifd.height;
-    const ctx  = cvs.getContext('2d');
-    const imgData = ctx.createImageData(ifd.width, ifd.height);
-    imgData.data.set(ifd.data);
-    ctx.putImageData(imgData, 0, 0);
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = cvs.toDataURL(); });
-    return img;
-  }
-  const dataURL = await new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload  = (e) => res(e.target.result);
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
-  });
-  const img = new Image();
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataURL; });
-  return img;
 }
 
 // ── Load image ────────────────────────────────────────────────────────────────
@@ -290,16 +257,16 @@ async function loadDeskProjects() {
   }
 }
 
+// ── BOM panel show/hide helpers ───────────────────────────────────────────────
+function _deskShow(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
+function _deskHide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+
 document.getElementById('deskProjectSelect')?.addEventListener('change', (e) => {
   deskProjectId     = e.target.value || null;
   deskTextureRecord = null;
   deskMaterialItem  = null;
 
   try { _deskClearMaterialUI(); } catch (_) {}
-
-  // Helper: show/hide via style (bypasses any CSS-class priority issues)
-  function _deskShow(id) { const el = document.getElementById(id); if (el) el.style.display = ''; }
-  function _deskHide(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
 
   _deskHide('deskBomSelectWrap');
   _deskHide('deskBomInputWrap');

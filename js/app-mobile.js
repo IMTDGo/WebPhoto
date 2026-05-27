@@ -4,9 +4,9 @@
 
 import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
-import { getCropCanvas, uploadSingleImage } from './upload.js';
+import { getCropCanvas, uploadSingleImage, fileToImage, _isTiff } from './upload.js';
 import { showToast }               from './toast.js';
-import { renderCategoryAccordion, highlightMaterial, renderMaterialGroupList } from './bom-ui.js';
+import { escapeHtml, renderMaterialGroupList } from './bom-ui.js';
 import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
 import { drawCameraRulers } from './camera-ruler.js';
 
@@ -171,12 +171,6 @@ function getAuthToken() {
   return sessionStorage.getItem('wp_token') || localStorage.getItem('wp_token') || '';
 }
 
-function escapeHtml(str) {
-  return String(str ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 // ── Project & BOM API ────────────────────────────────────────────────────────────────────────────
 async function loadProjects() {
   projectLoading.classList.remove('hidden');
@@ -185,7 +179,7 @@ async function loadProjects() {
 
   try {
     const res = await fetch(
-      `${window.__API_BASE__}/api/projects/list?page=1&pageSize=50`,
+      `${window.__API_BASE__}/api/projects/list?page=1&pageSize=100`,
       { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -445,15 +439,6 @@ function _renderCategoryList() {
       });
     });
   }
-}
-
-function _selectMaterial(item) {
-  currentMaterialItem = item;
-  highlightMaterial(item._id);
-  const actions = document.getElementById('entryActions');
-  const label   = document.getElementById('entryMaterialLabel');
-  if (label)   label.textContent = item.material || item.material_origin || '—';
-  if (actions) actions.classList.remove('hidden');
 }
 
 /**
@@ -723,39 +708,6 @@ function resetToEntry() {
   currentCrop = null;
 }
 
-// ── TIFF decode helper ────────────────────────────────────────────────────────
-function _isTiff(file) {
-  return /\.tiff?$/i.test(file.name) || file.type === 'image/tiff' || file.type === 'image/x-tiff';
-}
-
-async function fileToImage(file) {
-  if (_isTiff(file) && typeof UTIF !== 'undefined') {
-    const buf  = await file.arrayBuffer();
-    const ifds = UTIF.decode(buf);
-    UTIF.decodeImage(buf, ifds[0]);
-    const ifd = ifds[0];
-    const cvs = document.createElement('canvas');
-    cvs.width  = ifd.width;
-    cvs.height = ifd.height;
-    const ctx  = cvs.getContext('2d');
-    const imgData = ctx.createImageData(ifd.width, ifd.height);
-    imgData.data.set(ifd.data);
-    ctx.putImageData(imgData, 0, 0);
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = cvs.toDataURL(); });
-    return img;
-  }
-  const dataURL = await new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload  = (e) => res(e.target.result);
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
-  });
-  const img = new Image();
-  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataURL; });
-  return img;
-}
-
 // ── File handling ─────────────────────────────────────────────────────────────
 async function handleFile(file) {
   if (!file?.type.startsWith('image/') && !_isTiff(file)) {
@@ -783,14 +735,6 @@ document.getElementById('fileInputGalleryEntry')?.addEventListener('change', (e)
 // ── Camera controls ───────────────────────────────────────────────────────────
 btnOpenCamera.addEventListener('click', () => enterCameraStep());
 document.getElementById('btnOpenCameraEntry')?.addEventListener('click', () => enterCameraStep());
-
-document.getElementById('btnClearMaterial')?.addEventListener('click', () => {
-  currentMaterialItem = null;
-  document.querySelectorAll('.mat-btn').forEach(b => {
-    b.classList.remove('bg-primary/20', 'text-primary');
-  });
-  document.getElementById('entryActions')?.classList.add('hidden');
-});
 
 btnCameraBack.addEventListener('click', () => {
   _resetWbState();

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node seed.js"
+    "seed": "node scripts/seed.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.17",

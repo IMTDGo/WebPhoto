@@ -11,11 +11,5 @@ upload/*
 # Login log
 login_log.txt
 
-# Local dev accounts (for testing without MongoDB)
-dev-accounts.json
-
-# Brevo keepalive timestamp
-.brevo-keepalive
-
 #本機的Node.js不用推上去，用Render的
 node/
