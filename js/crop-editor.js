@@ -310,6 +310,7 @@ export class CropEditor {
 
   _bindEvents() {
     const c = this.canvas;
+    c.style.touchAction = 'none'; // ensure browser never treats touches as scroll
 
     // Mouse — update cursor on hover
     c.addEventListener('mousemove', (e) => {
@@ -327,7 +328,7 @@ export class CropEditor {
     // Touch — single finger
     c.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
-        e.preventDefault();
+        if (e.cancelable) e.preventDefault();
         this._onPointerDown(e.touches[0].clientX, e.touches[0].clientY, e);
       } else if (e.touches.length === 2) {
         this._drag = null;   // cancel any single-finger drag before entering pinch
@@ -338,7 +339,7 @@ export class CropEditor {
     }, { passive: false });
 
     c.addEventListener('touchmove', (e) => {
-      e.preventDefault();
+      if (e.cancelable) e.preventDefault();
       if (e.touches.length === 1 && this._drag) {
         this._onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
       } else if (e.touches.length === 2) {
@@ -357,7 +358,7 @@ export class CropEditor {
 
   _onPointerDown(clientX, clientY, e) {
     if (!this.img) return;
-    e.preventDefault();
+    if (e?.cancelable) e.preventDefault();
     const corner = this._hitCorner(clientX, clientY);
     if (corner) {
       // Resize mode: anchor the opposite corner

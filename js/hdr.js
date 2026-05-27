@@ -49,9 +49,9 @@ export async function captureHDRFrames(track, evCaps, onProgress, maxSize = 2048
 
   const clamp = (v) => Math.max(evCaps.min, Math.min(evCaps.max, v));
   const shots = [
-    { ev: clamp(-2), label: '暗部 (−2 EV)' },
-    { ev: clamp(0),  label: '正常 (0 EV)'  },
-    { ev: clamp(2),  label: '亮部 (+2 EV)' },
+    { ev: clamp(-2), label: 'Dark (−2 EV)' },
+    { ev: clamp(0),  label: 'Normal (0 EV)'  },
+    { ev: clamp(2),  label: 'Bright (+2 EV)' },
   ];
 
   const imageCapture = new ImageCapture(track);

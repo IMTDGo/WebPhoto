@@ -19,14 +19,14 @@ export function renderCategoryAccordion(containerEl, textures, onSelect) {
   containerEl.innerHTML = '';
 
   if (!textures?.length) {
-    containerEl.innerHTML = '<p class="text-xs text-center text-base-content/40 p-4">此 BOM 無材質資料</p>';
+    containerEl.innerHTML = '<p class="text-xs text-center text-base-content/40 p-4">No material data for this BOM</p>';
     return;
   }
 
   // Group by category
   const groups = {};
   textures.forEach(t => {
-    const cat = t.category || '其他';
+    const cat = t.category || 'Other';
     if (!groups[cat]) groups[cat] = [];
     groups[cat].push(t);
   });
@@ -125,14 +125,14 @@ export function renderMaterialGroupList(containerEl, textures, onSelect, uploade
   containerEl.innerHTML = '';
 
   if (!textures?.length) {
-    containerEl.innerHTML = '<p class="text-xs text-center text-base-content/40 p-4">此 BOM 無材質資料</p>';
+    containerEl.innerHTML = '<p class="text-xs text-center text-base-content/40 p-4">No material data for this BOM</p>';
     return;
   }
 
   // ── Group by category ───────────────────────────────────────────────────────
   const catGroups = new Map();
   textures.forEach(item => {
-    const cat = item.category || '其他';
+    const cat = item.category || 'Other';
     if (!catGroups.has(cat)) catGroups.set(cat, []);
     catGroups.get(cat).push(item);
   });
@@ -174,14 +174,14 @@ export function renderMaterialGroupList(containerEl, textures, onSelect, uploade
       const bodyContent = isDone
         ? `<div class="flex items-center gap-2 text-success">
              <span class="h-2.5 w-2.5 rounded-full bg-success shrink-0"></span>
-             <span class="text-sm font-semibold">已拍攝上傳</span>
+             <span class="text-sm font-semibold">Captured &amp; Uploaded</span>
            </div>`
         : `<button class="mat-group-upload-btn btn btn-primary btn-sm w-full gap-2">
              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0118.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
                <circle cx="12" cy="13" r="3"/>
-             </svg>拍照上傳
+             </svg>Capture &amp; Upload
            </button>`;
 
       matRow.innerHTML = `

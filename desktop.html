@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WebPhoto - 電腦版</title>
+  <title>WebPhoto - Desktop</title>
   <script>
     // Auth guard — must be logged in
     if (!sessionStorage.getItem('wp_auth') && !localStorage.getItem('wp_auth')) {
@@ -46,8 +46,8 @@
     <div class="flex-1"></div>
     <div class="flex items-center gap-3">
       <span id="navUsername" class="text-sm text-base-content/70 hidden"></span>
-      <button id="btnLogout" class="btn btn-xs btn-ghost text-error hidden">登出</button>
-      <a href="mobile.html" class="btn btn-xs btn-ghost opacity-60">手機版</a>
+      <button id="btnLogout" class="btn btn-xs btn-ghost text-error hidden">Log Out</button>
+      <a href="mobile.html" class="btn btn-xs btn-ghost opacity-60">Mobile</a>
     </div>
   </div>
   <script>
@@ -77,15 +77,15 @@
     <!-- ── Left: Controls ──────────────────────────────────────────── -->
     <div class="w-80 shrink-0 bg-base-100 flex flex-col gap-4 p-5 overflow-y-auto border-r border-base-300 shadow-lg">
 
-      <!-- ── BOM 選擇 ── -->
+      <!-- ── BOM Selection ── -->
       <div class="flex flex-col gap-3">
-        <h2 class="text-lg font-bold">BOM 選擇</h2>
+        <h2 class="text-lg font-bold">BOM Selection</h2>
 
         <!-- Project dropdown -->
         <div class="form-control gap-1">
-          <label class="label py-0"><span class="label-text text-xs">專案</span></label>
+          <label class="label py-0"><span class="label-text text-xs">Project</span></label>
           <select id="deskProjectSelect" class="select select-bordered select-sm w-full">
-            <option value="">— 載入中 —</option>
+            <option value="">— Loading —</option>
           </select>
         </div>
 
@@ -93,24 +93,24 @@
         <div id="deskBomSelectWrap" class="form-control gap-1" style="display:none">
           <label class="label py-0"><span class="label-text text-xs">BOM</span></label>
           <select id="deskBomSelect" class="select select-bordered select-sm w-full">
-            <option value="">— 選擇 BOM —</option>
+            <option value="">— Select BOM —</option>
           </select>
         </div>
 
         <!-- BOM manual input (fallback when bom-list returns 404) -->
         <div id="deskBomInputWrap" class="form-control gap-1" style="display:none">
-          <label class="label py-0"><span class="label-text text-xs">BOM 編號（手動輸入）</span></label>
+          <label class="label py-0"><span class="label-text text-xs">BOM ID (manual input)</span></label>
           <div class="flex gap-2">
             <input id="deskBomInput" type="text" placeholder="bom_id"
               class="input input-bordered input-sm flex-1" autocomplete="off" />
-            <button id="deskBomConfirm" class="btn btn-sm btn-primary">確認</button>
+            <button id="deskBomConfirm" class="btn btn-sm btn-primary">Confirm</button>
           </div>
           <div id="deskBomError" class="hidden text-xs text-error mt-1"></div>
         </div>
 
         <!-- Category accordion (shown after BOM confirmed) -->
         <div id="deskCategoryWrap" class="flex flex-col gap-1" style="display:none">
-          <label class="label py-0"><span class="label-text text-xs">選擇材質</span></label>
+          <label class="label py-0"><span class="label-text text-xs">Select Material</span></label>
           <div id="deskCategoryList"
             class="overflow-y-auto"
             style="max-height:22rem;-webkit-overflow-scrolling:touch"></div>
@@ -118,7 +118,7 @@
 
         <!-- Selected material chip -->
         <div id="deskMaterialChip" class="rounded-lg bg-primary/10 border border-primary/20 px-3 py-2 text-xs flex items-center gap-2" style="display:none">
-          <span class="text-primary/60">已選：</span>
+          <span class="text-primary/60">Selected: </span>
           <span id="deskMaterialLabel" class="font-semibold text-primary flex-1 truncate"></span>
           <button id="deskClearMaterial" class="text-base-content/30 hover:text-error transition-colors">✕</button>
         </div>
@@ -128,19 +128,19 @@
 
       <!-- Image info -->
       <div id="imageInfo" class="hidden">
-        <div class="divider text-xs my-1">圖片資訊</div>
+        <div class="divider text-xs my-1">Image Info</div>
         <div class="text-xs text-base-content/70 flex flex-col gap-1 px-1">
-          <div class="flex justify-between"><span>檔名</span><span class="font-mono truncate max-w-40" id="infoName">—</span></div>
-          <div class="flex justify-between"><span>尺寸</span><span class="font-mono" id="infoSize">—</span></div>
+          <div class="flex justify-between"><span>Filename</span><span class="font-mono truncate max-w-40" id="infoName">—</span></div>
+          <div class="flex justify-between"><span>Size</span><span class="font-mono" id="infoSize">—</span></div>
         </div>
       </div>
 
       <!-- UV scale + preview options (shown after image load) -->
       <div id="cropPanel" class="hidden flex flex-col gap-3">
-        <div class="divider text-xs my-0">預覽設定</div>
+        <div class="divider text-xs my-0">Preview Settings</div>
         <div class="form-control gap-1.5">
           <div class="flex items-center justify-between">
-            <span class="label-text text-xs">UV 縮放（格數）</span>
+            <span class="label-text text-xs">UV Scale (tiles)</span>
             <span id="uvScaleVal" class="badge badge-sm badge-neutral font-mono min-w-[2rem] justify-center">3</span>
           </div>
           <input type="range" id="uvScale" min="1" max="16" step="1" value="3"
@@ -153,15 +153,15 @@
 
       <!-- Seamless controls -->
       <div id="seamlessPanel" class="hidden flex flex-col gap-3" style="display:none!important">
-        <div class="divider text-xs my-1">四方連續參數</div>
+        <div class="divider text-xs my-1">Seamless Tiling Parameters</div>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" class="toggle toggle-primary toggle-sm" id="enableSeamless" checked />
-          <span class="text-sm">啟用四方連續</span>
+          <span class="text-sm">Enable Seamless Tiling</span>
         </label>
         <div id="seamlessControls" class="flex flex-col gap-3">
           <div class="form-control gap-1">
             <label class="label py-0">
-              <span class="label-text text-xs">接縫混合寬度</span>
+              <span class="label-text text-xs">Seam Blend Width</span>
               <span class="label-text-alt text-xs" id="seamBlendWidthVal">15%</span>
             </label>
             <input type="range" id="seamBlendWidth" min="3" max="40" step="1" value="15" class="range range-primary range-xs" />
@@ -172,7 +172,7 @@
       <!-- Upload -->
       <div id="uploadPanel" class="hidden flex flex-col gap-2 mt-auto pt-3 border-t border-base-300">
         <div class="form-control gap-1">
-          <label class="label py-0"><span class="label-text text-xs">輸出解析度</span></label>
+          <label class="label py-0"><span class="label-text text-xs">Output Resolution</span></label>
           <select id="uploadResolution" class="select select-bordered select-sm w-full">
             <option value="512">512 × 512</option>
             <option value="1024" selected>1024 × 1024</option>
@@ -181,15 +181,15 @@
           </select>
         </div>
         <div class="form-control gap-1">
-          <label class="label py-0"><span class="label-text text-xs">上傳名稱</span></label>
-          <input type="text" id="uploadName" placeholder="例如: wood_floor_01"
+          <label class="label py-0"><span class="label-text text-xs">Upload Name</span></label>
+          <input type="text" id="uploadName" placeholder="e.g. wood_floor_01"
             class="input input-bordered input-sm w-full" maxlength="100" />
         </div>
         <button class="btn btn-primary btn-sm gap-2" id="btnUpload">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
           </svg>
-          上傳圖片
+          Upload Image
         </button>
       </div>
     </div>
@@ -203,10 +203,10 @@
         <!-- Top-left: drop zone + original image -->
         <div class="flex-1 flex flex-col min-w-0 border-r border-base-300">
           <div class="panel-hd">
-            原始圖片
+            Original Image
             <div class="panel-hd-extra">
               <label class="btn btn-xs btn-outline btn-primary cursor-pointer">
-                選擇圖片
+              Select Image
                 <input type="file" accept="image/*,.tif,.tiff" id="fileInput" class="hidden" />
               </label>
             </div>
@@ -216,18 +216,18 @@
               <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
-              <p class="text-sm">拖放圖片至此，或點擊選擇</p>
+              <p class="text-sm">Drag &amp; drop an image here, or click to select</p>
             </label>
-            <img id="originalImg" class="hidden max-w-full max-h-full object-contain relative z-10" alt="原始圖片" />
+            <img id="originalImg" class="hidden max-w-full max-h-full object-contain relative z-10" alt="Original Image" />
           </div>
         </div>
 
         <!-- Top-right: crop editor -->
         <div id="rightCropPanel" class="flex-1 flex flex-col min-w-0" style="display:none">
           <div class="panel-hd">
-            裁切範圍
+            Crop Area
             <div class="panel-hd-extra">
-              <button id="btnAspectLock" class="btn btn-xs btn-outline gap-1" title="切換裁切比例（1:1 / 自由）">
+              <button id="btnAspectLock" class="btn btn-xs btn-outline gap-1" title="Toggle crop ratio (1:1 / Free)">
                 <svg id="lockIconClosed" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
@@ -247,7 +247,7 @@
 
       <!-- Bottom row: tiled preview -->
       <div id="previewSection" class="flex-1 flex flex-col min-h-0" style="display:none">
-        <div class="panel-hd">預覽</div>
+        <div class="panel-hd">Preview</div>
         <div class="flex-1 flex items-center justify-center bg-base-300 overflow-hidden">
           <canvas id="previewCanvas" class="max-w-full max-h-full"></canvas>
         </div>

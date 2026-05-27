@@ -40,7 +40,7 @@ async function _uploadCanvas(canvas, folder, suffix) {
   );
   if (!resp.ok) throw new Error(await resp.text());
   const data = await resp.json();
-  if (!data.success) throw new Error(data.message ?? '上傳失敗');
+  if (!data.success) throw new Error(data.message ?? 'Upload failed');
   const img = data.data?.images?.[0];
   return { url: img?.url ?? '', public_id: img?.id ?? '' };
 }
@@ -254,10 +254,10 @@ export async function uploadSingleImage(textureId, canvas, token, onProgress = n
 
   let data;
   try { data = JSON.parse(text); } catch (_) {
-    throw new Error(`伺服器回傳非 JSON: ${text.slice(0, 200)}`);
+    throw new Error(`Server returned non-JSON: ${text.slice(0, 200)}`);
   }
 
-  if (!data.success) throw new Error(data.message ?? '上傳失敗');
+  if (!data.success) throw new Error(data.message ?? 'Upload failed');
   onProgress?.(1, 1);
   return { ok: true, data: data.data };
 }

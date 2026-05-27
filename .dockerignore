@@ -1,0 +1,30 @@
+# Local Node.js binary (not needed in Docker — uses official node image)
+node/
+
+# npm / Node dependencies (reinstalled inside Docker via npm ci)
+node_modules/
+
+# Runtime data — volume-mounted instead
+upload/
+login_log.txt
+
+# Development-only files
+dev-accounts.json
+test_source/
+add-dev-account.js
+seed.js
+start.ps1
+start-public.ps1
+*.ps1
+
+# Secrets — never bake into image
+.env
+
+# Git metadata
+.git/
+.gitignore
+
+# Editor / OS files
+.vscode/
+*.DS_Store
+Thumbs.db

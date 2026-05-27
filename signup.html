@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -90,7 +90,7 @@
     <!-- ── STEP 1: Fill in details ── -->
     <div id="step1">
       <h1 class="text-center text-white font-bold text-2xl mb-1">Create Account</h1>
-      <p class="text-center text-slate-500 text-sm mb-6">建立您的 WebPhoto 帳號</p>
+      <p class="text-center text-slate-500 text-sm mb-6">Create your WebPhoto account</p>
 
       <div id="alertBox1" class="alert-box mb-4"></div>
 
@@ -98,31 +98,31 @@
 
         <div class="mb-3">
           <input id="s1Username" name="username" type="text"
-            class="login-input" placeholder="帳號（英數字或底線，3–30 字元）"
+            class="login-input" placeholder="Username (alphanumeric or underscore, 3–30 chars)"
             autocomplete="username" required />
         </div>
 
         <div class="mb-3">
           <input id="s1Name" name="name" type="text"
-            class="login-input" placeholder="顯示名稱"
+            class="login-input" placeholder="Display Name"
             autocomplete="name" required />
         </div>
 
         <div class="mb-3">
           <input id="s1Password" name="password" type="password"
-            class="login-input" placeholder="密碼（至少 8 個字元）"
+            class="login-input" placeholder="Password (at least 8 characters)"
             autocomplete="new-password" required />
         </div>
 
         <div class="mb-3">
           <input id="s1Confirm" name="confirm" type="password"
-            class="login-input" placeholder="確認密碼"
+            class="login-input" placeholder="Confirm Password"
             autocomplete="new-password" required />
         </div>
 
         <div class="mb-4">
           <input id="s1Email" name="email" type="email"
-            class="login-input" placeholder="Email 地址"
+            class="login-input" placeholder="Email Address"
             autocomplete="email" required />
         </div>
 
@@ -174,25 +174,25 @@
       const email    = document.getElementById('s1Email').value.trim();
 
       if (!account || !name || !password || !confirm || !email) {
-        showAlert('error', '請填寫所有欄位');
+        showAlert('error', 'Please fill in all fields');
         return;
       }
       if (!/^[a-zA-Z0-9_]{3,30}$/.test(account)) {
-        showAlert('error', '帳號只能使用英數字和底線，長度 3–30 字元');
+        showAlert('error', 'Username must be alphanumeric or underscore, 3–30 characters');
         return;
       }
       if (password.length < 8) {
-        showAlert('error', '密碼至少需要 8 個字元');
+        showAlert('error', 'Password must be at least 8 characters');
         return;
       }
       if (password !== confirm) {
-        showAlert('error', '兩次密碼輸入不一致');
+        showAlert('error', 'Passwords do not match');
         return;
       }
 
       const btn = document.getElementById('btnRegister');
       btn.disabled  = true;
-      btn.innerHTML = '<span class="spinner"></span>註冊中...';
+      btn.innerHTML = '<span class="spinner"></span>Registering...';
 
       try {
         const res = await fetch(`${BASE_URL}/api/auth/register`, {
@@ -208,7 +208,7 @@
           showAlert('error', '✘ ' + data.message);
         }
       } catch (err) {
-        showAlert('error', '✘ 連線失敗，請稍後再試');
+        showAlert('error', '✘ Connection failed, please try again later');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = 'Register';

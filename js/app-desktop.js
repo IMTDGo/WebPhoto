@@ -82,7 +82,7 @@ async function loadImage(file) {
   try {
     img = await fileToImage(file);
   } catch {
-    showToast('圖片載入失敗，格式可能不支援', 'error');
+    showToast('Failed to load image, format may be unsupported', 'error');
     return;
   }
 
@@ -139,7 +139,7 @@ dropZone.addEventListener('drop', (e) => {
   dropZone.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
   if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
-  else showToast('\u8acb\u62d6\u653e\u5716\u7247\u6a94\u6848', 'error');
+  else showToast('Please drop an image file', 'error');
 });
 
 // ── Aspect ratio lock ─────────────────────────────────────────────────────────
@@ -147,7 +147,7 @@ function _updateResolutionLabels(locked) {
   if (!uploadResolution) return;
   for (const opt of uploadResolution.options) {
     const n = opt.value;
-    opt.textContent = locked ? `${n} × ${n}` : `${n} px (最長邊)`;
+    opt.textContent = locked ? `${n} × ${n}` : `${n} px (longest side)`;
   }
 }
 
@@ -161,7 +161,7 @@ function _updateLockUI(locked) {
   } else {
     lockIconClosed.classList.add('hidden');
     lockIconOpen.classList.remove('hidden');
-    lockLabel.textContent = '自由';
+    lockLabel.textContent = 'Free';
     btnAspectLock.classList.remove('btn-outline');
     btnAspectLock.classList.add('btn-ghost');
   }
@@ -183,22 +183,22 @@ uvScale.addEventListener('input', (e) => {
 
 // ── Upload ────────────────────────────────────────────────────────────────────
 btnUpload.addEventListener('click', async () => {
-  if (!currentCrop) { showToast('請先選取圖片', 'warning'); return; }
+  if (!currentCrop) { showToast('Please select an image first', 'warning'); return; }
   const name = uploadNameInput.value.trim();
-  if (!name) { showToast('請輸入名稱', 'warning'); return; }
+  if (!name) { showToast('Please enter a name', 'warning'); return; }
   const outSize = parseInt(uploadResolution?.value || '1024');
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
-  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
+  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Uploading...';
 
   try {
     const canvas     = getCropCanvas(currentCrop, outSize, cropEditor?.aspectLocked ?? true);
     const textureId  = deskMaterialItem?._id || name;
     await uploadSingleImage(textureId, canvas, _deskGetToken());
-    showToast('上傳成功！', 'success');
+    showToast('Upload successful!', 'success');
   } catch (err) {
-    showToast('上傳失敗: ' + err.message, 'error');
+    showToast('Upload failed: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;
@@ -273,7 +273,7 @@ function _deskGetToken() {
 async function loadDeskProjects() {
   const sel = document.getElementById('deskProjectSelect');
   if (!sel) return;
-  sel.innerHTML = '<option value="">— 載入中 —</option>';
+  sel.innerHTML = '<option value="">— Loading —</option>';
   try {
     const res  = await fetch(`${window.__API_BASE__}/api/projects/list?page=1&pageSize=100`,
       { headers: { 'Authorization': `Bearer ${_deskGetToken()}` } });
@@ -283,10 +283,10 @@ async function loadDeskProjects() {
       : Array.isArray(json.items)      ? json.items
       : Array.isArray(json.data?.list) ? json.data.list
       : [];
-    sel.innerHTML = '<option value="">— 選擇專案 —</option>'
+    sel.innerHTML = '<option value="">— Select Project —</option>'
       + items.map(p => `<option value="${escapeHtml(p._id ?? p.id)}">${escapeHtml(p.name)}</option>`).join('');
   } catch (err) {
-    sel.innerHTML = `<option value="">載入失敗: ${escapeHtml(err.message)}</option>`;
+    sel.innerHTML = `<option value="">Load failed: ${escapeHtml(err.message)}</option>`;
   }
 }
 
@@ -331,7 +331,7 @@ document.getElementById('deskProjectSelect')?.addEventListener('change', (e) => 
 
       const sel = document.getElementById('deskBomSelect');
       if (!sel) return;
-      sel.innerHTML = '<option value="">— 選擇 BOM —</option>'
+      sel.innerHTML = '<option value="">— Select BOM —</option>'
         + items.map(b => `<option value="${escapeHtml(b.bom_id ?? b._id ?? b.id)}">${escapeHtml(b.bomFileName ?? b.bomName ?? b.name ?? b.bom_id)}</option>`).join('');
       _deskHide('deskBomInputWrap');
       _deskShow('deskBomSelectWrap');
@@ -355,7 +355,7 @@ async function lookupDeskBom(bomId) {
   const errEl = document.getElementById('deskBomError');
   const btn   = document.getElementById('deskBomConfirm');
   errEl?.classList.add('hidden');
-  if (btn) { btn.disabled = true; btn.textContent = '查詢中…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Searching…'; }
 
   try {
     const url = `${window.__API_BASE__}/api/texture/project-parse`
@@ -364,15 +364,15 @@ async function lookupDeskBom(bomId) {
     const res  = await fetch(url, { headers: { 'Authorization': `Bearer ${_deskGetToken()}` } });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    if (json.success === false) throw new Error(json.message ?? '查詢失敗');
+    if (json.success === false) throw new Error(json.message ?? 'Query failed');
     const record = json.data?.textureRecord;
-    if (!record) throw new Error('無法取得 textureRecord');
+    if (!record) throw new Error('Unable to retrieve textureRecord');
     deskTextureRecord = record;
     renderDeskCategories(record);
   } catch (err) {
-    if (errEl) { errEl.textContent = '查詢失敗：' + err.message; errEl.classList.remove('hidden'); }
+    if (errEl) { errEl.textContent = 'Query failed: ' + err.message; errEl.classList.remove('hidden'); }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '確認'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm'; }
   }
 }
 

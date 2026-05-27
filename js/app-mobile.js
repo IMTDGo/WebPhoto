@@ -123,13 +123,13 @@ function initEditors() {
     if (locked) {
       lockIconClosed?.classList.remove('hidden');
       lockIconOpen?.classList.add('hidden');
-      if (lockLabel) lockLabel.textContent = '1:1';
+  if (lockLabel) lockLabel.textContent = '1:1';
       btnAspectLock?.classList.remove('btn-ghost');
       btnAspectLock?.classList.add('btn-outline');
     } else {
       lockIconClosed?.classList.add('hidden');
       lockIconOpen?.classList.remove('hidden');
-      if (lockLabel) lockLabel.textContent = '自由';
+      if (lockLabel) lockLabel.textContent = 'Free';
       btnAspectLock?.classList.remove('btn-outline');
       btnAspectLock?.classList.add('btn-ghost');
     }
@@ -196,7 +196,7 @@ async function loadProjects() {
   } catch (err) {
     projectLoading.classList.add('hidden');
     projectError.classList.remove('hidden');
-    document.getElementById('projectErrorMsg').textContent = '載入失敗：' + err.message;
+    document.getElementById('projectErrorMsg').textContent = 'Load failed: ' + err.message;
   }
 }
 
@@ -212,14 +212,14 @@ function _renderProjects(data) {
 
   projectList.innerHTML = '';
   if (!list.length) {
-    projectList.innerHTML = '<p class="text-center text-base-content/40 text-sm py-10">目前沒有任何專案</p>';
+    projectList.innerHTML = '<p class="text-center text-base-content/40 text-sm py-10">No projects available</p>';
     return;
   }
   list.forEach(p => {
     const id    = p._id ?? p.id ?? p.project_id ?? '';
     const name  = p.name ?? String(id);
     const thumb = p.thumbnail ?? null;
-    const date  = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('zh-TW') : '';
+    const date  = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString('en-US') : '';
 
     const btn = document.createElement('button');
     btn.className = 'w-full text-left rounded-2xl bg-base-100/90 backdrop-blur border border-base-content/10 overflow-hidden active:scale-[0.98] transition-transform flex items-center gap-3 pr-4 mb-3';
@@ -258,7 +258,7 @@ async function loadBomList(projectId) {
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    if (json.success === false) throw new Error(json.message ?? '載入失敗');
+    if (json.success === false) throw new Error(json.message ?? 'Load failed');
 
     // data may be an array of {bom_id, bomFileName} or a single object
     const raw = json.data;
@@ -273,14 +273,14 @@ async function loadBomList(projectId) {
   } catch (err) {
     bomLoading.classList.add('hidden');
     bomError.classList.remove('hidden');
-    document.getElementById('bomErrorMsg').textContent = '載入失敗：' + err.message;
+    document.getElementById('bomErrorMsg').textContent = 'Load failed: ' + err.message;
   }
 }
 
 function _renderBomItems(items) {
   bomList.innerHTML = '';
   if (!items.length) {
-    bomList.innerHTML = '<p class="text-center text-base-content/40 text-sm py-10">此專案暫無 BOM 資料</p>';
+    bomList.innerHTML = '<p class="text-center text-base-content/40 text-sm py-10">No BOM data for this project</p>';
     return;
   }
   items.forEach(item => {
@@ -315,10 +315,10 @@ async function _lookupBomById(bomIdValue) {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    if (json.success === false) throw new Error(json.message ?? '查詢失敗');
+    if (json.success === false) throw new Error(json.message ?? 'Query failed');
 
     const record = json.data?.textureRecord;
-    if (!record) throw new Error('無法取得 textureRecord');
+    if (!record) throw new Error('Unable to retrieve textureRecord');
 
     bomLoading.classList.add('hidden');
     const name = record.bomName ?? record.textureGroupName ?? bomIdValue;
@@ -343,7 +343,7 @@ async function _lookupBomById(bomIdValue) {
     bomLoading.classList.add('hidden');
     bomError.classList.remove('hidden');
     bomError.classList.add('flex');
-    document.getElementById('bomErrorMsg').textContent = '查詢失敗：' + err.message;
+    document.getElementById('bomErrorMsg').textContent = 'Query failed: ' + err.message;
   }
 }
 
@@ -457,7 +457,7 @@ function _selectMaterial(item) {
 }
 
 /**
- * Called when the user taps 拍照上傳 on an individual material row.
+ * Called when the user taps Capture & Upload on an individual material row.
  * Stores the item in state and immediately opens the camera.
  */
 function _selectMaterialItem(item) {
@@ -644,7 +644,7 @@ function stopCamera() {
 
 async function enterCameraStep() {
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('此裝置不支援網頁即時相機，改用系統拍照', 'warning');
+    showToast('Web camera not supported on this device, using system camera', 'warning');
     fileInputCapture.click();
     return;
   }
@@ -662,7 +662,7 @@ async function enterCameraStep() {
       _cgRO.observe(_vf);
     }
   } catch (err) {
-    showToast('無法啟用相機，改用系統拍照', 'warning');
+    showToast('Unable to enable camera, using system camera', 'warning');
     showStep('entry');
     fileInputCapture.click();
   }
@@ -671,7 +671,7 @@ async function enterCameraStep() {
 function captureFromVideo() {
   const w = cameraVideo.videoWidth;
   const h = cameraVideo.videoHeight;
-  if (!w || !h) throw new Error('相機尚未就緒');
+  if (!w || !h) throw new Error('Camera not ready');
 
   const full = document.createElement('canvas');
   full.width  = w;
@@ -698,7 +698,7 @@ function openUploadSheet() {
     ?? currentBomName;
   uploadNameInput.value = name;
   const display = document.getElementById('uploadNameDisplay');
-  if (display) display.textContent = name || '（未選擇部件）';
+  if (display) display.textContent = name || '(no part selected)';
   uploadSheetBackdrop.classList.remove('hidden');
   uploadSheet.classList.remove('hidden');
 }
@@ -759,14 +759,14 @@ async function fileToImage(file) {
 // ── File handling ─────────────────────────────────────────────────────────────
 async function handleFile(file) {
   if (!file?.type.startsWith('image/') && !_isTiff(file)) {
-    showToast('請選擇圖片檔案', 'error');
+    showToast('Please select an image file', 'error');
     return;
   }
   let img;
   try {
     img = await fileToImage(file);
   } catch {
-    showToast('圖片載入失敗，格式可能不支援', 'error');
+    showToast('Failed to load image, format may be unsupported', 'error');
     return;
   }
   if (!cropEditor) initEditors();
@@ -860,7 +860,7 @@ function _exitWbMode(applied) {
     btn.textContent = 'WB';
   }
 
-  document.getElementById('camHintText').textContent = '對準材質後按下拍照';
+  document.getElementById('camHintText').textContent = 'Aim at material and press capture';
   document.getElementById('camHintText').closest('div').style.display = '';
   document.getElementById('camWbHint').style.display  = 'none';
   document.getElementById('camWbLoupe').style.display  = 'none';
@@ -921,7 +921,7 @@ function _sampleVideoPixel(clientX, clientY) {
 /** Compute and store WB gains from a sampled white-point pixel, update SVG filter. */
 function _applyWhiteBalance(r, g, b) {
   if (Math.max(r, g, b) < 12) {
-    showToast('點選區域太暗，請選擇純白色區域', 'warning');
+    showToast('Selected area is too dark, please choose a pure white area', 'warning');
     return false;
   }
   const rawR = 255 / r;
@@ -1087,11 +1087,11 @@ btnTakePhoto.addEventListener('click', async () => {
     try {
       const track = cameraStream.getVideoTracks()[0];
       const frames = await captureHDRFrames(track, hdrCapabilities, (step, total, label) => {
-        if (progText) progText.textContent = `拍攝 ${step}/${total}：${label}`;
+        if (progText) progText.textContent = `Capturing ${step}/${total}: ${label}`;
         setDot(step);
       });
 
-      if (progText) progText.textContent = 'HDR 合成中…';
+      if (progText) progText.textContent = 'Merging HDR…';
       setDot(3);
 
       const [dark, normal, bright] = frames;
@@ -1111,7 +1111,7 @@ btnTakePhoto.addEventListener('click', async () => {
       preview.update(currentCrop);
       showStep('edit');
     } catch (err) {
-      showToast('HDR 拍攝失敗，改用普通模式', 'warning');
+      showToast('HDR capture failed, switching to standard mode', 'warning');
       // Fallback: single shot from video
       try {
         const canvas = captureFromVideo();
@@ -1123,7 +1123,7 @@ btnTakePhoto.addEventListener('click', async () => {
         preview.update(currentCrop);
         showStep('edit');
       } catch {
-        showToast('拍照失敗，請重試', 'error');
+        showToast('Capture failed, please try again', 'error');
       }
     } finally {
       btnTakePhoto.disabled = false;
@@ -1145,7 +1145,7 @@ btnTakePhoto.addEventListener('click', async () => {
     preview.update(currentCrop);
     showStep('edit');
   } catch (err) {
-    showToast('拍照失敗，請重試', 'error');
+    showToast('Capture failed, please try again', 'error');
   }
 });
 
@@ -1159,7 +1159,7 @@ btnPickAnother.addEventListener('click', () => {
 });
 
 btnShowUpload.addEventListener('click', () => {
-  if (!currentCrop) { showToast('請先展開裁切區域', 'warning'); return; }
+  if (!currentCrop) { showToast('Please expand the crop area first', 'warning'); return; }
   openUploadSheet();
 });
 
@@ -1169,12 +1169,12 @@ uploadSheetBackdrop.addEventListener('click', () => closeUploadSheet());
 
 btnConfirmUpload.addEventListener('click', async () => {
   const name = uploadNameInput.value.trim() || currentBomName;
-  if (!name) { showToast('尚未選擇 BOM 部件', 'warning'); return; }
-  if (!currentCrop) { showToast('請先選取裁切範圍', 'warning'); return; }
+  if (!name) { showToast('No BOM part selected', 'warning'); return; }
+  if (!currentCrop) { showToast('Please select a crop area first', 'warning'); return; }
 
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
-  btnConfirmUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> 上傳中...';
+  btnConfirmUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Uploading...';
 
   try {
     const canvas   = getCropCanvas(currentCrop, Infinity, true);
@@ -1188,16 +1188,16 @@ btnConfirmUpload.addEventListener('click', async () => {
     if (currentMaterialItem?._id) uploadedMaterials.add(currentMaterialItem._id);
 
     closeUploadSheet();
-    showToast('上傳成功！', 'success');
+    showToast('Upload successful!', 'success');
     fileInputCapture.value = '';
     fileInputGallery.value = '';
     currentCrop          = null;
     currentMaterialGroup = null;
     currentMaterialItem  = null;
-    _renderCategoryList();   // re-render to show 已拍攝上傳 badge
+    _renderCategoryList();   // re-render to show Captured & Uploaded badge
     showStep('entry');
   } catch (err) {
-    showToast('上傳失敗: ' + err.message, 'error');
+    showToast('Upload failed: ' + err.message, 'error');
   } finally {
     btnConfirmUpload.disabled = false;
     btnConfirmUpload.innerHTML = origHTML;
@@ -1242,12 +1242,13 @@ window.addEventListener('resize', () => cropEditor?.resize());
 (function () {
   const wrap = document.getElementById('previewWrap');
   if (!wrap) return;
+  wrap.style.touchAction = 'none'; // ensure browser never treats touches as scroll
 
   let _pan   = null;   // { x, y }
   let _pinch = null;  // { dist }
 
   wrap.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     if (e.touches.length === 1) {
       _pan   = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       _pinch = null;
@@ -1261,7 +1262,7 @@ window.addEventListener('resize', () => cropEditor?.resize());
   }, { passive: false });
 
   wrap.addEventListener('touchmove', (e) => {
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     if (e.touches.length === 1 && _pan) {
       const dx = e.touches[0].clientX - _pan.x;
       const dy = e.touches[0].clientY - _pan.y;

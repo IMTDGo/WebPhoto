@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -345,7 +345,7 @@
           name="username"
           type="text"
           class="login-input"
-          placeholder="帳號"
+          placeholder="Username"
           autocomplete="username"
           required
         />
@@ -358,7 +358,7 @@
           name="password"
           type="password"
           class="login-input"
-          placeholder="密碼"
+          placeholder="Password"
           autocomplete="current-password"
           required
         />
@@ -388,7 +388,7 @@
 
     <!-- Camera test button -->
     <div class="text-center mt-5 pt-4" style="border-top: 1px solid #1e2a3a;">
-      <button type="button" id="btnCameraTest" class="btn-camera-test">📷 相機測試</button>
+      <button type="button" id="btnCameraTest" class="btn-camera-test">📷 Camera Test</button>
     </div>
 
   </div>
@@ -400,10 +400,10 @@
       <!-- Header -->
       <div class="cam-header">
         <h2>
-          📷 相機測試
+          📷 Camera Test
           <span id="camHdrBadge" class="cam-hdr-badge" style="display:none;">HDR</span>
         </h2>
-        <button id="btnCamClose" class="cam-close-btn" title="關閉">✕</button>
+        <button id="btnCamClose" class="cam-close-btn" title="Close">✕</button>
       </div>
 
       <!-- Info row -->
@@ -435,7 +435,7 @@
       </div>
 
       <!-- Status text -->
-      <div id="camStatus" class="cam-status">正在啟動相機...</div>
+      <div id="camStatus" class="cam-status">Starting camera...</div>
 
       <!-- Progress dots (3 shots) -->
       <div id="camDots" class="cam-dots">
@@ -458,20 +458,20 @@
 
       <!-- Action buttons -->
       <div class="cam-btns">
-        <button id="btnCamShoot" class="btn-cam-start" disabled>啟動中...</button>
+        <button id="btnCamShoot" class="btn-cam-start" disabled>Starting...</button>
       </div>
 
       <!-- Rename dialog (overlaid after capture, before upload) -->
       <div id="camRenameOverlay" class="cam-rename-overlay">
         <div class="cam-rename-box">
-          <div class="cam-rename-title">💾 為這次拍攝命名</div>
+          <div class="cam-rename-title">💾 Name This Capture</div>
           <input id="camRenameInput" type="text" class="cam-rename-input"
-            placeholder="輸入名稱（英數字、中文）" maxlength="40" />
+            placeholder="Enter name (alphanumeric or Chinese)" maxlength="40" />
           <div class="cam-rename-hint">
-            檔案將命名為：<br>
-            {名稱}_origin_&nbsp;&nbsp;{名稱}_-2EV_&nbsp;&nbsp;{名稱}_+2EV_&nbsp;&nbsp;{名稱}_hdr_
+            Files will be named:<br>
+            {name}_origin_&nbsp;&nbsp;{name}_-2EV_&nbsp;&nbsp;{name}_+2EV_&nbsp;&nbsp;{name}_hdr_
           </div>
-          <button id="btnRenameConfirm" class="btn-rename-ok">確認，開始上傳</button>
+          <button id="btnRenameConfirm" class="btn-rename-ok">Confirm &amp; Start Upload</button>
         </div>
       </div>
 
@@ -524,17 +524,17 @@
       const rememberMe = document.getElementById('rememberMe').checked;
 
       if (!username || !password) {
-        showAlert('error', '請輸入帳號與密碼');
+        showAlert('error', 'Please enter your username and password');
         return;
       }
 
       // Loading state
       btnLogin.disabled = true;
-      btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
+      btnLogin.innerHTML = '<span class="spinner"></span>Logging in...';
 
-      // 超過 4 秒還沒回應 → 提示等待
+      // No response after 4s → prompt the user to wait
       const coldStartTimer = setTimeout(() => {
-        showAlert('info', '⏳ 連線中，請稍候...');
+        showAlert('info', '⏳ Connecting, please wait...');
       }, 4000);
 
       // ── Save token and redirect helper ──
@@ -570,16 +570,16 @@
         if (data.success) {
           onLoginSuccess(data);
         } else if (res.status === 401 || res.status === 403) {
-          showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試'));
+          showAlert('error', '✘ ' + (data.message || 'Incorrect username or password, please try again'));
         } else if (!res.ok) {
-          showAlert('error', '✘ ' + (data.message || `伺服器錯誤 (${res.status})，請稍後再試`));
+          showAlert('error', '✘ ' + (data.message || `Server error (${res.status}), please try again later`));
         } else {
-          showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試'));
+          showAlert('error', '✘ ' + (data.message || 'Incorrect username or password, please try again'));
         }
 
       } catch (err) {
         clearTimeout(coldStartTimer);
-        showAlert('error', '✘ 連線失敗，請稍後再試');
+        showAlert('error', '✘ Connection failed, please try again later');
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';
@@ -624,9 +624,8 @@
       hdrBadge.style.display = 'none';
       infoRow.style.display = 'none';
       previewWrap.style.display = 'none';
-      statusEl.textContent = '正在啟動相機...';
-      btnShoot.disabled = true;
-      btnShoot.textContent = '啟動中...';
+      statusEl.textContent = 'Starting camera...';
+      btnShoot.textContent = 'Starting...';
       isShooting = false;
     }
 
@@ -656,18 +655,18 @@
 
         if (evCaps) {
           hdrBadge.style.display = '';
-          infoText.textContent = `HDR 支援 ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
-          btnShoot.textContent = '開始 HDR 拍攝 (3 張)';
+          infoText.textContent = `HDR supported ✔  EV ${evCaps.min} ~ ${evCaps.max}  |  ${settings.width}×${settings.height}`;
+          btnShoot.textContent = 'Start HDR Capture (3 shots)';
         } else {
-          infoText.textContent = `單張模式（此裝置不支援曝光補償）  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
-          btnShoot.textContent = '拍攝照片';
+          infoText.textContent = `Single-shot mode (exposure compensation not supported)  |  ${settings.width ?? '?'}×${settings.height ?? '?'}`;
+          btnShoot.textContent = 'Take Photo';
         }
         infoRow.style.display = 'flex';
-        statusEl.textContent = '相機已就緒';
+        statusEl.textContent = 'Camera ready';
         btnShoot.disabled = false;
 
       } catch (err) {
-        statusEl.textContent = `相機錯誤：${err.message}`;
+        statusEl.textContent = `Camera error: ${err.message}`;
       }
     });
 
@@ -744,7 +743,7 @@
         const a = document.createElement('a');
         a.href = url; a.target = '_blank';
         a.className = 'cam-log-link';
-        a.textContent = '查看 ↗';
+        a.textContent = 'View ↗';
         line.appendChild(a);
       }
       logEl.appendChild(line);
@@ -821,15 +820,15 @@
           _dbg(`evCaps: EV ${evCaps.min}~${evCaps.max} step=${evCaps.step}`, 'inf');
 
           const shotConfigs = [
-            { ev: Math.max(evCaps.min, -2), label: '暗部 −2EV', key: 'dark'   },
-            { ev: 0,                        label: '正常 0EV',  key: 'normal' },
-            { ev: Math.min(evCaps.max,  2), label: '亮部 +2EV', key: 'bright' },
+            { ev: Math.max(evCaps.min, -2), label: 'Dark −2EV', key: 'dark'   },
+            { ev: 0,                        label: 'Normal 0EV',  key: 'normal' },
+            { ev: Math.min(evCaps.max,  2), label: 'Bright +2EV', key: 'bright' },
           ];
           const ic = new ImageCapture(track);
           const rawFrames = {};
 
           for (const [i, { ev, label, key }] of shotConfigs.entries()) {
-            statusEl.textContent = `拍攝 ${i+1}/3：${label}`;
+            statusEl.textContent = `Capturing ${i+1}/3: ${label}`;
             dots.forEach((d, j) => {
               d.className = j < i ? 'cam-dot done' : j === i ? 'cam-dot active' : 'cam-dot';
             });
@@ -860,7 +859,7 @@
               _dbg(`  ✔ grabFrame OK → ${bitmap.width}×${bitmap.height}`, 'ok');
             } catch (e) {
               _dbg(`  ✘ grabFrame FAIL: ${e.name}: ${e.message}`, 'err');
-              throw new Error(`拍攝第${i+1}張失敗: ${e.message}`);
+              throw new Error(`Capture shot ${i+1} failed: ${e.message}`);
             }
             rawFrames[key] = bitmap;
           }
@@ -868,29 +867,29 @@
           // Restore EV to 0
           try {
             await track.applyConstraints({ advanced: [{ exposureCompensation: 0 }] });
-            _dbg('EV 已恢復為 0', 'ok');
+            _dbg(`EV reset to 0`, 'ok');
           } catch (e) {
-            _dbg(`EV 恢復失敗 (非致命): ${e.message}`, 'err');
+            _dbg(`EV reset failed (non-fatal): ${e.message}`, 'err');
           }
 
           dots.forEach(d => { d.className = 'cam-dot done'; });
-          statusEl.textContent = '合成 HDR 中...';
-          _dbg('開始 mergeHDR...');
+          statusEl.textContent = 'Merging HDR...';
+          _dbg('Starting mergeHDR...');
           const hdrCanvas = mergeHDR(rawFrames.dark, rawFrames.normal, rawFrames.bright);
-          _dbg(`✔ mergeHDR 完成 ${hdrCanvas.width}×${hdrCanvas.height}`, 'ok');
+          _dbg(`✔ mergeHDR complete ${hdrCanvas.width}×${hdrCanvas.height}`, 'ok');
 
           shots = [
-            { bitmap: rawFrames.normal, suffix: '_origin_', label: '正常 0EV'  },
-            { bitmap: rawFrames.dark,   suffix: '_-2EV_',   label: '暗部 −2EV' },
-            { bitmap: rawFrames.bright, suffix: '_+2EV_',   label: '亮部 +2EV' },
-            { bitmap: hdrCanvas,        suffix: '_hdr_',    label: 'HDR 合成'  },
+            { bitmap: rawFrames.normal, suffix: '_origin_', label: 'Normal 0EV'  },
+            { bitmap: rawFrames.dark,   suffix: '_-2EV_',   label: 'Dark −2EV' },
+            { bitmap: rawFrames.bright, suffix: '_+2EV_',   label: 'Bright +2EV' },
+            { bitmap: hdrCanvas,        suffix: '_hdr_',    label: 'HDR Merged'  },
           ];
 
         } else {
           // ── Single-shot fallback (no EV control) ───────────────────
-          statusEl.textContent = '拍攝中...';
+          statusEl.textContent = 'Capturing...';
           shots = [
-            { bitmap: await _captureFrame(), suffix: '_origin_', label: '照片' },
+            { bitmap: await _captureFrame(), suffix: '_origin_', label: 'Photo' },
           ];
         }
 
@@ -901,12 +900,12 @@
         }
 
         // ── Ask for filename ──────────────────────────────────────────
-        statusEl.textContent = '請為這次拍攝命名...';
+        statusEl.textContent = 'Please name this capture...';
         const baseName = await _askFileName(defaultName);
         const folder   = `device-test/${baseName}`;
 
         // ── Upload all to Cloudinary ──────────────────────────────────
-        statusEl.textContent = `上傳 ${shots.length} 張至 Cloudinary...`;
+        statusEl.textContent = `Uploading ${shots.length} shots to Cloudinary...`;
         let allOk = true;
 
         for (const { bitmap, suffix, label } of shots) {
@@ -920,15 +919,15 @@
           }
         }
 
-        statusEl.textContent = allOk ? '✔ 全部上傳完成！' : '⚠ 部分上傳失敗';
+        statusEl.textContent = allOk ? '✔ All uploads complete!' : '⚠ Some uploads failed';
         dotsWrap.style.display = 'none';
-        btnShoot.textContent = '再次測試';
+        btnShoot.textContent = 'Test Again';
         btnShoot.disabled = false;
 
       } catch (err) {
-        statusEl.textContent = `錯誤：${err.message}`;
+        statusEl.textContent = `Error: ${err.message}`;
         dotsWrap.style.display = 'none';
-        btnShoot.textContent = '重試';
+        btnShoot.textContent = 'Retry';
         btnShoot.disabled = false;
       } finally {
         isShooting = false;
