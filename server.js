@@ -52,10 +52,37 @@ if (process.env.MONGODB_URI) {
 
 // ─── User schema ──────────────────────────────────────────────────────────────
 const userSchema = new mongoose.Schema({
+  // Core
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // bcrypt hash
-  email:    { type: String, unique: true, sparse: true }
-});
+  email:    { type: String, unique: true, sparse: true },
+
+  // Account status
+  isActive:        { type: Boolean, default: true },
+  role:            { type: String, enum: ['user', 'admin'], default: 'user' },
+  isEmailVerified: { type: Boolean, default: false },
+
+  // Password management
+  passwordChangedAt:    { type: Date },
+  passwordResetToken:   { type: String },  // store HASHED token
+  passwordResetExpires: { type: Date },
+
+  // Email verification
+  emailVerifyToken:   { type: String },  // store HASHED token
+  emailVerifyExpires: { type: Date },
+
+  // Brute-force / account lock
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil:     { type: Date },
+
+  // Refresh tokens (array of opaque tokens for multi-device support)
+  refreshTokens: [{ type: String }],
+}, { timestamps: true });
+
+// Maximum failed attempts before locking account (configurable via env)
+const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10);
+const LOCK_DURATION_MS   = parseInt(process.env.LOCK_DURATION_MS   || String(15 * 60 * 1000), 10); // 15 min default
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 // ─── OTP schema (temporary records for email verification) ───────────────────
@@ -259,10 +286,45 @@ const server = http.createServer((req, res) => {
 
         if (mongoose.connection.readyState === 1) {
           // ── MongoDB path ─────────────────────────────────────────────────
-          const user = await User.findOne({ username }).lean();
+          const user = await User.findOne({ username });
           if (user) {
+            // Check account is active
+            if (!user.isActive) {
+              appendLoginLog(username, false);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, message: '帳號已停用，請聯繫管理員' }));
+              return;
+            }
+
+            // Check lockout
+            if (user.lockUntil && user.lockUntil > new Date()) {
+              const mins = Math.ceil((user.lockUntil - Date.now()) / 60000);
+              appendLoginLog(username, false);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, message: `帳號已鎖定，請 ${mins} 分鐘後再試` }));
+              return;
+            }
+
             success = await bcrypt.compare(password, user.password);
-            if (success) userEmail = user.email || null;
+
+            if (success) {
+              // Reset login attempts on success
+              if (user.loginAttempts > 0 || user.lockUntil) {
+                await User.updateOne({ _id: user._id }, {
+                  $set:   { loginAttempts: 0 },
+                  $unset: { lockUntil: '' }
+                });
+              }
+              userEmail = user.email || null;
+            } else {
+              // Increment attempts and possibly lock
+              const attempts = (user.loginAttempts || 0) + 1;
+              const update = { loginAttempts: attempts };
+              if (attempts >= MAX_LOGIN_ATTEMPTS) {
+                update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+              }
+              await User.updateOne({ _id: user._id }, { $set: update });
+            }
           }
         } else {
           // ── Fallback: no DB ──────────────────────────────────────────────
@@ -397,7 +459,7 @@ const server = http.createServer((req, res) => {
         }
 
         if (dbReady) {
-          await User.create({ username: record.username, password: record.password, email });
+          await User.create({ username: record.username, password: record.password, email, isEmailVerified: true });
           await OtpRecord.deleteOne({ email });
         } else {
           memUsers.set(record.username, { username: record.username, password: record.password, email });

@@ -20,8 +20,8 @@ const previewSection  = document.getElementById('previewSection');
 const previewCanvas   = document.getElementById('previewCanvas');
 const uploadPanel     = document.getElementById('uploadPanel');
 const btnUpload       = document.getElementById('btnUpload');
-const uploadNameInput = document.getElementById('uploadName');
-const uploadResolution = document.getElementById('uploadResolution');
+const uploadNameInput   = document.getElementById('uploadName');
+const cropSizeDisplay   = document.getElementById('cropSizeDisplay');
 const btnAspectLock   = document.getElementById('btnAspectLock');
 const lockIconClosed  = document.getElementById('lockIconClosed');
 const lockIconOpen    = document.getElementById('lockIconOpen');
@@ -118,10 +118,12 @@ async function loadImage(file) {
       onChange: (crop) => {
         currentCrop = crop;
         preview?.updateFast(crop);
+        _updateCropSizeDisplay(crop);
       },
       onChangeEnd: (crop) => {
         currentCrop = crop;
         updatePreview();
+        _updateCropSizeDisplay(crop);
       },
     });
   }
@@ -148,7 +150,14 @@ async function loadImage(file) {
   rightCropPanel.style.display = '';
   previewSection.style.display = '';
   uploadPanel.classList.remove('hidden');
+  _updateCropSizeDisplay(currentCrop);
   _updateResolutionLabels(cropEditor.aspectLocked);
+}
+
+// ── Crop size display ─────────────────────────────────────────────────────────
+function _updateCropSizeDisplay(crop) {
+  if (!cropSizeDisplay || !crop) return;
+  cropSizeDisplay.textContent = `${crop.w} × ${crop.h} px`;
 }
 
 // ── File input / drop ─────────────────────────────────────────────────────────
@@ -229,7 +238,8 @@ btnUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('\u8acb\u5148\u9078\u64c7\u5716\u7247', 'warning'); return; }
   const name = uploadNameInput.value.trim();
   if (!name) { showToast('\u8acb\u8f38\u5165\u540d\u7a31', 'warning'); return; }
-  const outSize = parseInt(uploadResolution?.value || '1024');
+  // Use full crop resolution — no downscaling
+  const outSize = Infinity;
   const params  = seamlessEnabled ? { ...seamlessParams } : null;
 
   btnUpload.disabled = true;
