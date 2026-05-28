@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign Up — WEBPHOTO</title>
+  <title>Sign Up — Texify</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Geist:wght@400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
@@ -15,20 +15,29 @@
       theme: {
         extend: {
           colors: {
-            "surface-container-high": "#2a2a2a", "on-background": "#e5e2e1",
-            "surface-tint": "#e9c349", "surface-container-low": "#1c1b1b",
-            "primary-container": "#d4af37", "primary": "#f2ca50",
-            "surface-bright": "#3a3939", "on-primary": "#3c2f00",
-            "surface-container": "#201f1f", "on-surface-variant": "#d0c5af",
-            "surface-container-lowest": "#0e0e0e", "outline-variant": "#4d4635",
-            "on-surface": "#e5e2e1", "surface-container-highest": "#353534",
-            "surface": "#131313", "background": "#131313",
-            "surface-variant": "#353534", "outline": "#99907c",
-            "primary-fixed": "#ffe088", "error": "#ffb4ab"
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-dim":               "#121317",
+            "surface-bright":            "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "surface-container-low":     "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-variant":           "#27272A",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "error":                     "#ffb4ab",
           },
           borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
           spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
-          fontFamily: { "headline-xl": ["Playfair Display"], "headline-lg": ["Playfair Display"], "label-sm": ["Geist"], "label-xs": ["Geist"], "body-lg": ["DM Sans"], "body-md": ["DM Sans"] },
+          fontFamily: { "headline-xl": ["Montserrat","sans-serif"], "headline-lg": ["Montserrat","sans-serif"], "label-sm": ["Inter","sans-serif"], "label-xs": ["Inter","sans-serif"], "body-lg": ["Inter","sans-serif"], "body-md": ["Inter","sans-serif"] },
           fontSize: {
             "headline-xl": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
             "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
@@ -67,7 +76,7 @@
   <main class="w-full max-w-[480px] z-10 relative">
     <!-- Brand -->
     <div class="text-center mb-8">
-      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">WEBPHOTO</a>
+      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">TEXIFY</a>
     </div>
 
     <!-- Glass Card -->
@@ -76,8 +85,8 @@
       <!-- ── STEP 1: Fill in details ── -->
       <div id="step1">
         <div class="text-center mb-8">
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" style="font-family:'Playfair Display'">Create Your Account</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant">建立您的 WEBPHOTO 帳號</p>
+          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2">Create Your Account</h2>
+          <p class="font-body-md text-body-md text-on-surface-variant">Join Texify and start creating</p>
         </div>
 
         <div id="alertBox1" class="alert-box mb-6"></div>
@@ -91,7 +100,7 @@
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
                 placeholder=" " />
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">英數字或底線，3–30 字元</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50">Letters, numbers or underscore · 3–30 chars</p>
           </div>
 
           <!-- Password -->
@@ -102,7 +111,7 @@
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
                 placeholder=" " />
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">至少 8 個字元</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50">Minimum 8 characters</p>
           </div>
 
           <!-- Confirm Password -->
@@ -124,7 +133,7 @@
                 placeholder=" " />
               <span class="absolute right-2 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none material-symbols-outlined text-[18px]">mail</span>
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">✉ 系統將寄送 6 位數驗證碼，10 分鐘內有效</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50">A 6-digit code will be sent to your inbox · valid 10 min</p>
           </div>
 
           <!-- Actions -->
@@ -153,8 +162,8 @@
       <div id="step2" class="hidden">
         <div class="text-center mb-8">
           <span class="material-symbols-outlined text-primary text-[48px] mb-3 block">mark_email_unread</span>
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" style="font-family:'Playfair Display'">Verify Email</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-1">驗證碼已寄送至</p>
+          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2">Verify Email</h2>
+          <p class="font-body-md text-body-md text-on-surface-variant mb-1">Verification code sent to</p>
           <p class="font-label-sm text-label-sm text-primary tracking-widest" id="displayEmail"></p>
         </div>
 
@@ -166,12 +175,12 @@
             <input id="s2Otp" type="text" inputmode="numeric" maxlength="6" required
               class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out otp-input"
               placeholder="______" />
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50 text-center">輸入 6 位數字驗證碼</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50 text-center">Enter the 6-digit verification code</p>
           </div>
 
           <div class="text-center">
-            <span class="font-body-md text-body-md text-on-surface-variant">沒收到？</span>
-            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary">重新發送</button>
+            <span class="font-body-md text-body-md text-on-surface-variant">Didn't receive it?</span>
+            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary">Resend</button>
             <span id="resendCooldown" class="font-label-xs text-label-xs text-on-surface-variant/40 ml-1 hidden"></span>
           </div>
 
@@ -241,29 +250,29 @@
       const email    = document.getElementById('s1Email').value.trim();
 
       if (!username || !password || !confirm || !email) {
-        showAlert('alertBox1', 'error', '請填寫所有欄位');
+        showAlert('alertBox1', 'error', 'Please fill in all fields');
         return;
       }
       if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
-        showAlert('alertBox1', 'error', '帳號只能使用英數字和底線，長度 3–30 字元');
+        showAlert('alertBox1', 'error', 'Username must be 3–30 characters using letters, numbers or underscores');
         return;
       }
       if (password.length < 8) {
-        showAlert('alertBox1', 'error', '密碼至少需要 8 個字元');
+        showAlert('alertBox1', 'error', 'Password must be at least 8 characters');
         return;
       }
       if (password !== confirm) {
-        showAlert('alertBox1', 'error', '兩次密碼輸入不一致');
+        showAlert('alertBox1', 'error', 'Passwords do not match');
         return;
       }
       if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
-        showAlert('alertBox1', 'error', '請輸入有效的 Gmail 地址（需以 @gmail.com 結尾）');
+        showAlert('alertBox1', 'error', 'Please enter a valid Gmail address');
         return;
       }
 
       const btn = document.getElementById('btnSendOtp');
       btn.disabled    = true;
-      btn.innerHTML   = '<span class="spinner"></span>寄送中...';
+      btn.innerHTML   = '<span class="spinner"></span>Sending...';
 
       try {
         const res = await fetch(`${BASE_URL}/register/send-otp`, {
@@ -283,7 +292,7 @@
           showAlert('alertBox1', 'error', '✘ ' + data.message);
         }
       } catch (err) {
-        showAlert('alertBox1', 'error', '✘ 連線失敗，請稍後再試');
+          showAlert('alertBox1', 'error', '\u2718 Connection failed. Please try again.');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = 'Send OTP';
@@ -297,13 +306,13 @@
 
       const otp = document.getElementById('s2Otp').value.trim();
       if (!/^\d{6}$/.test(otp)) {
-        showAlert('alertBox2', 'error', '請輸入 6 位數驗證碼');
+        showAlert('alertBox2', 'error', 'Please enter the 6-digit verification code');
         return;
       }
 
       const btn = document.getElementById('btnVerify');
       btn.disabled  = true;
-      btn.innerHTML = '<span class="spinner"></span>驗證中...';
+      btn.innerHTML = '<span class="spinner"></span>Verifying...';
 
       try {
         const res = await fetch(`${BASE_URL}/register/verify`, {
@@ -319,7 +328,7 @@
           showAlert('alertBox2', 'error', '✘ ' + data.message);
         }
       } catch (err) {
-        showAlert('alertBox2', 'error', '✘ 連線失敗，請稍後再試');
+        showAlert('alertBox2', 'error', '✘ Connection failed. Please try again.');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = 'Verify';
@@ -360,13 +369,13 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showAlert('alertBox2', 'info', '✉ 驗證碼已重新寄出');
+          showAlert('alertBox2', 'info', '\u2709 Verification code resent');
           startResendCooldown();
         } else {
           showAlert('alertBox2', 'error', '✘ ' + data.message);
         }
       } catch (err) {
-        showAlert('alertBox2', 'error', '✘ 連線失敗');
+          showAlert('alertBox2', 'error', '\u2718 Connection failed.');
       }
     });
   </script>

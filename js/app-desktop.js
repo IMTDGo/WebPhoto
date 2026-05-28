@@ -101,7 +101,7 @@ async function loadImage(file) {
   try {
     img = await fileToImage(file);
   } catch {
-    showToast('圖片載入失敗，格式可能不支援', 'error');
+    showToast('Failed to load image \u2014 format may not be supported', 'error');
     return;
   }
 
@@ -199,7 +199,7 @@ function _updateResolutionLabels(locked) {
   if (!uploadResolution) return;
   for (const opt of uploadResolution.options) {
     const n = opt.value;
-    opt.textContent = locked ? `${n} × ${n}` : `${n} px (最長邊)`;
+    opt.textContent = locked ? `${n} × ${n}` : `${n} px (longest side)`;
   }
 }
 
@@ -213,7 +213,7 @@ function _updateLockUI(locked) {
   } else {
     lockIconClosed.classList.add('hidden');
     lockIconOpen.classList.remove('hidden');
-    lockLabel.textContent = '自由';
+    lockLabel.textContent = 'Free';
     btnAspectLock.classList.remove('btn-outline');
     btnAspectLock.classList.add('btn-ghost');
   }
@@ -235,16 +235,16 @@ uvScale.addEventListener('input', (e) => {
 
 // ── Upload ────────────────────────────────────────────────────────────────────
 btnUpload.addEventListener('click', async () => {
-  if (!currentCrop) { showToast('\u8acb\u5148\u9078\u64c7\u5716\u7247', 'warning'); return; }
+  if (!currentCrop) { showToast('Please select an image first', 'warning'); return; }
   const name = uploadNameInput.value.trim();
-  if (!name) { showToast('\u8acb\u8f38\u5165\u540d\u7a31', 'warning'); return; }
+  if (!name) { showToast('Please enter a folder name', 'warning'); return; }
   // Use full crop resolution — no downscaling
   const outSize = Infinity;
   const params  = seamlessEnabled ? { ...seamlessParams } : null;
 
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
-  btnUpload.innerHTML = '<span class="loading loading-spinner loading-sm"></span> \u751f\u6210\u901a\u9053...';
+  btnUpload.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:_spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Generating...';
 
   try {
     generatedMaps = await generateChannels(currentCrop, params, outSize, cropEditor?.aspectLocked ?? true);
@@ -277,14 +277,14 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   const origHTML = btnUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
+    btnUpload.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:_spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Uploading... (${done}/${total})`;
   };
 
   try {
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
-    showToast('上傳成功！共 6 個通道', 'success');
+    showToast('Upload successful \u2014 6 channels saved', 'success');
 
-    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
+    // ── Send material links via Email ────────────────────────────────────────────────
     if (chkSendEmail?.checked) {
       try {
         const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
@@ -300,16 +300,16 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ email: user.email, name, maps })
           });
-          showToast('材質連結已寄至 ' + user.email, 'info');
+          showToast('Material links sent to ' + user.email, 'info');
         }
       } catch (mailErr) {
-        showToast('寄信失敗: ' + mailErr.message, 'warning');
+        showToast('Failed to send email: ' + mailErr.message, 'warning');
       }
     }
 
     generatedMaps = null;
   } catch (err) {
-    showToast('上傳失敗: ' + err.message, 'error');
+    showToast('Upload failed: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;

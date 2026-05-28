@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login — WEBPHOTO</title>
+  <title>Login — Texify</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Geist:wght@400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
@@ -15,20 +15,29 @@
       theme: {
         extend: {
           colors: {
-            "surface-container-high": "#2a2a2a", "on-background": "#e5e2e1",
-            "surface-tint": "#e9c349", "surface-container-low": "#1c1b1b",
-            "primary-container": "#d4af37", "primary": "#f2ca50",
-            "surface-bright": "#3a3939", "on-primary": "#3c2f00",
-            "surface-container": "#201f1f", "on-surface-variant": "#d0c5af",
-            "surface-container-lowest": "#0e0e0e", "outline-variant": "#4d4635",
-            "on-surface": "#e5e2e1", "surface-container-highest": "#353534",
-            "surface": "#131313", "background": "#131313",
-            "surface-variant": "#353534", "outline": "#99907c",
-            "primary-fixed": "#ffe088", "error": "#ffb4ab"
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-dim":               "#121317",
+            "surface-bright":            "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "surface-container-low":     "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-variant":           "#27272A",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "error":                     "#ffb4ab",
           },
           borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
           spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
-          fontFamily: { "headline-xl": ["Playfair Display"], "headline-lg": ["Playfair Display"], "label-sm": ["Geist"], "label-xs": ["Geist"], "body-lg": ["DM Sans"], "body-md": ["DM Sans"] },
+          fontFamily: { "headline-xl": ["Montserrat","sans-serif"], "headline-lg": ["Montserrat","sans-serif"], "label-sm": ["Inter","sans-serif"], "label-xs": ["Inter","sans-serif"], "body-lg": ["Inter","sans-serif"], "body-md": ["Inter","sans-serif"] },
           fontSize: {
             "headline-xl": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
             "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
@@ -69,13 +78,13 @@
   <main class="w-full max-w-[440px] z-10 relative">
     <!-- Brand -->
     <div class="text-center mb-8">
-      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">WEBPHOTO</a>
+      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">TEXIFY</a>
     </div>
 
     <!-- Glass Card -->
     <div class="bg-surface-container/60 backdrop-blur-2xl border border-outline-variant/30 rounded-xl p-container-padding glass-card transition-all duration-500 hover:border-outline-variant/50 hover:bg-surface-container/80">
       <header class="mb-10 text-center">
-        <h2 class="font-headline-xl text-headline-lg-mobile md:text-[36px] text-on-surface mb-2 tracking-tight" style="font-family:'Playfair Display'">Welcome Back</h2>
+        <h2 class="font-headline-xl text-headline-lg-mobile md:text-[36px] text-on-surface mb-2 tracking-tight">Welcome Back</h2>
         <p class="font-body-md text-body-md text-on-surface-variant">Sign in to access your workspace.</p>
       </header>
 
@@ -90,7 +99,7 @@
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors duration-250">person</span>
             <input id="username" name="username" type="text" autocomplete="username" required
               class="w-full bg-white/5 border border-transparent rounded-lg py-3 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:bg-white/10 focus:border-primary focus:ring-0 transition-all duration-250 ease-out outline-none"
-              placeholder="帳號" />
+              placeholder="Username" />
           </div>
         </div>
 
@@ -178,12 +187,12 @@
       const password   = document.getElementById('password').value;
       const rememberMe = document.getElementById('rememberMe').checked;
 
-      if (!username || !password) { showAlert('error', '請輸入帳號與密碼'); return; }
+      if (!username || !password) { showAlert('error', 'Please enter your username and password'); return; }
 
       btnLogin.disabled = true;
-      btnLogin.innerHTML = '<span class="spinner"></span>登入中...';
+      btnLogin.innerHTML = '<span class="spinner"></span>Signing in...';
 
-      const coldStartTimer = setTimeout(() => showAlert('info', '⏳ 連線中，請稍候...'), 4000);
+      const coldStartTimer = setTimeout(() => showAlert('info', 'Connecting, please wait...'), 4000);
 
       function onLoginSuccess(data) {
         const store = rememberMe ? localStorage : sessionStorage;
@@ -208,10 +217,10 @@
         clearTimeout(coldStartTimer);
         const data = await res.json();
         if (data.ok) { onLoginSuccess(data); }
-        else { showAlert('error', '✘ ' + (data.message || '帳號或密碼錯誤，請重試')); }
+        else { showAlert('error', '\u2718 ' + (data.message || 'Incorrect username or password.')); }
       } catch (err) {
         clearTimeout(coldStartTimer);
-        showAlert('error', '✘ 連線失敗，請稍後再試');
+        showAlert('error', '\u2718 Connection failed. Please try again.');
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';

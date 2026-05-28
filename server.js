@@ -192,11 +192,11 @@ const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
 const memUsers = new Map(); // username → { username, password, email }
 
 // ─── Send OTP email ───────────────────────────────────────────────────────────
-// 優先順序：Brevo → Resend → SendGrid → Gmail SMTP (本機 fallback)
+// Priority order: Brevo → Resend → SendGrid → Gmail SMTP (local fallback)
 async function sendOtpEmail(to, otp, custom = null) {
-  const subject = custom?.subject || 'WebPhoto 驗證碼';
-  const html    = custom?.html    || `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
-  const text    = custom?.text    || `您的驗證碼是：${otp}，10 分鐘內有效。`;
+  const subject = custom?.subject || 'Texify — Verification Code';
+  const html    = custom?.html    || `<p>Your Texify registration code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. Do not share it with anyone.</p>`;
+  const text    = custom?.text    || `Your verification code is: ${otp}. Valid for 10 minutes.`;
 
   // ── Brevo HTTPS ───────────────────────────────────────────────────────────
   if (process.env.BREVO_API_KEY) {
@@ -241,7 +241,7 @@ async function sendOtpEmail(to, otp, custom = null) {
     return;
   }
 
-  // ── Gmail SMTP（本機開發 fallback）────────────────────────────────────────
+  // ── Gmail SMTP (local dev fallback) ──────────────────────────────────────
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
     const transport = nodemailer.createTransport({
       service: 'gmail',
@@ -292,7 +292,7 @@ const server = http.createServer((req, res) => {
             if (!user.isActive) {
               appendLoginLog(username, false);
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ok: false, message: '帳號已停用，請聯繫管理員' }));
+              res.end(JSON.stringify({ ok: false, message: 'Account disabled. Contact support.' }));
               return;
             }
 
@@ -301,7 +301,7 @@ const server = http.createServer((req, res) => {
               const mins = Math.ceil((user.lockUntil - Date.now()) / 60000);
               appendLoginLog(username, false);
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ ok: false, message: `帳號已鎖定，請 ${mins} 分鐘後再試` }));
+              res.end(JSON.stringify({ ok: false, message: `Account locked. Try again in ${mins} min.` }));
               return;
             }
 
@@ -343,8 +343,8 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
           success
-            ? { ok: true,  message: '登入成功，歡迎回來！', username, email: userEmail }
-            : { ok: false, message: '帳號或密碼錯誤，請重試' }
+            ? { ok: true,  message: 'Login successful. Welcome back!', username, email: userEmail }
+            : { ok: false, message: 'Incorrect username or password.' }
         ));
       })
       .catch(err => {
@@ -367,8 +367,8 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: false, message: msg }));
         };
 
-        if (!username || !password || !email) return fail(400, '請填寫所有欄位');
-        if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, '請輸入有效的 Gmail 地址');
+if (!username || !password || !email) return fail(400, 'Please fill in all fields');
+  if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, 'Please enter a valid Gmail address');
 
         const dbReady = mongoose.connection.readyState === 1;
 
@@ -377,13 +377,13 @@ const server = http.createServer((req, res) => {
             User.findOne({ username }).lean(),
             User.findOne({ email }).lean()
           ]);
-          if (existingUser)  return fail(409, '此帳號名稱已被使用');
-          if (existingEmail) return fail(409, '此 Gmail 已被註冊');
+          if (existingUser)  return fail(409, 'Username already taken');
+          if (existingEmail) return fail(409, 'Email already registered');
         } else {
           // In-memory fallback
-          if (memUsers.has(username)) return fail(409, '此帳號名稱已被使用（測試模式）');
+          if (memUsers.has(username)) return fail(409, 'Username already taken (test mode)');
           const emailUsed = [...memUsers.values()].some(u => u.email === email);
-          if (emailUsed) return fail(409, '此 Gmail 已被註冊（測試模式）');
+          if (emailUsed) return fail(409, 'Email already registered (test mode)');
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -402,21 +402,21 @@ const server = http.createServer((req, res) => {
 
         try {
           await sendOtpEmail(email, otp);
-          writeLastSent(); // 更新 keepalive 時間戳
+          writeLastSent(); // update keepalive timestamp
         } catch (mailErr) {
-          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, '郵件服務未設定，請聯繫管理員');
+          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, 'Email service not configured. Contact support.');
           throw mailErr;
         }
 
         console.log(`[register] OTP sent to ${email} for user "${username}" (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '驗證碼已寄出' }));
+        res.end(JSON.stringify({ ok: true, message: 'Verification code sent' }));
       })
       .catch(err => {
         console.error('[register/send-otp]', err.message);
         const msg = process.env.NODE_ENV !== 'production'
           ? err.message
-          : '伺服器錯誤，請稍後再試';
+          : 'Server error. Please try again later.';
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: msg }));
       });
@@ -432,7 +432,7 @@ const server = http.createServer((req, res) => {
 
         if (!email || !otp) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '請提供 email 與驗證碼' }));
+          res.end(JSON.stringify({ ok: false, message: 'Please provide email and verification code' }));
           return;
         }
 
@@ -443,18 +443,18 @@ const server = http.createServer((req, res) => {
 
         if (!record) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '找不到驗證請求，請重新發送' }));
+          res.end(JSON.stringify({ ok: false, message: 'Verification request not found. Please resend.' }));
           return;
         }
         if (new Date() > record.expiresAt) {
           if (dbReady) await OtpRecord.deleteOne({ email }); else memOtp.delete(email);
           res.writeHead(410, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼已過期，請重新發送' }));
+          res.end(JSON.stringify({ ok: false, message: 'Code expired. Please resend.' }));
           return;
         }
         if (record.otp !== otp) {
           res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼錯誤，請重試' }));
+          res.end(JSON.stringify({ ok: false, message: 'Invalid verification code.' }));
           return;
         }
 
@@ -467,12 +467,12 @@ const server = http.createServer((req, res) => {
         }
         console.log(`[register] User created: "${record.username}" (${email}) (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
+        res.end(JSON.stringify({ ok: true, message: 'Registration successful! Welcome to Texify.' + (dbReady ? '' : ' (Test mode — data cleared on restart)') }));
       })
       .catch(err => {
         console.error('[register/verify]', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
+        res.end(JSON.stringify({ ok: false, message: 'Server error. Please try again later.' }));
       });
     return;
   }
@@ -487,7 +487,7 @@ const server = http.createServer((req, res) => {
 
         if (!email || !name || !maps || typeof maps !== 'object') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '缺少必要欄位' }));
+          res.end(JSON.stringify({ ok: false, message: 'Missing required fields' }));
           return;
         }
 
@@ -535,22 +535,22 @@ const server = http.createServer((req, res) => {
         }).join('');
 
         const zipButton = zipUrl
-          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ 一鍵下載全部 ZIP（24 小時有效）</a></div>`
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 24 h)</a></div>`
           : '';
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
 <h2 style="margin:0 0 4px">📦 ${name}</h2>
-<p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto 材質貼圖上傳完成</p>
+<p style="color:#64748b;margin:0 0 16px;font-size:13px">Texify — Texture upload complete</p>
 ${zipButton}
 <table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden;margin-top:16px">
-<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">個別下載</th></tr></thead>
+<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Channel</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Download</th></tr></thead>
 <tbody>${rows}</tbody></table>
-<p style="color:#374151;font-size:11px;margin-top:16px">此信由 WebPhoto 系統自動寄出</p></div>`;
+<p style="color:#374151;font-size:11px;margin-top:16px">This message was sent automatically by Texify.</p></div>`;
 
-        const text = (zipUrl ? `下載全部 ZIP：${zipUrl}\n\n` : '') +
+        const text = (zipUrl ? `Download all as ZIP: ${zipUrl}\n\n` : '') +
           Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
 
-        await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} 上傳完成`, html, text });
+        await sendOtpEmail(email, null, { subject: `[Texify] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, zipUrl }));
@@ -569,7 +569,7 @@ ${zipButton}
     const entry = zipStore.get(id);
     if (!entry) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('ZIP 已過期或不存在（有效期 24 小時）');
+      res.end('ZIP not found or has expired (valid 24 hours)');
       return;
     }
     const filename = encodeURIComponent(`${entry.name}_textures.zip`);
@@ -628,8 +628,8 @@ server.listen(PORT, () => {
 });
 
 // ─── Brevo API key keepalive ──────────────────────────────────────────────────
-// 每次 server 啟動時檢查：若距離上次寄信已超過 89 天，自動寄一封保活信
-// 同時每 24 小時再檢查一次（以防 server 長時間不重啟）
+// Brevo API key keepalive: send a heartbeat email if last send was >89 days ago
+// Also re-check every 24 h in case the server runs continuously
 const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
 const KEEPALIVE_DAYS = 89;
 const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
@@ -661,8 +661,8 @@ async function checkBrevoKeepalive() {
         body: JSON.stringify({
           sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
           to:          [{ email: KEEPALIVE_TO }],
-          subject:     '[WebPhoto] 系統保活通知',
-          textContent: `此信由 WebPhoto 系統自動寄出以維持 Brevo API Key 活躍狀態。\n時間：${new Date().toISOString()}`
+          subject:     '[Texify] System keepalive',
+          textContent: `This message was sent automatically by Texify to keep the Brevo API key active.\nTimestamp: ${new Date().toISOString()}`
         })
       });
       if (r.ok) {
@@ -678,7 +678,7 @@ async function checkBrevoKeepalive() {
     console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
   }
 
-  // 每 24 小時重新檢查一次
+  // Re-check every 24 hours
   setTimeout(checkBrevoKeepalive, 24 * 60 * 60 * 1000);
 }
 

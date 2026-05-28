@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Geist:wght@400;500;600&family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Montserrat:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
@@ -15,26 +15,34 @@
       theme: {
         extend: {
           colors: {
-            "surface-container-high": "#2a2a2a", "on-background": "#e5e2e1",
-            "surface-tint": "#e9c349", "surface-container-low": "#1c1b1b",
-            "surface-dim": "#131313", "primary-container": "#d4af37",
-            "primary": "#f2ca50", "surface-bright": "#3a3939",
-            "on-primary-container": "#554300", "on-error": "#690005",
-            "surface-container": "#201f1f", "on-surface-variant": "#d0c5af",
-            "surface-container-lowest": "#0e0e0e", "outline-variant": "#4d4635",
-            "on-surface": "#e5e2e1", "error-container": "#93000a",
-            "surface-container-highest": "#353534", "inverse-primary": "#735c00",
-            "on-tertiary": "#313030", "on-primary": "#3c2f00",
-            "surface": "#131313", "error": "#ffb4ab", "background": "#131313",
-            "surface-variant": "#353534", "inverse-on-surface": "#313030",
-            "inverse-surface": "#e5e2e1", "secondary": "#c6c7c3",
-            "outline": "#99907c", "tertiary": "#d0cdcd",
-            "primary-fixed": "#ffe088", "tertiary-fixed-dim": "#c8c6c5",
-            "on-tertiary-fixed-variant": "#474746"
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-dim":               "#121317",
+            "surface-bright":            "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "surface-container-low":     "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-variant":           "#27272A",
+            "on-background":             "#F4F4F5",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "on-primary-container":      "#18181B",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "secondary":                 "#A1A1AA",
+            "tertiary":                  "#A1A1AA",
+            "error":                     "#ffb4ab",
           },
           borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
           spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
-          fontFamily: { "headline-xl": ["Playfair Display"], "headline-lg": ["Playfair Display"], "label-sm": ["Geist"], "label-xs": ["Geist"], "body-lg": ["DM Sans"], "body-md": ["DM Sans"] },
+          fontFamily: { "headline-xl": ["Montserrat","sans-serif"], "headline-lg": ["Montserrat","sans-serif"], "label-sm": ["Inter","sans-serif"], "label-xs": ["Inter","sans-serif"], "body-lg": ["Inter","sans-serif"], "body-md": ["Inter","sans-serif"] },
           fontSize: {
             "headline-xl": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
             "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
@@ -114,7 +122,7 @@
         </button>
         <button id="btnNavLogout"
           class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
-          登出
+          Log Out
         </button>
       </div>
     </div>
@@ -207,7 +215,7 @@
     <div class="font-headline-lg text-headline-lg text-primary select-none">TEXIFY</div>
 
     <div class="flex flex-col items-center gap-1">
-      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60 zh">制作團隊</p>
+      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60">Created By</p>
       <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
         class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
         <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">

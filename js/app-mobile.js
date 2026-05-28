@@ -121,7 +121,7 @@ function initEditors() {
     } else {
       lockIconClosed?.classList.add('hidden');
       lockIconOpen?.classList.remove('hidden');
-      if (lockLabel) lockLabel.textContent = '自由';
+      if (lockLabel) lockLabel.textContent = 'Free';
       btnAspectLock?.classList.remove('btn-outline');
       btnAspectLock?.classList.add('btn-ghost');
     }
@@ -346,7 +346,7 @@ function stopCamera() {
 
 async function enterCameraStep() {
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('此裝置不支援網頁即時相機，改用系統拍照', 'warning');
+    showToast('Camera not supported on this device, using system camera', 'warning');
     fileInputCapture.click();
     return;
   }
@@ -357,7 +357,7 @@ async function enterCameraStep() {
     // Draw crop guide after layout is stable
     requestAnimationFrame(() => requestAnimationFrame(drawCropGuide));
   } catch (err) {
-    showToast('無法啟用相機，改用系統拍照', 'warning');
+    showToast('Unable to start camera, using system camera', 'warning');
     showStep('entry');
     fileInputCapture.click();
   }
@@ -366,7 +366,7 @@ async function enterCameraStep() {
 function captureFromVideo() {
   const w = cameraVideo.videoWidth;
   const h = cameraVideo.videoHeight;
-  if (!w || !h) throw new Error('相機尚未就緒');
+  if (!w || !h) throw new Error('Camera not ready');
 
   const full = document.createElement('canvas');
   full.width  = w;
@@ -441,14 +441,14 @@ async function fileToImage(file) {
 // ── File handling ─────────────────────────────────────────────────────────────
 async function handleFile(file) {
   if (!file?.type.startsWith('image/') && !_isTiff(file)) {
-    showToast('請選擇圖片檔案', 'error');
+    showToast('Please select an image file', 'error');
     return;
   }
   let img;
   try {
     img = await fileToImage(file);
   } catch {
-    showToast('圖片載入失敗，格式可能不支援', 'error');
+    showToast('Failed to load image \u2014 format may not be supported', 'error');
     return;
   }
   if (!cropEditor) initEditors();
@@ -533,7 +533,7 @@ function _exitWbMode(applied) {
   }
 
   const hintDiv = document.getElementById('camHintText')?.closest('div');
-  if (hintDiv) { document.getElementById('camHintText').textContent = '對準材質後按下拍照'; hintDiv.style.display = ''; }
+  if (hintDiv) { document.getElementById('camHintText').textContent = 'Aim at the surface then tap Capture'; hintDiv.style.display = ''; }
   const wbHint = document.getElementById('camWbHint');
   if (wbHint) wbHint.style.display = 'none';
   document.getElementById('camWbLoupe').style.display = 'none';
@@ -595,7 +595,7 @@ function _sampleVideoPixel(clientX, clientY) {
 /** Compute and store WB gains from a sampled white-point pixel, update SVG filter. */
 function _applyWhiteBalance(r, g, b) {
   if (Math.max(r, g, b) < 12) {
-    showToast('取樣點太暗，請點擊白色/灰色區域', 'warning');
+    showToast('Sample too dark \u2014 tap a white or grey area', 'warning');
     return false;
   }
   const rawR = 255 / r;
@@ -769,7 +769,7 @@ btnTakePhoto.addEventListener('click', async () => {
     try {
       const track  = cameraStream.getVideoTracks()[0];
       const frames = await captureHDRFrames(track, hdrCapabilities, onProgress);
-      if (progressText) progressText.textContent = '合成 HDR…';
+      if (progressText) progressText.textContent = 'Merging HDR...';
       const merged       = mergeHDR(...frames);
       frames.forEach(f => f.close?.());
       const squaredCanvas = _cropToSquare(merged, merged.width, merged.height);
@@ -784,7 +784,7 @@ btnTakePhoto.addEventListener('click', async () => {
       showStep('edit');
     } catch (err) {
       overlay.style.display = 'none';
-      showToast('HDR 拍照失敗: ' + err.message, 'error');
+      showToast('HDR capture failed: ' + err.message, 'error');
     }
     return;
   }
@@ -801,7 +801,7 @@ btnTakePhoto.addEventListener('click', async () => {
     preview.update(currentCrop);
     showStep('edit');
   } catch (err) {
-    showToast('拍照失敗，請重試', 'error');
+    showToast('Capture failed. Please try again.', 'error');
   }
 });
 
@@ -815,8 +815,8 @@ btnPickAnother.addEventListener('click', () => {
 });
 
 btnShowUpload.addEventListener('click', async () => {
-  if (!currentCrop) { showToast('請先展開裁切區域', 'warning'); return; }
-  genOverlayLabel.textContent = '生成通道中...';
+  if (!currentCrop) { showToast('Please adjust the crop area first', 'warning'); return; }
+  genOverlayLabel.textContent = 'Generating channels...';
   genOverlay.classList.remove('hidden');
   try {
     const outSize = parseInt(uploadResolution?.value || '1024');
@@ -825,7 +825,7 @@ btnShowUpload.addEventListener('click', async () => {
     paintPreviewThumbnails(generatedMaps);
     showStep('preview');
   } catch (err) {
-    showToast('通道生成失敗: ' + err.message, 'error');
+    showToast('Channel generation failed: ' + err.message, 'error');
   } finally {
     genOverlay.classList.add('hidden');
   }
@@ -844,23 +844,23 @@ uploadSheetBackdrop.addEventListener('click', () => closeUploadSheet());
 
 btnConfirmUpload.addEventListener('click', async () => {
   const name = uploadNameInput.value.trim();
-  if (!name) { showToast('請輸入名稱', 'warning'); return; }
-  if (!currentCrop) { showToast('請先選取裁切範圍', 'warning'); return; }
+  if (!name) { showToast('Please enter a folder name', 'warning'); return; }
+  if (!currentCrop) { showToast('Please select a crop area first', 'warning'); return; }
 
-  if (!generatedMaps) { showToast('請先預覽通道', 'warning'); return; }
+  if (!generatedMaps) { showToast('Please preview channels first', 'warning'); return; }
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnConfirmUpload.innerHTML = `<span class="loading loading-spinner loading-sm"></span> 上傳中... (${done}/${total})`;
+    btnConfirmUpload.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid #18181B;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Uploading... (${done}/${total})`;
   };
 
   try {
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
     closeUploadSheet();
-    showToast('上傳成功！共 6 個通道', 'success');
+    showToast('Upload successful \u2014 6 channels saved', 'success');
 
-    // ── 寄送材質連結 Email ──────────────────────────────────────────────────
+    // ── Send material links via Email ──────────────────────────────────────
     const chkSendEmail = document.getElementById('chkSendEmail');
     if (chkSendEmail?.checked) {
       try {
@@ -877,17 +877,17 @@ btnConfirmUpload.addEventListener('click', async () => {
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({ email: user.email, name, maps })
           });
-          showToast('材質連結已寄至 ' + user.email, 'info');
+          showToast('Material links sent to ' + user.email, 'info');
         }
       } catch (mailErr) {
-        showToast('寄信失敗: ' + mailErr.message, 'warning');
+        showToast('Failed to send email: ' + mailErr.message, 'warning');
       }
     }
 
     generatedMaps = null;
     showStep('entry');
   } catch (err) {
-    showToast('上傳失敗: ' + err.message, 'error');
+    showToast('Upload failed: ' + err.message, 'error');
   } finally {
     btnConfirmUpload.disabled = false;
     btnConfirmUpload.innerHTML = origHTML;
