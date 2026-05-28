@@ -29,6 +29,15 @@ const bcrypt    = require('bcryptjs');
 const nodemailer = require('nodemailer');
 const crypto    = require('crypto');
 const AdmZip    = require('adm-zip');
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+
+function _getS3Client() {
+  return new S3Client({
+    region: 'auto',
+    credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+    endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+  });
+}
 
 // ─── In-memory ZIP store (TTL 24 h) ──────────────────────────────────────────
 const zipStore = new Map(); // id → { name, buffer, createdAt }
@@ -40,6 +49,12 @@ setInterval(() => {
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
 const LOGIN_LOG  = path.join(__dirname, 'login_log.txt');
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || '';
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || '';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
+const R2_BUCKET_URL = process.env.R2_BUCKET_URL || '';
+
 
 // ─── MongoDB connection ───────────────────────────────────────────────────────
 if (process.env.MONGODB_URI) {
@@ -96,7 +111,7 @@ const otpSchema = new mongoose.Schema({
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
 const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
 
-// ─── Upload record (for Cloudinary auto-cleanup) ─────────────────────────────
+// ─── Upload record (for Cloudflare Images auto-cleanup) ─────────────────────
 const uploadRecordSchema = new mongoose.Schema({
   username:   { type: String },
   folderName: { type: String },
@@ -164,6 +179,12 @@ const upload = multer({
   { name: 'image', maxCount: 1 },
   { name: 'name',  maxCount: 1 }
 ]);
+
+const uploadMapParser = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: 3 * 1024 * 1024 } // 3 MB max per image
+}).single('file');
 
 // ─── Static file helper ───────────────────────────────────────────────────────
 const MIME = {
@@ -282,37 +303,59 @@ async function sendOtpEmail(to, otp, custom = null) {
   throw new Error('NO_MAIL_SERVICE');
 }
 
-// ─── Cloudinary: destroy asset with CDN invalidation ───────────────────────
-async function cloudinaryDestroy(publicId) {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dnxqob2cu';
-  const apiKey    = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  if (!apiKey || !apiSecret) throw new Error('Cloudinary API keys not configured');
+function isR2Configured() {
+  return !!(R2_BUCKET_NAME && R2_ACCOUNT_ID && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY && R2_BUCKET_URL);
+}
 
-  const timestamp = Math.floor(Date.now() / 1000);
-  const toSign    = `invalidate=true&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
-  const signature = crypto.createHash('sha1').update(toSign).digest('hex');
+function _sanitizeSlug(input, fallback = 'asset') {
+  const raw = String(input || '').trim().toLowerCase();
+  const safe = raw.replace(/[^a-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '');
+  return safe || fallback;
+}
 
-  const body = new URLSearchParams({
-    public_id:  publicId,
-    invalidate: 'true',
-    timestamp:  String(timestamp),
-    api_key:    apiKey,
-    signature
-  });
+function _extensionFromMime(mimeType) {
+  if (mimeType === 'image/webp') return 'webp';
+  if (mimeType === 'image/jpeg') return 'jpg';
+  if (mimeType === 'image/png') return 'png';
+  return 'bin';
+}
 
-  const r = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body:    body.toString()
-  });
-  if (!r.ok) throw new Error(`Cloudinary destroy HTTP ${r.status}`);
-  const data = await r.json();
-  // 'ok' = deleted, 'not found' = already gone — both acceptable
-  if (data.result !== 'ok' && data.result !== 'not found') {
-    throw new Error(`Cloudinary destroy result: ${data.result}`);
+async function r2UploadBuffer(fileBuffer, objectKey, metadata = {}) {
+  if (!isR2Configured()) {
+    throw new Error('R2 is not configured on server');
   }
-  return data.result;
+
+  try {
+    const cmd = new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey,
+      Body: fileBuffer,
+      Metadata: Object.fromEntries(Object.entries(metadata).map(([k, v]) => [k, String(v)]))
+    });
+    await _getS3Client().send(cmd);
+    const url = `${R2_BUCKET_URL}/${objectKey}`;
+    return { url, public_id: objectKey, bytes: fileBuffer.length };
+  } catch (err) {
+    throw new Error(`R2 upload failed: ${err.message}`);
+  }
+}
+
+async function r2DeleteObject(objectKey) {
+  if (!isR2Configured()) {
+    throw new Error('R2 is not configured on server');
+  }
+
+  try {
+    const cmd = new DeleteObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: objectKey
+    });
+    await _getS3Client().send(cmd);
+    return 'ok';
+  } catch (err) {
+    if (err.name === 'NoSuchKey') return 'not found';
+    throw new Error(`R2 delete failed: ${err.message}`);
+  }
 }
 
 function startOfTodayUTC() {
@@ -384,10 +427,10 @@ async function checkUploadQuotaForUser(username) {
   return { ok: true, status: 200, message: 'Quota available', stats };
 }
 
-// ─── Scheduled Cloudinary cleanup (every 24 h, delete assets > 24 hours old) ───
-async function runCloudinaryCleanup() {
+// ─── Scheduled R2 cleanup (every 24 h, delete objects > 24 hours old) ───
+async function runR2Cleanup() {
   purgeMemUploadRecords();
-  if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return;
+  if (!isR2Configured()) return;
   if (mongoose.connection.readyState !== 1) return;
 
   const cutoff = new Date(Date.now() - UPLOAD_RETENTION_MS);
@@ -406,18 +449,18 @@ async function runCloudinaryCleanup() {
 
   let deleted = 0;
   for (const record of records) {
-    for (const publicId of (record.publicIds || [])) {
+    for (const objectKey of (record.publicIds || [])) {
       try {
-        const res = await cloudinaryDestroy(publicId);
-        console.log(`[cleanup] ${publicId} → ${res}`);
+        const res = await r2DeleteObject(objectKey);
+        console.log(`[cleanup] ${objectKey} → ${res}`);
         deleted++;
       } catch (err) {
-        console.error(`[cleanup] Failed ${publicId}:`, err.message);
+        console.error(`[cleanup] Failed ${objectKey}:`, err.message);
       }
     }
     await UploadRecord.deleteOne({ _id: record._id }).catch(() => {});
   }
-  console.log(`[cleanup] Removed ${deleted} asset(s) across ${records.length} upload record(s)`);
+  console.log(`[cleanup] Removed ${deleted} object(s) across ${records.length} upload record(s)`);
 }
 
 // ─── Request handler ──────────────────────────────────────────────────────────
@@ -640,6 +683,51 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
     return;
   }
 
+  // ── POST /upload-map (multipart) ─────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/upload-map') {
+    uploadMapParser(req, res, async (err) => {
+      if (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: err.message }));
+        return;
+      }
+      if (!req.file || !req.file.buffer) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'No image file received' }));
+        return;
+      }
+
+      const username = String(req.body?.username || '').trim();
+      const folder = _sanitizeSlug(req.body?.folder, 'material');
+      const suffix = _sanitizeSlug(req.body?.suffix, 'map');
+
+      try {
+        const quota = await checkUploadQuotaForUser(username);
+        if (!quota.ok) {
+          res.writeHead(quota.status, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: quota.message }));
+          return;
+        }
+
+        const ext = _extensionFromMime(req.file.mimetype || 'application/octet-stream');
+        const filename = `${folder}_${suffix}.${ext}`;
+        const uploaded = await r2UploadBuffer(req.file.buffer, filename, {
+          username: username || null,
+          folder,
+          suffix,
+          uploadedAt: new Date().toISOString(),
+        });
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, ...uploaded }));
+      } catch (uploadErr) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: uploadErr.message }));
+      }
+    });
+    return;
+  }
+
   // ── POST /upload-quota/check ─────────────────────────────────────────────
   if (req.method === 'POST' && rawUrl === '/upload-quota/check') {
     readJsonBody(req)
@@ -686,7 +774,7 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
           normal:    'Normal'
         };
 
-        // ── Build ZIP from Cloudinary URLs ───────────────────────────────
+        // ── Build ZIP from Cloudflare delivery URLs ──────────────────────
         let zipUrl = null;
         try {
           const zip = new AdmZip();
@@ -849,9 +937,9 @@ server.listen(PORT, () => {
   checkBrevoKeepalive();
 });
 
-// Run Cloudinary cleanup 30 s after startup (allow DB to connect), then every 24 h
-setTimeout(runCloudinaryCleanup, 30_000);
-setInterval(runCloudinaryCleanup, 24 * 60 * 60 * 1000).unref();
+// Run R2 cleanup 30 s after startup (allow DB to connect), then every 24 h
+setTimeout(runR2Cleanup, 30_000);
+setInterval(runR2Cleanup, 24 * 60 * 60 * 1000).unref();
 
 // ─── Brevo API key keepalive ──────────────────────────────────────────────────
 // Brevo API key keepalive: send a heartbeat email if last send was >89 days ago

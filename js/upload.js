@@ -5,9 +5,9 @@
  *   1. generateChannels(crop, params, outSize)
  *      → generates 6 PBR canvases via Web Worker (falls back to main thread)
  *   2. uploadAllMaps(name, canvasMap, onProgress)
- *      → uploads all canvases in PARALLEL to Cloudinary
+ *      → uploads all canvases in PARALLEL to backend, then backend forwards to Cloudflare Images
  *
- * Cloudinary folder structure:
+ * Logical file structure:
  *   {name}/{name}_basecolor.png
  *   {name}/{name}_roughness.png
  *   {name}/{name}_ao.png
@@ -25,9 +25,6 @@ import {
   canvasFromData,
 } from './textureGenerator.js';
 
-const CLOUDINARY_CLOUD_NAME    = 'dnxqob2cu';
-const CLOUDINARY_UPLOAD_PRESET = 'WebTexureUpload';
-const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -36,6 +33,16 @@ function getApiBase() {
   return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
     ? `${location.protocol}//${location.host}`
     : 'https://webphoto-lidl.onrender.com';
+}
+
+function getCurrentUsername() {
+  try {
+    const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const user = raw ? JSON.parse(raw) : null;
+    return String(user?.id || user?.name || '').trim();
+  } catch {
+    return '';
+  }
 }
 
 async function _encodeBlob(canvas, mimeType, quality) {
@@ -78,14 +85,18 @@ async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
 async function _uploadCanvas(canvas, folder, suffix) {
   const encoded = await _toSizedBlob(canvas, MAX_UPLOAD_BYTES);
   const fd = new FormData();
-  fd.append('file', encoded.blob, `${folder}_${suffix}.${encoded.ext}`);  // explicit filename fixes Cloudinary naming
-  fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  fd.append('file', encoded.blob, `${folder}_${suffix}.${encoded.ext}`);
   fd.append('folder', folder);
-  fd.append('public_id', `${folder}_${suffix}`);
-  const resp = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
-  if (!resp.ok) throw new Error(await resp.text());
-  const data = await resp.json();
-  return { url: data.secure_url, public_id: data.public_id, bytes: data.bytes || encoded.blob.size };
+  fd.append('suffix', suffix);
+  fd.append('username', getCurrentUsername());
+
+  const resp = await fetch(`${getApiBase()}/upload-map`, { method: 'POST', body: fd });
+  let data = null;
+  try { data = await resp.json(); } catch {}
+  if (!resp.ok || !data?.ok) {
+    throw new Error(data?.message || 'Upload failed');
+  }
+  return { url: data.url, public_id: data.public_id, bytes: data.bytes || encoded.blob.size };
 }
 
 function _workerResults(workerData, w, h, baseCanvas) {
