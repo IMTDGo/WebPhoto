@@ -326,11 +326,13 @@ async function r2UploadBuffer(fileBuffer, objectKey, metadata = {}) {
   }
 
   try {
+    const { contentType: ct, ...metaRest } = metadata;
     const cmd = new PutObjectCommand({
       Bucket: R2_BUCKET_NAME,
       Key: objectKey,
       Body: fileBuffer,
-      Metadata: Object.fromEntries(Object.entries(metadata).map(([k, v]) => [k, String(v)]))
+      ContentType: ct || 'application/octet-stream',
+      Metadata: Object.fromEntries(Object.entries(metaRest).map(([k, v]) => [k, String(v)]))
     });
     await _getS3Client().send(cmd);
     const url = `${R2_BUCKET_URL}/${objectKey}`;
@@ -709,9 +711,11 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
           return;
         }
 
-        const ext = _extensionFromMime(req.file.mimetype || 'application/octet-stream');
+        const mime = req.file.mimetype || 'image/jpeg';
+        const ext = _extensionFromMime(mime);
         const filename = `${folder}_${suffix}.${ext}`;
         const uploaded = await r2UploadBuffer(req.file.buffer, filename, {
+          contentType: mime,
           username: username || null,
           folder,
           suffix,

@@ -224,7 +224,7 @@
         <span class="text-xs text-on-dim/50">Aspect Ratio</span>
       </div>
 
-      <div id="previewContainer" class="shrink-0 min-h-0 flex flex-col overflow-hidden border-b" style="background:#18181B;border-color:#27272A;flex:0 0 34%">
+      <div id="previewContainer" class="shrink-0 min-h-0 flex flex-col overflow-hidden border-b" style="background:#18181B;border-color:#27272A;flex:1 1 0;min-height:80px">
         <div class="shrink-0 flex items-center gap-2 px-3 pt-2">
           <span class="text-xs uppercase tracking-widest text-on-dim/60">UV Scale</span>
           <span id="previewGridVal" class="text-xs font-mono text-on-surface">3</span>
@@ -243,6 +243,7 @@
         </div>
       </div>
 
+      <div class="shrink-0" style="overflow-y:auto;max-height:40vh">
       <details class="shrink-0 border-b" style="background:#18181B;border-color:#27272A">
         <summary class="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-on-surface cursor-pointer select-none">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-on-dim shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,6 +269,7 @@
           </div>
         </div>
       </details>
+      </div><!-- end parameters scroll wrapper -->
 
       <div class="shrink-0 safe-bottom grid grid-cols-3 gap-2 p-3 border-t" style="background:#18181B;border-color:#27272A">
         <button id="btnRetake" class="py-2.5 text-sm text-on-dim rounded-lg border border-outline-dim hover:border-outline hover:text-on-surface transition-colors bg-transparent">Retake</button>
@@ -360,19 +362,6 @@
     </div>
 
     <div style="display:flex;flex-direction:column;gap:16px">
-      <div>
-        <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;display:block;margin-bottom:8px">Output Resolution</label>
-        <div style="position:relative">
-          <select id="uploadResolution" style="width:100%;padding:10px 36px 10px 12px;background:#27272A;border:1px solid #3F3F46;border-radius:8px;font-family:'Inter',monospace;font-size:13px;color:#F4F4F5;outline:none;-webkit-appearance:none;cursor:pointer">
-            <option value="512">512 &times; 512</option>
-            <option value="1024" selected>1024 &times; 1024</option>
-            <option value="2048">2048 &times; 2048</option>
-            <option value="4096">4096 &times; 4096</option>
-          </select>
-          <span class="material-symbols-outlined" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;color:#A1A1AA;pointer-events:none">expand_more</span>
-        </div>
-      </div>
-
       <div>
         <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;display:block;margin-bottom:8px">Folder Name</label>
         <input type="text" id="uploadName" placeholder="e.g. wood_floor_01" maxlength="100"
