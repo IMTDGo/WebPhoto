@@ -28,20 +28,64 @@ import {
 const CLOUDINARY_CLOUD_NAME    = 'dnxqob2cu';
 const CLOUDINARY_UPLOAD_PRESET = 'WebTexureUpload';
 const CLOUDINARY_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+function getApiBase() {
+  return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? `${location.protocol}//${location.host}`
+    : 'https://webphoto-lidl.onrender.com';
+}
+
+async function _encodeBlob(canvas, mimeType, quality) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error(`Failed to encode ${mimeType}`));
+    }, mimeType, quality);
+  });
+}
+
+async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
+  let work = canvas;
+
+  for (let pass = 0; pass < 5; pass++) {
+    for (const q of [0.92, 0.86, 0.8, 0.74, 0.68, 0.62]) {
+      const webp = await _encodeBlob(work, 'image/webp', q).catch(() => null);
+      if (webp && webp.size <= maxBytes) return { blob: webp, mime: 'image/webp', ext: 'webp' };
+    }
+    for (const q of [0.9, 0.82, 0.74, 0.66, 0.58]) {
+      const jpg = await _encodeBlob(work, 'image/jpeg', q).catch(() => null);
+      if (jpg && jpg.size <= maxBytes) return { blob: jpg, mime: 'image/jpeg', ext: 'jpg' };
+    }
+
+    const next = document.createElement('canvas');
+    next.width = Math.max(256, Math.round(work.width * 0.85));
+    next.height = Math.max(256, Math.round(work.height * 0.85));
+    next.getContext('2d').drawImage(work, 0, 0, next.width, next.height);
+    work = next;
+  }
+
+  // Last resort: lowest-quality JPEG even if slightly above target
+  const fallback = await _encodeBlob(work, 'image/jpeg', 0.5);
+  if (fallback.size > maxBytes) {
+    throw new Error('Unable to compress image under 3MB');
+  }
+  return { blob: fallback, mime: 'image/jpeg', ext: 'jpg' };
+}
+
 async function _uploadCanvas(canvas, folder, suffix) {
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  const encoded = await _toSizedBlob(canvas, MAX_UPLOAD_BYTES);
   const fd = new FormData();
-  fd.append('file', blob, `${folder}_${suffix}.png`);  // explicit filename fixes Cloudinary naming
+  fd.append('file', encoded.blob, `${folder}_${suffix}.${encoded.ext}`);  // explicit filename fixes Cloudinary naming
   fd.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   fd.append('folder', folder);
   fd.append('public_id', `${folder}_${suffix}`);
   const resp = await fetch(CLOUDINARY_URL, { method: 'POST', body: fd });
   if (!resp.ok) throw new Error(await resp.text());
   const data = await resp.json();
-  return { url: data.secure_url, public_id: data.public_id };
+  return { url: data.secure_url, public_id: data.public_id, bytes: data.bytes || encoded.blob.size };
 }
 
 function _workerResults(workerData, w, h, baseCanvas) {
@@ -142,6 +186,26 @@ export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024, 
       resolve(_generateMainThread(imageData, w, h, baseCanvas));
     }
   });
+}
+
+/**
+ * Check whether the current user is allowed to upload right now.
+ * Server enforces:
+ * - max 200 unique uploader accounts per day
+ * - max 3 uploads per user per day (except exempt test account)
+ */
+export async function checkUploadQuota(username) {
+  const resp = await fetch(`${getApiBase()}/upload-quota/check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: String(username || '').trim() })
+  });
+  let data = null;
+  try { data = await resp.json(); } catch {}
+  if (!resp.ok || !data?.ok) {
+    throw new Error(data?.message || 'Upload quota check failed');
+  }
+  return data;
 }
 
 /**

@@ -105,6 +105,22 @@ const uploadRecordSchema = new mongoose.Schema({
 });
 const UploadRecord = mongoose.models.UploadRecord || mongoose.model('UploadRecord', uploadRecordSchema);
 
+const DAILY_UNIQUE_UPLOADERS_LIMIT = 200;
+const DAILY_UPLOADS_PER_ACCOUNT = 3;
+const EXEMPT_UPLOAD_ACCOUNT = 'testestest';
+const UPLOAD_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+// Fallback upload records when MongoDB is unavailable
+const memUploadRecords = [];
+setInterval(() => {
+  const cutoff = Date.now() - UPLOAD_RETENTION_MS;
+  for (let i = memUploadRecords.length - 1; i >= 0; i--) {
+    if (new Date(memUploadRecords[i].uploadedAt).getTime() < cutoff) {
+      memUploadRecords.splice(i, 1);
+    }
+  }
+}, 60 * 60 * 1000).unref();
+
 // ─── Dev accounts (local testing without MongoDB) ────────────────────────────
 const DEV_ACCOUNTS_FILE = path.join(__dirname, 'dev-accounts.json');
 let devAccounts = {};
@@ -143,7 +159,7 @@ const fileFilter = (_req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 } // 50 MB max
+  limits: { fileSize: 3 * 1024 * 1024 } // 3 MB max per image
 }).fields([
   { name: 'image', maxCount: 1 },
   { name: 'name',  maxCount: 1 }
@@ -299,12 +315,82 @@ async function cloudinaryDestroy(publicId) {
   return data.result;
 }
 
-// ─── Scheduled Cloudinary cleanup (every 24 h, delete assets > 3 days old) ───
+function startOfTodayUTC() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function endOfTodayUTC() {
+  const start = startOfTodayUTC();
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
+}
+
+function purgeMemUploadRecords() {
+  const cutoff = Date.now() - UPLOAD_RETENTION_MS;
+  for (let i = memUploadRecords.length - 1; i >= 0; i--) {
+    if (new Date(memUploadRecords[i].uploadedAt).getTime() < cutoff) {
+      memUploadRecords.splice(i, 1);
+    }
+  }
+}
+
+async function getTodayUploadStats(username) {
+  const start = startOfTodayUTC();
+  const end = endOfTodayUTC();
+
+  if (mongoose.connection.readyState === 1) {
+    const todayRecords = await UploadRecord.find({ uploadedAt: { $gte: start, $lt: end } }, { username: 1 }).lean();
+    const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
+    const userCount = todayRecords.filter(r => String(r.username || '').trim() === username).length;
+    return { uniqueUsersToday: todayUsers.size, userUploadsToday: userCount, userAlreadyUploadedToday: todayUsers.has(username) };
+  }
+
+  purgeMemUploadRecords();
+  const todayRecords = memUploadRecords.filter(r => {
+    const t = new Date(r.uploadedAt).getTime();
+    return t >= start.getTime() && t < end.getTime();
+  });
+  const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
+  const userCount = todayRecords.filter(r => String(r.username || '').trim() === username).length;
+  return { uniqueUsersToday: todayUsers.size, userUploadsToday: userCount, userAlreadyUploadedToday: todayUsers.has(username) };
+}
+
+async function checkUploadQuotaForUser(username) {
+  const normalized = String(username || '').trim();
+  if (!normalized) {
+    return { ok: false, status: 401, message: 'Please login before uploading' };
+  }
+  if (normalized.toLowerCase() === EXEMPT_UPLOAD_ACCOUNT) {
+    return { ok: true, status: 200, message: 'Quota exempt account' };
+  }
+
+  const stats = await getTodayUploadStats(normalized);
+  if (stats.userUploadsToday >= DAILY_UPLOADS_PER_ACCOUNT) {
+    return {
+      ok: false,
+      status: 429,
+      message: `Daily upload limit reached (${DAILY_UPLOADS_PER_ACCOUNT} groups per account)`
+    };
+  }
+
+  if (!stats.userAlreadyUploadedToday && stats.uniqueUsersToday >= DAILY_UNIQUE_UPLOADERS_LIMIT) {
+    return {
+      ok: false,
+      status: 429,
+      message: `Daily uploader limit reached (${DAILY_UNIQUE_UPLOADERS_LIMIT} accounts)`
+    };
+  }
+
+  return { ok: true, status: 200, message: 'Quota available', stats };
+}
+
+// ─── Scheduled Cloudinary cleanup (every 24 h, delete assets > 24 hours old) ───
 async function runCloudinaryCleanup() {
+  purgeMemUploadRecords();
   if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return;
   if (mongoose.connection.readyState !== 1) return;
 
-  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(Date.now() - UPLOAD_RETENTION_MS);
   let records;
   try {
     records = await UploadRecord.find({ uploadedAt: { $lt: cutoff } }).lean();
@@ -554,6 +640,29 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
     return;
   }
 
+  // ── POST /upload-quota/check ─────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/upload-quota/check') {
+    readJsonBody(req)
+      .then(async body => {
+        const username = String(body.username || '').trim();
+        const quota = await checkUploadQuotaForUser(username);
+        res.writeHead(quota.status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          ok: quota.ok,
+          message: quota.message,
+          uniqueUsersToday: quota.stats?.uniqueUsersToday ?? null,
+          userUploadsToday: quota.stats?.userUploadsToday ?? null,
+          dailyUniqueLimit: DAILY_UNIQUE_UPLOADERS_LIMIT,
+          dailyPerUserLimit: DAILY_UPLOADS_PER_ACCOUNT,
+        }));
+      })
+      .catch(err => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
+    return;
+  }
+
   // ── POST /send-upload-report ───────────────────────────────────────────────
   if (req.method === 'POST' && rawUrl === '/send-upload-report') {
     readJsonBody(req)
@@ -671,10 +780,21 @@ ${zipButton}
         res.end(JSON.stringify({ ok: false, message: 'No publicIds provided' }));
         return;
       }
-      if (mongoose.connection.readyState === 1) {
-        await UploadRecord.create({ username, folderName, publicIds, uploadedAt: new Date() });
-        console.log(`[record-upload] Saved ${publicIds.length} id(s) for "${folderName || 'unnamed'}" (${username || 'anon'})`);
+
+      const quota = await checkUploadQuotaForUser(username);
+      if (!quota.ok) {
+        res.writeHead(quota.status, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: quota.message }));
+        return;
       }
+
+      const record = { username, folderName, publicIds, uploadedAt: new Date() };
+      if (mongoose.connection.readyState === 1) {
+        await UploadRecord.create(record);
+      } else {
+        memUploadRecords.push(record);
+      }
+      console.log(`[record-upload] Saved ${publicIds.length} id(s) for "${folderName || 'unnamed'}" (${username || 'anon'})`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     }).catch(err => {

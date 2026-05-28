@@ -4,7 +4,7 @@
 
 import { CropEditor }     from './crop-editor.js';
 import { PatternPreview } from './preview.js';
-import { generateChannels, uploadAllMaps } from './upload.js';
+import { generateChannels, uploadAllMaps, checkUploadQuota } from './upload.js';
 import { showToast }      from './toast.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -285,6 +285,11 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   };
 
   try {
+    const _rawUser = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const _currentUser = _rawUser ? JSON.parse(_rawUser) : null;
+    const _username = _currentUser?.id || _currentUser?.name || '';
+    await checkUploadQuota(_username);
+
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
 
     // ── Record upload for auto-cleanup ────────────────────────────────────────

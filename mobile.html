@@ -48,7 +48,7 @@
       color: #F4F4F5;
     }
     #cropCanvas { touch-action: none; display: block; }
-    #previewCanvas { image-rendering: pixelated; display: block; }
+    #previewCanvas { image-rendering: pixelated; display: block; transform-origin: 50% 50%; will-change: transform; }
     #cameraVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
     .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
     .scroll-area { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
@@ -224,7 +224,7 @@
         <span class="text-xs text-on-dim/50">Aspect Ratio</span>
       </div>
 
-      <div id="previewContainer" class="flex-1 min-h-0 flex flex-col overflow-hidden border-b" style="background:#18181B;border-color:#27272A">
+      <div id="previewContainer" class="shrink-0 min-h-0 flex flex-col overflow-hidden border-b" style="background:#18181B;border-color:#27272A;flex:0 0 34%">
         <div class="shrink-0 flex items-center gap-2 px-3 pt-2">
           <span class="text-xs uppercase tracking-widest text-on-dim/60">UV Scale</span>
           <span id="previewGridVal" class="text-xs font-mono text-on-surface">3</span>
@@ -237,8 +237,9 @@
         <div class="shrink-0 px-3 pb-2">
           <input type="range" id="previewGridSlider" min="1" max="10" value="3" class="aura-range w-full mt-1" />
         </div>
-        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden" style="touch-action:none">
+        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden relative" style="touch-action:none">
           <canvas id="previewCanvas" style="display:block" class="w-full"></canvas>
+          <div id="previewGestureHint" class="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-2 px-2 py-1 rounded-md text-[10px] tracking-wide" style="color:rgba(255,255,255,0.7);background:rgba(0,0,0,0.35)">Drag to pan · Pinch to zoom</div>
         </div>
       </div>
 
