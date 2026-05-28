@@ -71,12 +71,27 @@
       WEBPHOTO
     </div>
     <div class="flex items-center gap-4">
+      <!-- Logged-out state -->
       <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
         Sign Up
       </a>
       <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
         Login
       </a>
+      <!-- Logged-in state (hidden by default, shown via JS) -->
+      <div id="navUserGroup" class="hidden items-center gap-3">
+        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">account_circle</span>
+        <span id="navUsername" class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest"></span>
+        <span class="text-on-surface-variant/20" style="font-size:10px">|</span>
+        <button id="btnNavOpenApp"
+          class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+          Open App
+        </button>
+        <button id="btnNavLogout"
+          class="font-label-sm text-label-sm text-on-surface-variant hover:text-error border border-outline-variant/30 hover:border-error/40 px-4 py-2 rounded-full transition-all duration-250 ease-out active:scale-95 uppercase tracking-widest">
+          Logout
+        </button>
+      </div>
     </div>
   </nav>
 
@@ -194,14 +209,38 @@
         else window.location.href = './login.html?ref=app';
       });
 
-      // Navbar: if logged in, replace Login with "Open App" and hide Sign Up
+      // ── Real logout helper ──
+      function doLogout() {
+        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
+          localStorage.removeItem(k);
+          sessionStorage.removeItem(k);
+        });
+        window.location.reload();
+      }
+
+      // Navbar: show correct state based on login
       if (isLoggedIn) {
-        const navLogin  = document.getElementById('navLogin');
-        const navSignUp = document.getElementById('navSignUp');
-        const heroSignUp = document.getElementById('heroSignUp');
-        if (navLogin)  { navLogin.textContent = 'Open App'; navLogin.addEventListener('click', (e) => { e.preventDefault(); _wpGoToApp(); }); }
-        if (navSignUp)  navSignUp.classList.add('hidden');
-        if (heroSignUp) heroSignUp.classList.add('hidden');
+        // Hide logged-out elements
+        document.getElementById('navSignUp').classList.add('hidden');
+        document.getElementById('navLogin').classList.add('hidden');
+        document.getElementById('heroSignUp')?.classList.add('hidden');
+
+        // Show logged-in elements
+        const userGroup = document.getElementById('navUserGroup');
+        userGroup.classList.remove('hidden');
+        userGroup.classList.add('flex');
+
+        // Populate username
+        try {
+          const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+          if (raw) {
+            const u = JSON.parse(raw);
+            document.getElementById('navUsername').textContent = u.name || u.id || '';
+          }
+        } catch (e) {}
+
+        document.getElementById('btnNavOpenApp').addEventListener('click', _wpGoToApp);
+        document.getElementById('btnNavLogout').addEventListener('click', doLogout);
       }
 
       const canvas = document.getElementById('material-canvas');
