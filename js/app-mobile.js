@@ -4,7 +4,7 @@
 
 import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
-import { generateChannels, uploadAllMaps } from './upload.js';
+import { generateChannels, uploadAllMaps, checkUploadQuota } from './upload.js';
 import { showToast }               from './toast.js';
 import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
 
@@ -21,6 +21,7 @@ const fileInputCapture = document.getElementById('fileInputCapture');
 const fileInputGallery = document.getElementById('fileInputGallery');
 const cropCanvas   = document.getElementById('cropCanvas');
 const previewCanvas = document.getElementById('previewCanvas');
+const previewWrap = document.getElementById('previewWrap');
 const previewGridSlider = document.getElementById('previewGridSlider');
 const previewGridVal    = document.getElementById('previewGridVal');
 const btnRetake      = document.getElementById('btnRetake');
@@ -63,8 +64,19 @@ let seamlessEnabled = true;
 let seamlessParams  = { seamBlendWidth: 0.15, iterations: 80 };
 
 // HDR state
-let hdrMode         = false;
+let hdrMode         = true;
 let hdrCapabilities = null;  // null = not supported / not yet checked
+
+// Preview pan/zoom state
+const previewPointers = new Map();
+let previewPanX = 0;
+let previewPanY = 0;
+let previewScale = 1;
+let previewPinchStartDist = 0;
+let previewPinchStartScale = 1;
+let previewPinchStartMid = null;
+let previewPinchStartPan = null;
+let previewDragStart = null;
 
 // White balance state
 let wbGains   = { r: 1, g: 1, b: 1 }; // per-channel gains (1 = neutral)
@@ -91,11 +103,12 @@ function initEditors() {
     onChange: (crop) => {
       currentCrop = crop;
       preview.updateFast(crop);  // low-res, real-time
+      _syncPreviewTransform();
       _updateCropSize(crop);
     },
     onChangeEnd: (crop) => {
       currentCrop = crop;
-      preview.update(crop);      // full quality after drag ends
+      preview.update(crop).then(() => _syncPreviewTransform());      // full quality after drag ends
       _updateCropSize(crop);
     },
   });
@@ -103,11 +116,14 @@ function initEditors() {
   preview = new PatternPreview(previewCanvas, { displaySize: 512, gridSize: 3 });
   preview.seamlessEnabled = seamlessEnabled;
   preview.params = { ...seamlessParams };
+  _initPreviewGestures();
+  _resetPreviewTransform();
 
   previewGridSlider.addEventListener('input', (e) => {
     const n = parseInt(e.target.value);
     previewGridVal.textContent = n;
     preview.setGridSize(n);
+    _syncPreviewTransform();
   });
 
   // Aspect ratio lock
@@ -150,6 +166,104 @@ function initEditors() {
     seamlessParams.seamBlendWidth = pct / 100;
     if (seamlessEnabled) _applySeamlessToPreview();
   });
+}
+
+function _dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function _mid(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function _getPanBounds() {
+  const wrapW = previewWrap?.clientWidth || 0;
+  const wrapH = previewWrap?.clientHeight || 0;
+  const baseW = previewCanvas?.offsetWidth || 0;
+  const baseH = previewCanvas?.offsetHeight || 0;
+  const scaledW = baseW * previewScale;
+  const scaledH = baseH * previewScale;
+  return {
+    x: Math.max(0, (scaledW - wrapW) / 2),
+    y: Math.max(0, (scaledH - wrapH) / 2),
+  };
+}
+
+function _syncPreviewTransform() {
+  if (!previewCanvas) return;
+  const bounds = _getPanBounds();
+  previewPanX = Math.max(-bounds.x, Math.min(bounds.x, previewPanX));
+  previewPanY = Math.max(-bounds.y, Math.min(bounds.y, previewPanY));
+  previewCanvas.style.transform = `translate(${previewPanX}px, ${previewPanY}px) scale(${previewScale})`;
+}
+
+function _resetPreviewTransform() {
+  previewPanX = 0;
+  previewPanY = 0;
+  previewScale = 1;
+  requestAnimationFrame(() => requestAnimationFrame(_syncPreviewTransform));
+}
+
+function _initPreviewGestures() {
+  if (!previewWrap || !previewCanvas || previewWrap.dataset.gestureBound === '1') return;
+  previewWrap.dataset.gestureBound = '1';
+
+  previewWrap.addEventListener('pointerdown', (e) => {
+    previewPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    previewWrap.setPointerCapture(e.pointerId);
+
+    if (previewPointers.size === 1) {
+      previewDragStart = { x: e.clientX, y: e.clientY, panX: previewPanX, panY: previewPanY };
+      previewPinchStartMid = null;
+    }
+    if (previewPointers.size === 2) {
+      const [a, b] = [...previewPointers.values()];
+      previewPinchStartDist = Math.max(1, _dist(a, b));
+      previewPinchStartScale = previewScale;
+      previewPinchStartMid = _mid(a, b);
+      previewPinchStartPan = { x: previewPanX, y: previewPanY };
+      previewDragStart = null;
+    }
+  }, { passive: true });
+
+  previewWrap.addEventListener('pointermove', (e) => {
+    if (!previewPointers.has(e.pointerId)) return;
+    previewPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (previewPointers.size === 1 && previewDragStart) {
+      previewPanX = previewDragStart.panX + (e.clientX - previewDragStart.x);
+      previewPanY = previewDragStart.panY + (e.clientY - previewDragStart.y);
+      _syncPreviewTransform();
+      return;
+    }
+
+    if (previewPointers.size >= 2 && previewPinchStartMid && previewPinchStartPan) {
+      const [a, b] = [...previewPointers.values()];
+      const curDist = Math.max(1, _dist(a, b));
+      const curMid = _mid(a, b);
+      previewScale = Math.max(1, Math.min(5, previewPinchStartScale * (curDist / previewPinchStartDist)));
+      previewPanX = previewPinchStartPan.x + (curMid.x - previewPinchStartMid.x);
+      previewPanY = previewPinchStartPan.y + (curMid.y - previewPinchStartMid.y);
+      _syncPreviewTransform();
+    }
+  }, { passive: true });
+
+  function _endPointer(e) {
+    previewPointers.delete(e.pointerId);
+    if (previewPointers.size === 1) {
+      const only = [...previewPointers.values()][0];
+      previewDragStart = { x: only.x, y: only.y, panX: previewPanX, panY: previewPanY };
+    } else {
+      previewDragStart = null;
+      previewPinchStartMid = null;
+      previewPinchStartPan = null;
+    }
+    _syncPreviewTransform();
+  }
+
+  previewWrap.addEventListener('pointerup', _endPointer, { passive: true });
+  previewWrap.addEventListener('pointercancel', _endPointer, { passive: true });
+  previewWrap.addEventListener('dblclick', () => _resetPreviewTransform());
 }
 
 function showStep(stepName) {
@@ -329,6 +443,7 @@ async function startCamera() {
   if (hdrBtn) {
     if (hdrCapabilities) {
       hdrBtn.style.display = '';
+      hdrMode = true;
       _updateHDRButton();
     } else {
       hdrBtn.style.display = 'none';
@@ -455,6 +570,7 @@ async function handleFile(file) {
   cropEditor.load(img);
   currentCrop = cropEditor.getCrop();
   preview.update(currentCrop);
+  _resetPreviewTransform();
   showStep('edit');
 }
 
@@ -781,6 +897,7 @@ btnTakePhoto.addEventListener('click', async () => {
       cropEditor.load(img);
       currentCrop = cropEditor.getCrop();
       preview.update(currentCrop);
+      _resetPreviewTransform();
       showStep('edit');
     } catch (err) {
       overlay.style.display = 'none';
@@ -799,6 +916,7 @@ btnTakePhoto.addEventListener('click', async () => {
     cropEditor.load(img);
     currentCrop = cropEditor.getCrop();
     preview.update(currentCrop);
+    _resetPreviewTransform();
     showStep('edit');
   } catch (err) {
     showToast('Capture failed. Please try again.', 'error');
@@ -856,7 +974,26 @@ btnConfirmUpload.addEventListener('click', async () => {
   };
 
   try {
+    const rawUser = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const currentUser = rawUser ? JSON.parse(rawUser) : null;
+    const username = currentUser?.id || currentUser?.name || '';
+    await checkUploadQuota(username);
+
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
+
+    // Persist upload record for quota and cleanup.
+    const publicIds = Object.values(result.maps).map(i => i.public_id).filter(Boolean);
+    if (publicIds.length) {
+      const apiBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? `${location.protocol}//${location.host}`
+        : 'https://webphoto-lidl.onrender.com';
+      fetch(`${apiBase}/record-upload`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, folderName: name, publicIds })
+      }).catch((e) => console.warn('[record-upload]', e.message));
+    }
+
     closeUploadSheet();
     showToast('Upload successful \u2014 6 channels saved', 'success');
 
@@ -897,6 +1034,7 @@ btnConfirmUpload.addEventListener('click', async () => {
 // ── Resize ────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => {
   cropEditor?.resize();
+  _syncPreviewTransform();
   if (!stepCamera.classList.contains('hidden')) drawCropGuide();
 });
 window.addEventListener('beforeunload', () => stopCamera());
