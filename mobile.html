@@ -104,6 +104,15 @@
         <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
         <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
       </div>
+      <!-- Fallback overlay shown when getUserMedia fails (uses native label+input, safe on iOS) -->
+      <div id="cameraError" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-5 p-6" style="background:#000;z-index:20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:rgba(255,255,255,0.3)">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+        <p style="color:rgba(255,255,255,0.7);font-size:14px;text-align:center">無法開啟內建相機<br><span style="color:rgba(255,255,255,0.4);font-size:12px">請使用系統相機拍照</span></p>
+        <label for="fileInputCapture" class="btn btn-primary w-full" style="max-width:240px">📷 開啟系統相機</label>
+        <button id="btnCameraErrorBack" class="btn btn-ghost btn-sm" style="color:rgba(255,255,255,0.5)">返回</button>
+      </div>
     </section>
 
     <!-- Step 3: edit + preview -->

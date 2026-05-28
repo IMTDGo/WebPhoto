@@ -181,19 +181,21 @@ function stopCamera() {
 }
 
 async function enterCameraStep() {
+  // Show camera section immediately so user sees visual feedback (black bg)
+  showStep('camera');
+  const errOverlay = document.getElementById('cameraError');
+  if (errOverlay) errOverlay.classList.add('hidden');
+
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('此裝置不支援網頁即時相機，改用系統拍照', 'warning');
-    fileInputCapture.click();
+    if (errOverlay) errOverlay.classList.remove('hidden');
     return;
   }
 
   try {
-    // Start camera BEFORE showing the camera section to avoid blank white flash
     await startCamera();
-    showStep('camera');
   } catch (err) {
-    showToast('無法啟用相機，改用系統拍照', 'warning');
-    fileInputCapture.click();
+    // Show in-section fallback — avoids broken .click() in async on iOS
+    if (errOverlay) errOverlay.classList.remove('hidden');
   }
 }
 
@@ -297,6 +299,11 @@ fileInputGallery.addEventListener('change', (e) => handleFile(e.target.files[0])
 btnOpenCamera.addEventListener('click', () => enterCameraStep());
 
 btnCameraBack.addEventListener('click', () => {
+  stopCamera();
+  showStep('entry');
+});
+
+document.getElementById('btnCameraErrorBack')?.addEventListener('click', () => {
   stopCamera();
   showStep('entry');
 });
