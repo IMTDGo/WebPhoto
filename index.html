@@ -1,26 +1,383 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html class="dark" lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WebPhoto</title>
-  <script>
-    // Auth guard — must be logged in
-    const _auth = sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth');
-    if (!_auth) {
-      window.location.replace('./login.html');
-    } else {
-      // Redirect based on device type
-      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
-      if (isMobile) {
-        window.location.replace('./mobile.html');
-      } else {
-        window.location.replace('./desktop.html');
+  <title>Texify — Transform Reality into Texture</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;0,6..96,700;1,6..96,400&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-dim":               "#121317",
+            "surface-bright":            "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "surface-container-low":     "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-variant":           "#27272A",
+            "on-background":             "#F4F4F5",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "on-primary-container":      "#18181B",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "secondary":                 "#A1A1AA",
+            "tertiary":                  "#A1A1AA",
+            "error":                     "#ffb4ab",
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
+          fontFamily: { "headline-xl": ["Bodoni Moda","serif"], "headline-lg": ["Cinzel","serif"], "body-lg": ["Playfair Display","serif"], "body-md": ["Cormorant Garamond","serif"], "label-sm": ["Cormorant Garamond","serif"], "label-xs": ["Cormorant Garamond","serif"] },
+          fontSize: {
+            "headline-xl": ["48px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-lg": ["32px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm": ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs": ["10px", { lineHeight: "1.0", letterSpacing: "0.1em", fontWeight: "600" }],
+            "body-lg": ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }]
+          }
+        }
       }
     }
   </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+    .perspective-container { perspective: 1000px; }
+    .preserve-3d { transform-style: preserve-3d; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+    #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .zh { font-family: 'Noto Serif TC', serif !important; }
+  </style>
+  <script>
+    // Detect if user is already logged in (used later by JS, no auto-redirect)
+    window._wpIsLoggedIn = !!(sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
+    function _wpGoToApp() {
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+      window.location.href = isMobile ? './mobile.html' : './desktop.html';
+    }
+    // 10-minute inactivity auto-logout
+    if (window._wpIsLoggedIn) {
+      var _wpIdleTimer;
+      function _wpResetIdle() {
+        clearTimeout(_wpIdleTimer);
+        _wpIdleTimer = setTimeout(function() {
+          ['wp_auth','wp_token','wp_sessionId','wp_user'].forEach(function(k) {
+            localStorage.removeItem(k); sessionStorage.removeItem(k);
+          });
+          window.location.reload();
+        }, 10 * 60 * 1000);
+      }
+      ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev) {
+        document.addEventListener(ev, _wpResetIdle, { passive: true });
+      });
+      _wpResetIdle();
+    }
+  </script>
 </head>
-<body>
-  <p>正在偵測裝置類型，請稍候...</p>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
+
+  <!-- Animated Background Canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <!-- Top Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
+    <div class="font-headline-lg text-headline-lg tracking-tighter text-primary cursor-default select-none">
+      TEXIFY
+    </div>
+    <div class="flex items-center gap-4">
+      <!-- Logged-out state -->
+      <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
+        Sign Up
+      </a>
+      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+        Login
+      </a>
+      <!-- Logged-in state (hidden by default, shown via JS) -->
+      <div id="navUserGroup" class="hidden items-center gap-3">
+        <!-- User identity pill -->
+        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
+          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
+        </div>
+        <button id="btnNavOpenApp"
+          class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+          Start Creating
+        </button>
+        <button id="btnNavLogout"
+          class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
+          Log Out
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="flex-grow pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
+
+    <!-- Ambient Background Glow -->
+    <div class="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+
+    <!-- Hero Section -->
+    <section class="z-10 flex flex-col items-center text-center max-w-4xl mt-12 mb-16 relative">
+      <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-8 bg-surface-container/60 backdrop-blur">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Material Texture Intelligence</span>
+      </div>
+      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight">
+        Transform Reality<br />into Texture
+      </h1>
+      <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6">
+        The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center gap-4 mt-10">
+        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]">
+          Start Creating
+        </button>
+        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out">
+          Create Account
+        </a>
+      </div>
+    </section>
+
+    <!-- Interactive Material Canvas -->
+    <section class="z-10 w-full max-w-[1200px] perspective-container px-0 md:px-container-padding mt-4">
+      <div class="w-full aspect-[16/9] bg-surface-container-high border border-outline-variant/30 rounded-xl overflow-hidden relative shadow-[0_20px_60px_rgba(0,0,0,0.5)] preserve-3d transition-transform duration-300 ease-out group cursor-crosshair" id="material-canvas">
+        <!-- Base Texture Layer -->
+        <div class="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
+          style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2416 30%, #1c1a10 60%, #0e0e0e 100%);">
+          <!-- Grid overlay for tool feel -->
+          <div class="absolute inset-0 bg-[linear-gradient(rgba(242,202,80,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(242,202,80,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+          <!-- Concentric highlight rings -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-64 h-64 rounded-full border border-primary/5 absolute"></div>
+            <div class="w-96 h-96 rounded-full border border-primary/4 absolute"></div>
+            <div class="w-[32rem] h-[32rem] rounded-full border border-primary/3 absolute"></div>
+          </div>
+        </div>
+        <!-- Glassmorphic Depth Overlay -->
+        <div class="absolute inset-0 bg-gradient-to-br from-surface/40 via-transparent to-surface/80 mix-blend-overlay pointer-events-none"></div>
+        <!-- Dynamic Studio Light Layer -->
+        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none mix-blend-color-dodge" id="dynamic-light"
+          style="background: radial-gradient(circle 600px at 50% 50%, rgba(242,202,80,0.15), transparent 80%);">
+        </div>
+        <!-- Center label -->
+        <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
+          <span class="material-symbols-outlined text-primary/30 text-[64px]">texture</span>
+          <p class="font-label-xs text-label-xs text-on-surface-variant/30 uppercase tracking-widest">Move cursor to explore</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Feature Chips -->
+    <section class="z-10 flex flex-wrap justify-center gap-3 mt-12">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+        <span class="material-symbols-outlined text-primary text-base">photo_camera</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Mobile Capture</span>
+      </div>
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+        <span class="material-symbols-outlined text-primary text-base">hdr_on</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">HDR Merge</span>
+      </div>
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+        <span class="material-symbols-outlined text-primary text-base">wb_auto</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Auto White Balance</span>
+      </div>
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+        <span class="material-symbols-outlined text-primary text-base">layers</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">PBR Channel Maps</span>
+      </div>
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+        <span class="material-symbols-outlined text-primary text-base">view_in_ar</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Seamless Tiling</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full py-10 bg-surface-container-lowest border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center px-margin-mobile md:px-margin-page gap-stack-gap z-10 relative">
+    <div class="font-headline-lg text-headline-lg text-primary select-none">TEXIFY</div>
+
+    <div class="flex flex-col items-center gap-1">
+      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60">Created By</p>
+      <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
+        class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
+        <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+        </svg>
+        @z_jay_0723
+      </a>
+    </div>
+
+    <div class="flex gap-6">
+      <a href="./login.html?ref=app"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
+      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // ── Auth-aware UI ──
+      const isLoggedIn = window._wpIsLoggedIn;
+
+      // "Start Creating" button: go to app if logged in, else login page
+      document.getElementById('btnGetStarted').addEventListener('click', () => {
+        if (isLoggedIn) _wpGoToApp();
+        else window.location.href = './login.html?ref=app';
+      });
+
+      // ── Real logout helper ──
+      function doLogout() {
+        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
+          localStorage.removeItem(k);
+          sessionStorage.removeItem(k);
+        });
+        window.location.reload();
+      }
+
+      // Navbar + footer: show correct state based on login
+      if (isLoggedIn) {
+        document.getElementById('navSignUp').classList.add('hidden');
+        document.getElementById('navLogin').classList.add('hidden');
+        document.getElementById('heroSignUp')?.classList.add('hidden');
+        document.getElementById('footerSignUp')?.classList.add('hidden');
+
+        const userGroup = document.getElementById('navUserGroup');
+        userGroup.classList.remove('hidden');
+        userGroup.classList.add('flex');
+
+        try {
+          const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+          if (raw) {
+            const u = JSON.parse(raw);
+            document.getElementById('navUsername').textContent = u.name || u.id || '';
+          }
+        } catch (e) {}
+
+        document.getElementById('btnNavOpenApp').addEventListener('click', _wpGoToApp);
+        document.getElementById('btnNavLogout').addEventListener('click', doLogout);
+      }
+
+      // ── Animated background canvas ──
+      (function () {
+        const bgC = document.getElementById('bg-canvas');
+        if (!bgC || !bgC.getContext) return;
+        const ctx = bgC.getContext('2d');
+        let W = 0, H = 0, mx = 0.5, my = 0.5, tmx = 0.5, tmy = 0.5;
+
+        function resize() { W = bgC.width = window.innerWidth; H = bgC.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        document.addEventListener('mousemove', e => { tmx = e.clientX / W; tmy = e.clientY / H; });
+        document.addEventListener('touchmove', e => {
+          if (e.touches[0]) { tmx = e.touches[0].clientX / W; tmy = e.touches[0].clientY / H; }
+        }, { passive: true });
+
+        // Segmented orbital rings — inspired by helix cross-sections
+        const RINGS = [
+          { r: 0.13, segs: 4, gap: 0.38, spd:  0.00025, ph: 0.00, a: 0.065, w: 1.5 },
+          { r: 0.21, segs: 3, gap: 0.42, spd: -0.00018, ph: 1.05, a: 0.055, w: 1.0 },
+          { r: 0.30, segs: 5, gap: 0.35, spd:  0.00014, ph: 2.09, a: 0.045, w: 1.0 },
+          { r: 0.40, segs: 4, gap: 0.40, spd: -0.00010, ph: 0.52, a: 0.036, w: 1.0 },
+          { r: 0.51, segs: 6, gap: 0.44, spd:  0.00007, ph: 1.57, a: 0.027, w: 0.8 },
+          { r: 0.63, segs: 3, gap: 0.32, spd: -0.00005, ph: 3.14, a: 0.019, w: 0.8 },
+          { r: 0.77, segs: 5, gap: 0.46, spd:  0.00003, ph: 0.79, a: 0.013, w: 0.5 },
+          { r: 0.93, segs: 4, gap: 0.38, spd: -0.00002, ph: 2.36, a: 0.009, w: 0.5 },
+        ];
+
+        let t = 0;
+        function draw() {
+          t += 1;
+          mx += (tmx - mx) * 0.035;
+          my += (tmy - my) * 0.035;
+
+          ctx.clearRect(0, 0, W, H);
+
+          const D   = Math.min(W, H);
+          const cx  = W * 0.5  + (mx - 0.5) * W * 0.05;
+          const cy  = H * 0.48 + (my - 0.5) * H * 0.04;
+          const sy  = 0.55 + my * 0.22; // perspective: mouse-Y tilts the rings
+
+          RINGS.forEach(ring => {
+            const r   = ring.r * D;
+            const rot = t * ring.spd + ring.ph;
+            const seg = (Math.PI * 2) / ring.segs;
+            const arc = seg * (1 - ring.gap);
+
+            ctx.strokeStyle = `rgba(242,202,80,${ring.a})`;
+            ctx.lineWidth   = ring.w;
+            ctx.lineCap     = 'round';
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(1, sy);
+            ctx.beginPath();
+            for (let s = 0; s < ring.segs; s++) {
+              const sa = rot + s * seg;
+              ctx.moveTo(r * Math.cos(sa), r * Math.sin(sa));
+              ctx.arc(0, 0, r, sa, sa + arc);
+            }
+            ctx.stroke();
+            ctx.restore();
+          });
+
+          requestAnimationFrame(draw);
+        }
+
+        requestAnimationFrame(draw);
+      })();
+
+      // ── Material canvas mouse interaction ──
+      const canvas = document.getElementById('material-canvas');
+      const light  = document.getElementById('dynamic-light');
+
+      if (canvas && light) {
+        canvas.addEventListener('mousemove', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          light.style.background = `radial-gradient(circle 600px at ${x}px ${y}px, rgba(242,202,80,0.2), transparent 70%)`;
+          const centerX  = rect.width / 2;
+          const centerY  = rect.height / 2;
+          const rotateX  = ((y - centerY) / centerY) * -2;
+          const rotateY  = ((x - centerX) / centerX) * 2;
+          canvas.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+        canvas.addEventListener('mouseleave', () => {
+          canvas.style.transform = 'rotateX(0deg) rotateY(0deg)';
+          light.style.background = 'radial-gradient(circle 600px at 50% 50%, rgba(242,202,80,0.15), transparent 80%)';
+        });
+      }
+
+      // ── Navbar scroll effect ──
+      const nav = document.getElementById('global-nav');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 20) {
+          nav.classList.add('shadow-md', 'bg-surface/95');
+          nav.classList.remove('bg-surface/80');
+        } else {
+          nav.classList.remove('shadow-md', 'bg-surface/95');
+          nav.classList.add('bg-surface/80');
+        }
+      });
+    });
+  </script>
 </body>
 </html>

@@ -1,45 +1,90 @@
 <!DOCTYPE html>
-<html lang="zh-TW" data-theme="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <title>WebPhoto - 手機版</title>
+  <title>Texify &mdash; Mobile</title>
   <script>
-    // Auth guard — must be logged in
     if (!sessionStorage.getItem('wp_auth') && !localStorage.getItem('wp_auth')) {
       window.location.replace('./login.html');
     }
-    // Auto-redirect large screens to desktop version
     const isLargeScreen = window.innerWidth >= 1024 && window.innerHeight >= 768 && !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isLargeScreen) {
-      window.location.replace('./desktop.html');
+    if (isLargeScreen) window.location.replace('./desktop.html');
+  <\/script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "background":     "#09090B",
+            "surface":        "#18181B",
+            "surface-high":   "#27272A",
+            "on-surface":     "#F4F4F5",
+            "on-dim":         "#A1A1AA",
+            "outline":        "#52525B",
+            "outline-dim":    "#3F3F46",
+            "secondary":      "#E8C854",
+            "secondary-dim":  "#C9A630",
+            "error":          "#ffb4ab",
+          }
+        }
+      }
     }
-  </script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <\/script>
+  <link rel="stylesheet" href="./css/camera.css" />
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
+      font-family: 'Inter', sans-serif;
       overscroll-behavior: none;
       touch-action: manipulation;
-      background: radial-gradient(90% 70% at 20% 0%, #1f2a44 0%, #0f172a 40%, #05070f 100%);
+      background: #09090B;
+      color: #F4F4F5;
     }
     #cropCanvas { touch-action: none; display: block; }
     #previewCanvas { image-rendering: pixelated; display: block; }
     #cameraVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
     .safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 12px); }
+    .scroll-area { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
+    .aura-glass { background: rgba(24,24,27,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+    .aura-range { -webkit-appearance: none; width: 100%; height: 4px; background: #3F3F46; border-radius: 2px; outline: none; cursor: pointer; }
+    .aura-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #E8C854; cursor: pointer; margin-top: -6px; box-shadow: 0 0 8px rgba(232,200,84,0.5); }
+    .aura-range::-webkit-slider-runnable-track { height: 4px; background: #3F3F46; border-radius: 2px; }
+    .aura-toggle-wrap { position:relative; display:inline-flex; width:40px; height:22px; flex-shrink:0; }
+    .aura-toggle-wrap input { opacity:0; width:0; height:0; position:absolute; }
+    .aura-toggle-track { position:absolute; inset:0; background:#27272A; border:1px solid #3F3F46; border-radius:11px; transition:.25s; cursor:pointer; }
+    .aura-toggle-thumb { position:absolute; top:3px; left:3px; width:14px; height:14px; background:#A1A1AA; border-radius:50%; transition:.25s; pointer-events:none; }
+    .aura-toggle-wrap input:checked + .aura-toggle-track { background:rgba(232,200,84,0.2); border-color:rgba(232,200,84,0.5); }
+    .aura-toggle-wrap input:checked ~ .aura-toggle-thumb { transform:translateX(18px); background:#E8C854; box-shadow:0 0 6px rgba(232,200,84,0.6); }
+    .ch-card { background:#18181B; border:1px solid #27272A; border-radius:12px; overflow:hidden; transition:border-color .3s; }
+    .ch-card:hover { border-color: rgba(232,200,84,0.4); }
+    .aura-spinner { display:inline-block; width:48px; height:48px; border:3px solid #3F3F46; border-top-color:#E8C854; border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 20; font-family:'Material Symbols Outlined'; }
+    ::-webkit-scrollbar { width:4px; height:4px; }
+    ::-webkit-scrollbar-track { background:#09090B; }
+    ::-webkit-scrollbar-thumb { background:#3F3F46; border-radius:2px; }
+    details > summary { list-style: none; }
+    details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
-<body class="text-base-content min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col">
 
-  <div class="navbar bg-base-100/90 backdrop-blur shadow px-4 shrink-0 border-b border-base-content/10">
-    <span class="text-lg font-black tracking-wide text-primary">WebPhoto Mobile</span>
+  <!-- Navigation -->
+  <nav class="aura-glass shrink-0 flex items-center px-4 h-12 border-b border-white/5" style="z-index:30">
+    <span class="font-semibold tracking-wide text-secondary" style="font-family:'Cinzel',serif">TEXIFY</span>
+    <span class="text-[10px] text-on-dim/50 ml-1.5 self-end mb-0.5">MOBILE</span>
     <div class="flex-1"></div>
-    <span id="navUsername" class="text-xs text-base-content/60 hidden mr-2"></span>
-    <button id="btnLogout" class="btn btn-xs btn-ghost text-error hidden mr-1">登出</button>
-    <a href="desktop.html" class="btn btn-xs btn-ghost opacity-70">電腦版</a>
-  </div>
+    <span id="navUsername" class="text-xs text-on-dim hidden mr-2"></span>
+    <button id="btnLogout" class="hidden mr-2 px-2 py-1 text-[11px] text-error border border-error/30 rounded-md tracking-wider uppercase hover:bg-error/10 transition-colors">Log Out</button>
+    <a href="desktop.html" class="px-2 py-1 text-[11px] text-on-dim border border-outline-dim/40 rounded-md tracking-wider uppercase hover:text-on-surface hover:border-outline transition-colors">Desktop</a>
+  </nav>
   <script>
     (function () {
       const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
@@ -47,7 +92,7 @@
         try {
           const user = JSON.parse(raw);
           const el = document.getElementById('navUsername');
-          el.textContent = '👤 ' + (user.name || user.id);
+          el.textContent = user.name || user.id;
           el.classList.remove('hidden');
           document.getElementById('btnLogout').classList.remove('hidden');
         } catch (e) {}
@@ -60,49 +105,89 @@
         window.location.replace('./login.html');
       });
     })();
-  </script>
+  <\/script>
 
   <main class="flex-1 relative overflow-hidden" style="min-height:0">
-    <!-- Step 1: entry -->
+
+    <!-- Step 1: Entry -->
     <section id="stepEntry" class="h-full flex flex-col p-4 gap-4">
-      <div class="rounded-2xl bg-base-100/90 backdrop-blur shadow-xl border border-base-content/10 p-4">
-        <h1 class="text-xl font-bold">快速開始</h1>
-        <p class="text-sm text-base-content/60 mt-1">先拍一張，或從相簿選擇，再拖曳調整裁切區域。</p>
+      <div class="rounded-2xl p-4" style="background:#18181B;border:1px solid #27272A">
+        <h1 class="text-xl font-semibold text-on-surface" style="font-family:'Montserrat',sans-serif">Get Started</h1>
+        <p class="text-sm text-on-dim mt-1">Take a photo or choose one from your gallery, then adjust the crop area.</p>
       </div>
 
-      <button id="btnOpenCamera" class="btn btn-primary btn-lg h-16 justify-start text-base gap-3 rounded-2xl shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button id="btnOpenCamera"
+        class="flex items-center gap-3 h-16 px-5 rounded-2xl text-base font-semibold text-background bg-secondary hover:bg-secondary-dim transition-colors"
+        style="box-shadow:0 4px 20px rgba(232,200,84,0.25)">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
         </svg>
-        直接拍照
+        Take a Photo
       </button>
 
-      <label class="btn btn-outline btn-lg h-16 justify-start text-base gap-3 rounded-2xl bg-base-100/80 border-base-content/20">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <label class="flex items-center gap-3 h-16 px-5 rounded-2xl text-base font-semibold text-on-surface cursor-pointer transition-colors"
+        style="background:#18181B;border:1px solid #3F3F46">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 text-on-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
         </svg>
-        從相簿選擇
+        Choose from Gallery
         <input type="file" accept="image/*,.tif,.tiff" class="hidden" id="fileInputGallery" />
       </label>
 
-      <!-- Fallback when camera permission is unavailable -->
       <input type="file" accept="image/*" capture="environment" class="hidden" id="fileInputCapture" />
 
-      <div class="mt-auto rounded-xl bg-base-100/70 p-3 text-xs text-base-content/60 border border-base-content/10">
-        小提示: 裁切頁可拖曳移動，拉角縮放，雙指可縮放裁切範圍。
+      <div class="mt-auto rounded-xl p-3 text-xs text-on-dim" style="background:#18181B;border:1px solid #27272A">
+        Tip: Drag to reposition &middot; pinch to resize crop area
       </div>
     </section>
 
-    <!-- Step 2: camera -->
-    <section id="stepCamera" class="hidden h-full relative" style="background:#000">
-      <video id="cameraVideo" playsinline autoplay muted style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000"></video>
-      <div class="absolute inset-x-0 top-0 p-4 bg-gradient-to-b from-black/70 to-transparent text-sm text-white/90">
-        對準材質後按下拍照
+    <!-- Step 2: Camera -->
+    <section id="stepCamera" class="hidden h-full bg-black relative">
+      <div class="cam-viewfinder absolute inset-0">
+        <video id="cameraVideo" playsinline autoplay muted></video>
+        <svg id="camWbSvg" style="position:absolute;width:0;height:0;overflow:visible" aria-hidden="true">
+          <defs>
+            <filter id="camWbFilter" color-interpolation-filters="sRGB">
+              <feColorMatrix id="camWbMatrix" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+            </filter>
+          </defs>
+        </svg>
+        <canvas id="camCropGuide" style="position:absolute;inset:0;width:100%;height:100%;z-index:5;pointer-events:none;display:block"></canvas>
+        <canvas id="camWbLoupe" style="position:absolute;display:none;z-index:25;pointer-events:none;border-radius:50%;border:3px solid #38bdf8;box-shadow:0 2px 12px rgba(0,0,0,0.5)"></canvas>
+        <div class="cam-ruler-corner"></div>
+        <canvas class="cam-ruler-h"></canvas>
+        <canvas class="cam-ruler-v"></canvas>
+        <div id="camWbDot" style="position:absolute;display:none;z-index:26;pointer-events:none;width:16px;height:16px;margin-left:-8px;margin-top:-8px;border-radius:50%;background:rgba(255,20,20,0.95);border:2.5px solid #fff;box-shadow:0 0 0 2px rgba(255,0,0,0.45),0 2px 8px rgba(0,0,0,0.6)"></div>
       </div>
-      <div class="absolute inset-x-0 bottom-0 p-4 safe-bottom bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-6">
-        <button id="btnCameraBack" class="btn btn-sm btn-ghost text-white border border-white/40">取消</button>
-        <button id="btnTakePhoto" class="btn btn-circle btn-lg btn-primary" aria-label="拍照"></button>
+
+      <div class="absolute inset-x-0 bottom-0 safe-bottom flex flex-col" style="z-index:10">
+        <div class="text-center text-xs text-white/75 bg-black/50 px-4 py-1.5">
+          <span id="camHintText">Aim at the surface then tap Capture</span>
+        </div>
+        <div id="camWbHint" class="text-center text-xs text-yellow-200/90 bg-black/60 px-4 py-2" style="display:none">
+          Tap a white object to set white balance
+        </div>
+        <div id="camWbDoneRow" class="flex items-center justify-center bg-black/60 px-4 py-1.5" style="display:none">
+          <span class="text-xs text-emerald-300/90 font-medium">&#10004; White balance applied (tap WB to reset)</span>
+        </div>
+        <div class="p-4 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center gap-5">
+          <button id="btnCameraBack" class="px-4 py-2 text-sm text-white border border-white/40 rounded-xl bg-transparent">Cancel</button>
+          <button id="btnWbMode" class="px-4 py-2 text-sm text-white/60 border border-white/20 rounded-xl bg-transparent min-w-[3rem]" title="White balance">WB</button>
+          <button id="btnTakePhoto" class="w-16 h-16 rounded-full bg-secondary hover:bg-secondary-dim transition-colors flex items-center justify-center" style="box-shadow:0 0 0 3px rgba(232,200,84,0.3)" aria-label="Capture"></button>
+          <button id="btnHDRToggle" class="px-4 py-2 text-sm text-white/50 border border-white/20 rounded-xl bg-transparent min-w-[3.5rem]" style="display:none">HDR</button>
+        </div>
+      </div>
+
+      <div id="hdrOverlay" class="absolute inset-0 flex flex-col items-center justify-center gap-5" style="display:none;z-index:20;background:rgba(0,0,0,0.85)">
+        <div class="aura-spinner"></div>
+        <p id="hdrProgressText" class="text-white text-sm font-medium tracking-wide">Capturing HDR...</p>
+        <div class="flex gap-3">
+          <span id="hdrDot0" class="w-3 h-3 rounded-full bg-white/20 transition-colors duration-200"></span>
+          <span id="hdrDot1" class="w-3 h-3 rounded-full bg-white/20 transition-colors duration-200"></span>
+          <span id="hdrDot2" class="w-3 h-3 rounded-full bg-white/20 transition-colors duration-200"></span>
+        </div>
+        <p class="text-white/40 text-xs">Keep your device steady</p>
       </div>
       <!-- Fallback overlay shown when getUserMedia fails (uses native label+input, safe on iOS) -->
       <div id="cameraError" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-5 p-6" style="background:#000;z-index:20">
@@ -115,15 +200,19 @@
       </div>
     </section>
 
-    <!-- Step 3: edit + preview -->
+    <!-- Step 3: Edit -->
     <section id="stepEdit" class="hidden h-full flex flex-col" style="min-height:0">
-      <div id="cropContainer" class="flex-1 min-h-0 bg-black/70 flex items-center justify-center overflow-hidden border-b border-base-content/10">
+      <div id="cropContainer" class="min-h-0 flex items-center justify-center overflow-hidden" style="flex:0 0 55%;touch-action:none;background:#000">
         <canvas id="cropCanvas"></canvas>
       </div>
 
-      <!-- Aspect ratio lock -->
-      <div class="shrink-0 flex items-center justify-center gap-2 px-3 py-1.5 bg-base-100/70 border-b border-base-content/10">
-        <button id="btnAspectLock" class="btn btn-xs btn-outline gap-1" title="切換裁切比例">
+      <div id="splitHandle" class="shrink-0 flex flex-col items-center justify-center gap-1 select-none" style="height:22px;touch-action:none;cursor:row-resize;background:rgba(9,9,11,0.9);border-top:1px solid rgba(255,255,255,0.07);border-bottom:1px solid rgba(255,255,255,0.07)">
+        <div style="width:40px;height:2px;border-radius:1px;background:rgba(255,255,255,0.25)"></div>
+        <div style="width:40px;height:2px;border-radius:1px;background:rgba(255,255,255,0.25)"></div>
+      </div>
+
+      <div class="shrink-0 flex items-center justify-center gap-2 px-3 py-1.5 border-b" style="background:#18181B;border-color:#27272A">
+        <button id="btnAspectLock" class="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-on-dim border border-outline-dim hover:border-secondary hover:text-secondary transition-colors" title="Toggle aspect ratio">
           <svg id="lockIconClosed" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
           </svg>
@@ -132,120 +221,198 @@
           </svg>
           <span id="lockLabel">1:1</span>
         </button>
-        <span class="text-xs text-base-content/40">裁切比例</span>
+        <span class="text-xs text-on-dim/50">Aspect Ratio</span>
       </div>
 
-      <div id="previewContainer" class="flex-1 min-h-0 bg-base-100/85 backdrop-blur px-3 py-2 flex flex-col gap-2 border-b border-base-content/10 overflow-hidden">
-        <div class="flex items-center gap-2 shrink-0">
-          <span class="text-xs uppercase tracking-widest text-base-content/50 flex-1">UV 縮放</span>
-          <span id="previewGridVal" class="text-xs font-mono">3</span>
-          <span class="text-xs text-base-content/40">tile</span>
+      <div id="previewContainer" class="flex-1 min-h-0 flex flex-col overflow-hidden border-b" style="background:#18181B;border-color:#27272A">
+        <div class="shrink-0 flex items-center gap-2 px-3 pt-2">
+          <span class="text-xs uppercase tracking-widest text-on-dim/60">UV Scale</span>
+          <span id="previewGridVal" class="text-xs font-mono text-on-surface">3</span>
+          <span class="text-xs text-on-dim/50">tile</span>
+          <span class="text-xs text-on-dim/20 mx-1">|</span>
+          <span class="text-xs text-on-dim/50">Crop</span>
+          <span id="cropSizeInfo" class="text-xs font-mono text-on-dim">&mdash; &times; &mdash;</span>
+          <span class="text-xs text-on-dim/50">px</span>
         </div>
-        <input type="range" id="previewGridSlider" min="1" max="50" value="3" class="range range-accent range-xs shrink-0" />
-        <div class="flex-1 min-h-0 flex items-center justify-center">
-          <canvas id="previewCanvas" class="rounded shadow max-w-full max-h-full"></canvas>
+        <div class="shrink-0 px-3 pb-2">
+          <input type="range" id="previewGridSlider" min="1" max="10" value="3" class="aura-range w-full mt-1" />
+        </div>
+        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden" style="touch-action:none">
+          <canvas id="previewCanvas" style="display:block" class="w-full"></canvas>
         </div>
       </div>
 
-      <!-- Advanced parameters dropdown -->
-      <details class="collapse shrink-0 bg-base-100/80 border-b border-base-content/10">
-        <summary class="collapse-title text-sm font-semibold cursor-pointer py-3 px-4">⚙️ 進階調整</summary>
-        <div class="collapse-content px-4 pb-3 pt-0">
-          <!-- Seamless parameters -->
-          <div class="form-control gap-2 mb-3">
-            <label class="label gap-2 cursor-pointer py-0">
-              <input type="checkbox" class="toggle toggle-primary toggle-sm" id="enableSeamless" checked />
-              <span class="label-text text-xs">啟用四方連續</span>
+      <details class="shrink-0 border-b" style="background:#18181B;border-color:#27272A">
+        <summary class="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-on-surface cursor-pointer select-none">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-on-dim shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Parameters
+        </summary>
+        <div class="px-4 pb-3 pt-1 space-y-3">
+          <div class="flex items-center gap-3">
+            <label class="aura-toggle-wrap" for="enableSeamless">
+              <input type="checkbox" id="enableSeamless" checked />
+              <div class="aura-toggle-track"></div>
+              <div class="aura-toggle-thumb"></div>
             </label>
+            <span class="text-xs text-on-dim">Enable Seamless Tiling</span>
           </div>
           <div id="seamlessControls" class="space-y-2">
-            <div class="form-control gap-1">
-              <label class="label py-0">
-                <span class="label-text text-xs">接縫混合寬度</span>
-                <span class="label-text-alt text-xs" id="seamBlendWidthVal">15%</span>
-              </label>
-              <input type="range" id="seamBlendWidth" min="3" max="40" step="1" value="15" class="range range-primary range-xs" />
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-on-dim">Blend Width</span>
+              <span class="text-xs font-mono text-secondary" id="seamBlendWidthVal">15%</span>
             </div>
-
+            <input type="range" id="seamBlendWidth" min="3" max="40" step="1" value="15" class="aura-range w-full" />
           </div>
         </div>
       </details>
 
-      <div class="shrink-0 p-3 safe-bottom bg-base-100/95 border-t border-base-content/10 grid grid-cols-3 gap-2">
-        <button class="btn btn-ghost" id="btnRetake">重拍</button>
-        <button class="btn btn-outline" id="btnPickAnother">重選</button>
-        <button class="btn btn-primary" id="btnShowUpload">下一步 →</button>
+      <div class="shrink-0 safe-bottom grid grid-cols-3 gap-2 p-3 border-t" style="background:#18181B;border-color:#27272A">
+        <button id="btnRetake" class="py-2.5 text-sm text-on-dim rounded-lg border border-outline-dim hover:border-outline hover:text-on-surface transition-colors bg-transparent">Retake</button>
+        <button id="btnPickAnother" class="py-2.5 text-sm text-on-dim rounded-lg border border-outline hover:border-secondary hover:text-secondary transition-colors bg-transparent">Reselect</button>
+        <button id="btnShowUpload" class="py-2.5 text-sm font-semibold text-background rounded-lg transition-colors" style="background:#E8C854;box-shadow:0 4px 16px rgba(232,200,84,0.25)">Next &rarr;</button>
       </div>
     </section>
 
-    <!-- Step 4: channel preview -->
-    <section id="stepPreview" class="hidden h-full flex flex-col overflow-hidden" style="min-height:0">
-      <div class="flex-1 overflow-y-auto p-3">
-        <p class="text-xs text-base-content/50 uppercase tracking-widest mb-3">確認通道貼圖</p>
-        <div class="grid grid-cols-3 gap-2">
-          <div class="flex flex-col items-center gap-1">
-            <canvas id="previewCh_basecolor" class="rounded w-full aspect-square bg-base-300 object-cover"></canvas>
-            <span class="text-xs text-base-content/60">Base Color</span>
+    <!-- Step 4: Channel Preview -->
+    <section id="stepPreview" class="hidden h-full flex flex-col overflow-hidden" style="min-height:0;background:#09090B">
+      <div class="shrink-0 aura-glass px-4 pt-4 pb-3" style="border-bottom:1px solid #27272A">
+        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:600;color:#F4F4F5;letter-spacing:-0.01em">Confirm Channel Maps</h2>
+        <p style="font-size:12px;color:#A1A1AA;margin-top:4px">Review each channel before uploading</p>
+      </div>
+
+      <div class="flex-1 overflow-y-auto scroll-area p-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="ch-card">
+            <div class="aspect-square overflow-hidden" style="background:#18181B">
+              <canvas id="previewCh_basecolor" class="w-full h-full block"></canvas>
+            </div>
+            <div class="py-2 text-center" style="border-top:1px solid #27272A">
+              <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#A1A1AA">Base Color</span>
+            </div>
           </div>
-          <div class="flex flex-col items-center gap-1">
-            <canvas id="previewCh_roughness" class="rounded w-full aspect-square bg-base-300"></canvas>
-            <span class="text-xs text-base-content/60">Roughness</span>
+          <div class="ch-card">
+            <div class="aspect-square overflow-hidden" style="background:#18181B">
+              <canvas id="previewCh_roughness" class="w-full h-full block"></canvas>
+            </div>
+            <div class="py-2 text-center" style="border-top:1px solid #27272A">
+              <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#A1A1AA">Roughness</span>
+            </div>
           </div>
-          <div class="flex flex-col items-center gap-1">
-            <canvas id="previewCh_ao" class="rounded w-full aspect-square bg-base-300"></canvas>
-            <span class="text-xs text-base-content/60">AO</span>
+          <div class="ch-card">
+            <div class="aspect-square overflow-hidden" style="background:#18181B">
+              <canvas id="previewCh_ao" class="w-full h-full block"></canvas>
+            </div>
+            <div class="py-2 text-center" style="border-top:1px solid #27272A">
+              <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#A1A1AA">AO</span>
+            </div>
           </div>
-          <div class="flex flex-col items-center gap-1">
-            <canvas id="previewCh_height" class="rounded w-full aspect-square bg-base-300"></canvas>
-            <span class="text-xs text-base-content/60">Height</span>
+          <div class="ch-card">
+            <div class="aspect-square overflow-hidden" style="background:#18181B">
+              <canvas id="previewCh_height" class="w-full h-full block"></canvas>
+            </div>
+            <div class="py-2 text-center" style="border-top:1px solid #27272A">
+              <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#A1A1AA">Height</span>
+            </div>
           </div>
-          <div class="flex flex-col items-center gap-1">
-            <canvas id="previewCh_normal" class="rounded w-full aspect-square bg-base-300"></canvas>
-            <span class="text-xs text-base-content/60">Normal</span>
+          <div class="ch-card col-span-2">
+            <div class="aspect-video overflow-hidden" style="background:#18181B">
+              <canvas id="previewCh_normal" class="w-full h-full block"></canvas>
+            </div>
+            <div class="py-2 text-center" style="border-top:1px solid #27272A">
+              <span style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#A1A1AA">Normal</span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="shrink-0 p-3 safe-bottom bg-base-100/95 border-t border-base-content/10 grid grid-cols-2 gap-2">
-        <button class="btn btn-ghost" id="btnPreviewBack">← 返回</button>
-        <button class="btn btn-primary" id="btnPreviewConfirm">確認上傳</button>
+
+      <div class="shrink-0 aura-glass flex gap-3 px-4 pt-3" style="padding-bottom:max(env(safe-area-inset-bottom),12px);border-top:1px solid #27272A">
+        <button id="btnPreviewBack"
+          style="flex:1;padding:12px 0;border:1px solid #3F3F46;border-radius:10px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;background:transparent;cursor:pointer">
+          &larr; Back
+        </button>
+        <button id="btnPreviewConfirm"
+          style="flex:2;padding:12px 0;border:none;border-radius:10px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#18181B;background:#E8C854;cursor:pointer;font-weight:700;box-shadow:0 4px 20px rgba(232,200,84,0.3)">
+          Confirm Upload
+        </button>
       </div>
     </section>
   </main>
 
-  <!-- Generation loading overlay -->
-  <div id="genOverlay" class="hidden fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center gap-3">
-    <span class="loading loading-spinner loading-lg text-primary"></span>
-    <p id="genOverlayLabel" class="text-sm text-white/80">生成通道中...</p>
+  <!-- Generation overlay -->
+  <div id="genOverlay" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center gap-3" style="background:rgba(9,9,11,0.88)">
+    <div class="aura-spinner"></div>
+    <p id="genOverlayLabel" class="text-sm" style="color:rgba(255,255,255,0.75)">Generating channels...</p>
   </div>
 
+  <!-- Upload sheet backdrop -->
+  <div id="uploadSheetBackdrop" class="hidden fixed inset-0 z-40" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"></div>
+
   <!-- Upload bottom sheet -->
-  <div id="uploadSheetBackdrop" class="hidden fixed inset-0 bg-black/45 z-40"></div>
-  <section id="uploadSheet" class="hidden fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-base-100 shadow-2xl border-t border-base-content/10 p-4 safe-bottom">
-    <div class="w-12 h-1.5 bg-base-300 rounded-full mx-auto mb-4"></div>
-    <h3 class="font-bold text-lg mb-3">命名並上傳</h3>
-    <div class="form-control gap-2">
-      <label class="label py-0"><span class="label-text">輸出解析度</span></label>
-      <select id="uploadResolution" class="select select-bordered w-full">
-        <option value="512">512 × 512</option>
-        <option value="1024" selected>1024 × 1024</option>
-        <option value="2048">2048 × 2048</option>
-        <option value="4096">4096 × 4096</option>
-      </select>
-      <label class="label py-0"><span class="label-text">資料夾名稱</span></label>
-      <input type="text" id="uploadName" placeholder="例如: wood_floor_01" class="input input-bordered w-full" maxlength="100" />
-      <p class="text-xs text-base-content/40">6 個通道將上傳至同一資料夾</p>
-      <label id="sendEmailLabel" class="hidden flex items-center gap-2 text-sm text-base-content/60 cursor-pointer mt-1">
-        <input type="checkbox" id="chkSendEmail" class="checkbox checkbox-sm checkbox-primary" />
-        <span>📧 上傳完成後寄送材質連結至我的 Email</span>
+  <section id="uploadSheet" class="hidden fixed inset-x-0 bottom-0 z-50" style="background:rgba(18,18,19,0.98);border-top:1px solid #27272A;border-radius:20px 20px 0 0;padding:20px 20px max(env(safe-area-inset-bottom),20px)">
+    <div style="width:40px;height:3px;border-radius:2px;background:#3F3F46;margin:0 auto 20px"></div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
+      <span style="width:3px;height:20px;background:#E8C854;border-radius:2px;display:inline-block"></span>
+      <h3 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;color:#F4F4F5;margin:0">Name &amp; Upload</h3>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;display:block;margin-bottom:8px">Output Resolution</label>
+        <div style="position:relative">
+          <select id="uploadResolution" style="width:100%;padding:10px 36px 10px 12px;background:#27272A;border:1px solid #3F3F46;border-radius:8px;font-family:'Inter',monospace;font-size:13px;color:#F4F4F5;outline:none;-webkit-appearance:none;cursor:pointer">
+            <option value="512">512 &times; 512</option>
+            <option value="1024" selected>1024 &times; 1024</option>
+            <option value="2048">2048 &times; 2048</option>
+            <option value="4096">4096 &times; 4096</option>
+          </select>
+          <span class="material-symbols-outlined" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:16px;color:#A1A1AA;pointer-events:none">expand_more</span>
+        </div>
+      </div>
+
+      <div>
+        <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;display:block;margin-bottom:8px">Folder Name</label>
+        <input type="text" id="uploadName" placeholder="e.g. wood_floor_01" maxlength="100"
+          style="width:100%;padding:10px 12px;background:#27272A;border:none;border-bottom:1.5px solid #3F3F46;font-family:'Inter',monospace;font-size:14px;color:#F4F4F5;outline:none;transition:border-color .2s"
+          onfocus="this.style.borderBottomColor='#E8C854'" onblur="this.style.borderBottomColor='#3F3F46'" />
+        <p style="font-size:11px;color:#52525B;margin-top:4px">All 6 channels will be uploaded to the same folder</p>
+      </div>
+
+      <label id="sendEmailLabel" class="hidden" style="display:none;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid #27272A;background:#18181B">
+        <div style="position:relative;flex-shrink:0">
+          <input type="checkbox" id="chkSendEmail" class="sr-only peer" />
+          <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #3F3F46;background:#27272A;display:flex;align-items:center;justify-content:center">
+            <span class="material-symbols-outlined" style="font-size:12px;color:#E8C854;font-variation-settings:'FILL' 1;opacity:0;transition:opacity .2s" id="emailCheckIcon">check</span>
+          </div>
+        </div>
+        <span style="font-size:13px;color:#A1A1AA;display:flex;align-items:center;gap:6px">
+          <span class="material-symbols-outlined" style="font-size:15px;color:#52525B">mail</span>
+          Email material links when upload is complete
+        </span>
       </label>
     </div>
-    <div class="mt-4 grid grid-cols-2 gap-2">
-      <button class="btn btn-ghost" id="btnCancelUpload">取消</button>
-      <button class="btn btn-primary" id="btnConfirmUpload">確認上傳</button>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:20px">
+      <button id="btnCancelUpload" style="padding:12px 0;border:1px solid #3F3F46;border-radius:10px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;background:transparent;cursor:pointer">Cancel</button>
+      <button id="btnConfirmUpload" style="padding:12px 0;border:none;border-radius:10px;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#18181B;background:#E8C854;cursor:pointer;font-weight:700;box-shadow:0 4px 20px rgba(232,200,84,0.3)">Confirm Upload</button>
     </div>
   </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
-  <script type="module" src="./js/app-mobile.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"><\/script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chk = document.getElementById('chkSendEmail');
+      const icon = document.getElementById('emailCheckIcon');
+      if (chk && icon) {
+        chk.addEventListener('change', () => {
+          icon.style.opacity = chk.checked ? '1' : '0';
+          icon.parentElement.style.borderColor = chk.checked ? 'rgba(232,200,84,0.6)' : '#3F3F46';
+        });
+      }
+    });
+  <\/script>
+  <script type="module" src="./js/app-mobile.js"><\/script>
 </body>
 </html>

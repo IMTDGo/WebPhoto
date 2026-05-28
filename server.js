@@ -52,10 +52,37 @@ if (process.env.MONGODB_URI) {
 
 // ─── User schema ──────────────────────────────────────────────────────────────
 const userSchema = new mongoose.Schema({
+  // Core
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true }, // bcrypt hash
-  email:    { type: String, unique: true, sparse: true }
-});
+  email:    { type: String, unique: true, sparse: true },
+
+  // Account status
+  isActive:        { type: Boolean, default: true },
+  role:            { type: String, enum: ['user', 'admin'], default: 'user' },
+  isEmailVerified: { type: Boolean, default: false },
+
+  // Password management
+  passwordChangedAt:    { type: Date },
+  passwordResetToken:   { type: String },  // store HASHED token
+  passwordResetExpires: { type: Date },
+
+  // Email verification
+  emailVerifyToken:   { type: String },  // store HASHED token
+  emailVerifyExpires: { type: Date },
+
+  // Brute-force / account lock
+  loginAttempts: { type: Number, default: 0 },
+  lockUntil:     { type: Date },
+
+  // Refresh tokens (array of opaque tokens for multi-device support)
+  refreshTokens: [{ type: String }],
+}, { timestamps: true });
+
+// Maximum failed attempts before locking account (configurable via env)
+const MAX_LOGIN_ATTEMPTS = parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10);
+const LOCK_DURATION_MS   = parseInt(process.env.LOCK_DURATION_MS   || String(15 * 60 * 1000), 10); // 15 min default
+
 const User = mongoose.models.User || mongoose.model('User', userSchema);
 
 // ─── OTP schema (temporary records for email verification) ───────────────────
@@ -68,6 +95,15 @@ const otpSchema = new mongoose.Schema({
 });
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
 const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
+
+// ─── Upload record (for Cloudinary auto-cleanup) ─────────────────────────────
+const uploadRecordSchema = new mongoose.Schema({
+  username:   { type: String },
+  folderName: { type: String },
+  publicIds:  [{ type: String }],
+  uploadedAt: { type: Date, default: Date.now, index: true }
+});
+const UploadRecord = mongoose.models.UploadRecord || mongoose.model('UploadRecord', uploadRecordSchema);
 
 // ─── Dev accounts (local testing without MongoDB) ────────────────────────────
 const DEV_ACCOUNTS_FILE = path.join(__dirname, 'dev-accounts.json');
@@ -165,11 +201,11 @@ const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
 const memUsers = new Map(); // username → { username, password, email }
 
 // ─── Send OTP email ───────────────────────────────────────────────────────────
-// 優先順序：Brevo → Resend → SendGrid → Gmail SMTP (本機 fallback)
+// Priority order: Brevo → Resend → SendGrid → Gmail SMTP (local fallback)
 async function sendOtpEmail(to, otp, custom = null) {
-  const subject = custom?.subject || 'WebPhoto 驗證碼';
-  const html    = custom?.html    || `<p>您的 WebPhoto 註冊驗證碼是：</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>此驗證碼 10 分鐘內有效，請勿分享給他人。</p>`;
-  const text    = custom?.text    || `您的驗證碼是：${otp}，10 分鐘內有效。`;
+  const subject = custom?.subject || 'Texify — Verification Code';
+  const html    = custom?.html    || `<p>Your Texify registration code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. Do not share it with anyone.</p>`;
+  const text    = custom?.text    || `Your verification code is: ${otp}. Valid for 10 minutes.`;
 
   // ── Brevo HTTPS ───────────────────────────────────────────────────────────
   if (process.env.BREVO_API_KEY) {
@@ -214,7 +250,7 @@ async function sendOtpEmail(to, otp, custom = null) {
     return;
   }
 
-  // ── Gmail SMTP（本機開發 fallback）────────────────────────────────────────
+  // ── Gmail SMTP (local dev fallback) ──────────────────────────────────────
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
     const transport = nodemailer.createTransport({
       service: 'gmail',
@@ -228,6 +264,74 @@ async function sendOtpEmail(to, otp, custom = null) {
   }
 
   throw new Error('NO_MAIL_SERVICE');
+}
+
+// ─── Cloudinary: destroy asset with CDN invalidation ───────────────────────
+async function cloudinaryDestroy(publicId) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dnxqob2cu';
+  const apiKey    = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!apiKey || !apiSecret) throw new Error('Cloudinary API keys not configured');
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const toSign    = `invalidate=true&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+  const signature = crypto.createHash('sha1').update(toSign).digest('hex');
+
+  const body = new URLSearchParams({
+    public_id:  publicId,
+    invalidate: 'true',
+    timestamp:  String(timestamp),
+    api_key:    apiKey,
+    signature
+  });
+
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString()
+  });
+  if (!r.ok) throw new Error(`Cloudinary destroy HTTP ${r.status}`);
+  const data = await r.json();
+  // 'ok' = deleted, 'not found' = already gone — both acceptable
+  if (data.result !== 'ok' && data.result !== 'not found') {
+    throw new Error(`Cloudinary destroy result: ${data.result}`);
+  }
+  return data.result;
+}
+
+// ─── Scheduled Cloudinary cleanup (every 24 h, delete assets > 3 days old) ───
+async function runCloudinaryCleanup() {
+  if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return;
+  if (mongoose.connection.readyState !== 1) return;
+
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  let records;
+  try {
+    records = await UploadRecord.find({ uploadedAt: { $lt: cutoff } }).lean();
+  } catch (e) {
+    console.error('[cleanup] DB query failed:', e.message);
+    return;
+  }
+
+  if (!records.length) {
+    console.log('[cleanup] No expired uploads');
+    return;
+  }
+
+  let deleted = 0;
+  for (const record of records) {
+    for (const publicId of (record.publicIds || [])) {
+      try {
+        const res = await cloudinaryDestroy(publicId);
+        console.log(`[cleanup] ${publicId} → ${res}`);
+        deleted++;
+      } catch (err) {
+        console.error(`[cleanup] Failed ${publicId}:`, err.message);
+      }
+    }
+    await UploadRecord.deleteOne({ _id: record._id }).catch(() => {});
+  }
+  console.log(`[cleanup] Removed ${deleted} asset(s) across ${records.length} upload record(s)`);
 }
 
 // ─── Request handler ──────────────────────────────────────────────────────────
@@ -259,10 +363,45 @@ const server = http.createServer((req, res) => {
 
         if (mongoose.connection.readyState === 1) {
           // ── MongoDB path ─────────────────────────────────────────────────
-          const user = await User.findOne({ username }).lean();
+          const user = await User.findOne({ username });
           if (user) {
+            // Check account is active
+            if (!user.isActive) {
+              appendLoginLog(username, false);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, message: 'Account disabled. Contact support.' }));
+              return;
+            }
+
+            // Check lockout
+            if (user.lockUntil && user.lockUntil > new Date()) {
+              const mins = Math.ceil((user.lockUntil - Date.now()) / 60000);
+              appendLoginLog(username, false);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, message: `Account locked. Try again in ${mins} min.` }));
+              return;
+            }
+
             success = await bcrypt.compare(password, user.password);
-            if (success) userEmail = user.email || null;
+
+            if (success) {
+              // Reset login attempts on success
+              if (user.loginAttempts > 0 || user.lockUntil) {
+                await User.updateOne({ _id: user._id }, {
+                  $set:   { loginAttempts: 0 },
+                  $unset: { lockUntil: '' }
+                });
+              }
+              userEmail = user.email || null;
+            } else {
+              // Increment attempts and possibly lock
+              const attempts = (user.loginAttempts || 0) + 1;
+              const update = { loginAttempts: attempts };
+              if (attempts >= MAX_LOGIN_ATTEMPTS) {
+                update.lockUntil = new Date(Date.now() + LOCK_DURATION_MS);
+              }
+              await User.updateOne({ _id: user._id }, { $set: update });
+            }
           }
         } else {
           // ── Fallback: no DB ──────────────────────────────────────────────
@@ -281,8 +420,8 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
           success
-            ? { ok: true,  message: '登入成功，歡迎回來！', username, email: userEmail }
-            : { ok: false, message: '帳號或密碼錯誤，請重試' }
+            ? { ok: true,  message: 'Login successful. Welcome back!', username, email: userEmail }
+            : { ok: false, message: 'Incorrect username or password.' }
         ));
       })
       .catch(err => {
@@ -305,8 +444,8 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: false, message: msg }));
         };
 
-        if (!username || !password || !email) return fail(400, '請填寫所有欄位');
-        if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, '請輸入有效的 Gmail 地址');
+if (!username || !password || !email) return fail(400, 'Please fill in all fields');
+  if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, 'Please enter a valid Gmail address');
 
         const dbReady = mongoose.connection.readyState === 1;
 
@@ -315,13 +454,13 @@ const server = http.createServer((req, res) => {
             User.findOne({ username }).lean(),
             User.findOne({ email }).lean()
           ]);
-          if (existingUser)  return fail(409, '此帳號名稱已被使用');
-          if (existingEmail) return fail(409, '此 Gmail 已被註冊');
+          if (existingUser)  return fail(409, 'Username already taken');
+          if (existingEmail) return fail(409, 'Email already registered');
         } else {
           // In-memory fallback
-          if (memUsers.has(username)) return fail(409, '此帳號名稱已被使用（測試模式）');
+          if (memUsers.has(username)) return fail(409, 'Username already taken (test mode)');
           const emailUsed = [...memUsers.values()].some(u => u.email === email);
-          if (emailUsed) return fail(409, '此 Gmail 已被註冊（測試模式）');
+          if (emailUsed) return fail(409, 'Email already registered (test mode)');
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -340,21 +479,21 @@ const server = http.createServer((req, res) => {
 
         try {
           await sendOtpEmail(email, otp);
-          writeLastSent(); // 更新 keepalive 時間戳
+          writeLastSent(); // update keepalive timestamp
         } catch (mailErr) {
-          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, '郵件服務未設定，請聯繫管理員');
+          if (mailErr.message === 'NO_MAIL_SERVICE') return fail(503, 'Email service not configured. Contact support.');
           throw mailErr;
         }
 
         console.log(`[register] OTP sent to ${email} for user "${username}" (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '驗證碼已寄出' }));
+        res.end(JSON.stringify({ ok: true, message: 'Verification code sent' }));
       })
       .catch(err => {
         console.error('[register/send-otp]', err.message);
         const msg = process.env.NODE_ENV !== 'production'
           ? err.message
-          : '伺服器錯誤，請稍後再試';
+          : 'Server error. Please try again later.';
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: msg }));
       });
@@ -370,7 +509,7 @@ const server = http.createServer((req, res) => {
 
         if (!email || !otp) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '請提供 email 與驗證碼' }));
+          res.end(JSON.stringify({ ok: false, message: 'Please provide email and verification code' }));
           return;
         }
 
@@ -381,23 +520,23 @@ const server = http.createServer((req, res) => {
 
         if (!record) {
           res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '找不到驗證請求，請重新發送' }));
+          res.end(JSON.stringify({ ok: false, message: 'Verification request not found. Please resend.' }));
           return;
         }
         if (new Date() > record.expiresAt) {
           if (dbReady) await OtpRecord.deleteOne({ email }); else memOtp.delete(email);
           res.writeHead(410, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼已過期，請重新發送' }));
+          res.end(JSON.stringify({ ok: false, message: 'Code expired. Please resend.' }));
           return;
         }
         if (record.otp !== otp) {
           res.writeHead(401, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '驗證碼錯誤，請重試' }));
+          res.end(JSON.stringify({ ok: false, message: 'Invalid verification code.' }));
           return;
         }
 
         if (dbReady) {
-          await User.create({ username: record.username, password: record.password, email });
+          await User.create({ username: record.username, password: record.password, email, isEmailVerified: true });
           await OtpRecord.deleteOne({ email });
         } else {
           memUsers.set(record.username, { username: record.username, password: record.password, email });
@@ -405,12 +544,12 @@ const server = http.createServer((req, res) => {
         }
         console.log(`[register] User created: "${record.username}" (${email}) (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: '註冊成功！歡迎加入 WebPhoto' + (dbReady ? '' : '（測試模式，重啟後清除）') }));
+        res.end(JSON.stringify({ ok: true, message: 'Registration successful! Welcome to Texify.' + (dbReady ? '' : ' (Test mode — data cleared on restart)') }));
       })
       .catch(err => {
         console.error('[register/verify]', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: false, message: '伺服器錯誤，請稍後再試' }));
+        res.end(JSON.stringify({ ok: false, message: 'Server error. Please try again later.' }));
       });
     return;
   }
@@ -425,7 +564,7 @@ const server = http.createServer((req, res) => {
 
         if (!email || !name || !maps || typeof maps !== 'object') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ ok: false, message: '缺少必要欄位' }));
+          res.end(JSON.stringify({ ok: false, message: 'Missing required fields' }));
           return;
         }
 
@@ -473,22 +612,22 @@ const server = http.createServer((req, res) => {
         }).join('');
 
         const zipButton = zipUrl
-          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ 一鍵下載全部 ZIP（24 小時有效）</a></div>`
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 24 h)</a></div>`
           : '';
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
 <h2 style="margin:0 0 4px">📦 ${name}</h2>
-<p style="color:#64748b;margin:0 0 16px;font-size:13px">WebPhoto 材質貼圖上傳完成</p>
+<p style="color:#64748b;margin:0 0 16px;font-size:13px">Texify — Texture upload complete</p>
 ${zipButton}
 <table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden;margin-top:16px">
-<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">通道</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">個別下載</th></tr></thead>
+<thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Channel</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Download</th></tr></thead>
 <tbody>${rows}</tbody></table>
-<p style="color:#374151;font-size:11px;margin-top:16px">此信由 WebPhoto 系統自動寄出</p></div>`;
+<p style="color:#374151;font-size:11px;margin-top:16px">This message was sent automatically by Texify.</p></div>`;
 
-        const text = (zipUrl ? `下載全部 ZIP：${zipUrl}\n\n` : '') +
+        const text = (zipUrl ? `Download all as ZIP: ${zipUrl}\n\n` : '') +
           Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
 
-        await sendOtpEmail(email, null, { subject: `[WebPhoto] ${name} 上傳完成`, html, text });
+        await sendOtpEmail(email, null, { subject: `[Texify] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, zipUrl }));
@@ -507,7 +646,7 @@ ${zipButton}
     const entry = zipStore.get(id);
     if (!entry) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('ZIP 已過期或不存在（有效期 24 小時）');
+      res.end('ZIP not found or has expired (valid 24 hours)');
       return;
     }
     const filename = encodeURIComponent(`${entry.name}_textures.zip`);
@@ -518,6 +657,31 @@ ${zipButton}
       'Cache-Control':       'no-store',
     });
     res.end(entry.buffer);
+    return;
+  }
+
+  // ── POST /record-upload ──────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/record-upload') {
+    readJsonBody(req).then(async body => {
+      const username   = String(body.username   || '').trim() || null;
+      const folderName = String(body.folderName || '').trim() || null;
+      const publicIds  = Array.isArray(body.publicIds) ? body.publicIds.map(String) : [];
+      if (!publicIds.length) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'No publicIds provided' }));
+        return;
+      }
+      if (mongoose.connection.readyState === 1) {
+        await UploadRecord.create({ username, folderName, publicIds, uploadedAt: new Date() });
+        console.log(`[record-upload] Saved ${publicIds.length} id(s) for "${folderName || 'unnamed'}" (${username || 'anon'})`);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    }).catch(err => {
+      console.error('[record-upload]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: err.message }));
+    });
     return;
   }
 
@@ -565,9 +729,13 @@ server.listen(PORT, () => {
   checkBrevoKeepalive();
 });
 
+// Run Cloudinary cleanup 30 s after startup (allow DB to connect), then every 24 h
+setTimeout(runCloudinaryCleanup, 30_000);
+setInterval(runCloudinaryCleanup, 24 * 60 * 60 * 1000).unref();
+
 // ─── Brevo API key keepalive ──────────────────────────────────────────────────
-// 每次 server 啟動時檢查：若距離上次寄信已超過 89 天，自動寄一封保活信
-// 同時每 24 小時再檢查一次（以防 server 長時間不重啟）
+// Brevo API key keepalive: send a heartbeat email if last send was >89 days ago
+// Also re-check every 24 h in case the server runs continuously
 const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
 const KEEPALIVE_DAYS = 89;
 const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
@@ -599,8 +767,8 @@ async function checkBrevoKeepalive() {
         body: JSON.stringify({
           sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
           to:          [{ email: KEEPALIVE_TO }],
-          subject:     '[WebPhoto] 系統保活通知',
-          textContent: `此信由 WebPhoto 系統自動寄出以維持 Brevo API Key 活躍狀態。\n時間：${new Date().toISOString()}`
+          subject:     '[Texify] System keepalive',
+          textContent: `This message was sent automatically by Texify to keep the Brevo API key active.\nTimestamp: ${new Date().toISOString()}`
         })
       });
       if (r.ok) {
@@ -616,7 +784,7 @@ async function checkBrevoKeepalive() {
     console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
   }
 
-  // 每 24 小時重新檢查一次
+  // Re-check every 24 hours
   setTimeout(checkBrevoKeepalive, 24 * 60 * 60 * 1000);
 }
 
