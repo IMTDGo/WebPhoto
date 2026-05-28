@@ -154,12 +154,13 @@ function paintPreviewThumbnails(maps) {
 
 async function startCamera() {
   stopCamera();
+  // Use ideal-only constraints (no min) to avoid OverconstrainedError on mid-range devices
   const constraints = {
     audio: false,
     video: {
       facingMode: { ideal: 'environment' },
-      width: { min: 1920, ideal: 3840, max: 4096 },
-      height: { min: 1080, ideal: 2160, max: 2160 },
+      width:  { ideal: 3840 },
+      height: { ideal: 2160 },
     },
   };
 
@@ -187,11 +188,11 @@ async function enterCameraStep() {
   }
 
   try {
-    showStep('camera');
+    // Start camera BEFORE showing the camera section to avoid blank white flash
     await startCamera();
+    showStep('camera');
   } catch (err) {
     showToast('無法啟用相機，改用系統拍照', 'warning');
-    showStep('entry');
     fileInputCapture.click();
   }
 }
