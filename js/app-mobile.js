@@ -6,7 +6,7 @@ import { CropEditor }              from './crop-editor.js';
 import { PatternPreview }           from './preview.js';
 import { generateChannels, uploadAllMaps } from './upload.js';
 import { showToast }               from './toast.js';
-// seamless.js no longer needed for UI
+import { getHDRCapabilities, captureHDRFrames, mergeHDR } from './hdr.js';
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 const stepEntry    = document.getElementById('stepEntry');
@@ -62,17 +62,41 @@ let cameraStream    = null;
 let seamlessEnabled = true;
 let seamlessParams  = { seamBlendWidth: 0.15, iterations: 80 };
 
+// HDR state
+let hdrMode         = false;
+let hdrCapabilities = null;  // null = not supported / not yet checked
+
+// White balance state
+let wbGains   = { r: 1, g: 1, b: 1 }; // per-channel gains (1 = neutral)
+let wbApplied = false;                  // gains have been sampled at least once
+let wbActive  = false;                  // WB-pick mode is open
+let wbDragging = false;                 // pointer is currently held down
+
+// Offset applied to raw touch point so the sample lands upper-right of finger
+const WB_SAMPLE_DX =  35;  // CSS px to the right
+const WB_SAMPLE_DY = -50;  // CSS px upward
+
+const CAM_RULER_SZ = 22;   // must match css/camera.css --cam-ruler-sz
+const CAPTURE_SIZE = 2048; // forced square capture resolution
+
 
 // ── Initialise editors ────────────────────────────────────────────────────────
 function initEditors() {
+  const cropSizeInfo = document.getElementById('cropSizeInfo');
+  function _updateCropSize(crop) {
+    if (cropSizeInfo && crop) cropSizeInfo.textContent = `${Math.round(crop.w)} × ${Math.round(crop.h)}`;
+  }
+
   cropEditor = new CropEditor(cropCanvas, {
     onChange: (crop) => {
       currentCrop = crop;
       preview.updateFast(crop);  // low-res, real-time
+      _updateCropSize(crop);
     },
     onChangeEnd: (crop) => {
       currentCrop = crop;
       preview.update(crop);      // full quality after drag ends
+      _updateCropSize(crop);
     },
   });
 
@@ -152,6 +176,133 @@ function paintPreviewThumbnails(maps) {
   }
 }
 
+// ── Crop guide + 1:1 square capture ─────────────────────────────────────────
+
+/**
+ * Draw the 1:1 crop guide (white border + corner brackets)
+ * on the #camCropGuide canvas, centered in the video area.
+ */
+function drawCropGuide() {
+  const canvas = document.getElementById('camCropGuide');
+  if (!canvas) return;
+
+  const vf  = stepCamera.querySelector('.cam-viewfinder');
+  if (!vf) return;
+  const vfW = vf.offsetWidth;
+  const vfH = vf.offsetHeight;
+  if (vfW <= 0 || vfH <= 0) return;
+
+  const videoAreaW  = vfW - CAM_RULER_SZ;
+  const videoAreaH  = vfH - CAM_RULER_SZ;
+  const squareSide  = Math.min(videoAreaW, videoAreaH);
+  const squareX     = CAM_RULER_SZ + (videoAreaW - squareSide) / 2;
+  const squareY     = CAM_RULER_SZ; // align to top ruler
+
+  // Clip the video element to the 1:1 square only
+  const rightInset  = vfW - squareX - squareSide;
+  const bottomInset = vfH - squareY - squareSide;
+  cameraVideo.style.clipPath =
+    `inset(${squareY}px ${rightInset}px ${bottomInset}px ${squareX}px)`;
+
+  // Draw the crop-guide canvas (border + corner brackets)
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = Math.round(vfW * dpr);
+  canvas.height = Math.round(vfH * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Thin border around the square
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  ctx.lineWidth   = 1.5;
+  ctx.strokeRect(squareX + 0.75, squareY + 0.75, squareSide - 1.5, squareSide - 1.5);
+
+  // Corner brackets
+  const BL = 18;
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth   = 2.5;
+  const corners = [
+    [squareX, squareY,                        1,  1],
+    [squareX + squareSide, squareY,           -1,  1],
+    [squareX, squareY + squareSide,            1, -1],
+    [squareX + squareSide, squareY + squareSide, -1, -1],
+  ];
+  for (const [x, y, dx, dy] of corners) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx * BL, y);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x, y + dy * BL);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Crop the full-frame source canvas to the displayed 1:1 CSS square,
+ * scale to CAPTURE_SIZE, and apply WB gains if active.
+ */
+function _cropToSquare(src, srcVideoW, srcVideoH) {
+  const sw = src.width;
+  const sh = src.height;
+
+  const vf  = stepCamera.querySelector('.cam-viewfinder');
+  const vfW = vf.offsetWidth;
+  const vfH = vf.offsetHeight;
+  const videoAreaW      = vfW - CAM_RULER_SZ;
+  const videoAreaH      = vfH - CAM_RULER_SZ;
+  const squareSide_css  = Math.min(videoAreaW, videoAreaH);
+  const squareLeft_css  = CAM_RULER_SZ + (videoAreaW - squareSide_css) / 2;
+  const squareTop_css   = CAM_RULER_SZ;
+
+  // How the native video is laid out in the CSS container (object-fit: cover)
+  const videoAspect     = srcVideoW / srcVideoH;
+  const containerAspect = vfW / vfH;
+  let renderW, renderH, offsetX, offsetY;
+  if (videoAspect > containerAspect) {
+    renderH = vfH; renderW = renderH * videoAspect;
+    offsetX = (vfW - renderW) / 2; offsetY = 0;
+  } else {
+    renderW = vfW; renderH = renderW / videoAspect;
+    offsetX = 0; offsetY = (vfH - renderH) / 2;
+  }
+  const cssToVideo = srcVideoW / renderW;
+
+  // Crop region in native video pixel coords
+  const vx    = Math.max(0, (squareLeft_css - offsetX) * cssToVideo);
+  const vy    = Math.max(0, (squareTop_css  - offsetY) * cssToVideo);
+  const vSize = squareSide_css * cssToVideo;
+
+  // Scale to source canvas coords
+  const hdrScale  = sw / srcVideoW;
+  const sx        = Math.round(vx    * hdrScale);
+  const sy        = Math.round(vy    * hdrScale);
+  const rawSize   = Math.round(vSize * hdrScale);
+  const clampedSz = Math.min(rawSize, sw - sx, sh - sy, sw, sh);
+
+  const out = document.createElement('canvas');
+  out.width  = CAPTURE_SIZE;
+  out.height = CAPTURE_SIZE;
+  const ctx  = out.getContext('2d');
+  ctx.drawImage(src, sx, sy, clampedSz, clampedSz, 0, 0, CAPTURE_SIZE, CAPTURE_SIZE);
+
+  // Apply white-balance gains per-pixel at capture time (CSS filter is visual only)
+  if (wbApplied && (wbGains.r !== 1 || wbGains.g !== 1 || wbGains.b !== 1)) {
+    _applyWbToCanvas(ctx, CAPTURE_SIZE, CAPTURE_SIZE);
+  }
+  return out;
+}
+
+/** Apply stored white-balance gains to a 2-D canvas context in-place. */
+function _applyWbToCanvas(ctx, w, h) {
+  const id  = ctx.getImageData(0, 0, w, h);
+  const d   = id.data;
+  const { r: rg, g: gg, b: bg } = wbGains;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i]     = Math.min(255, Math.round(d[i]     * rg));
+    d[i + 1] = Math.min(255, Math.round(d[i + 1] * gg));
+    d[i + 2] = Math.min(255, Math.round(d[i + 2] * bg));
+  }
+  ctx.putImageData(id, 0, 0);
+}
+
 async function startCamera() {
   stopCamera();
   const constraints = {
@@ -170,6 +321,20 @@ async function startCamera() {
     cameraVideo.addEventListener('loadedmetadata', res, { once: true });
   });
   await cameraVideo.play();
+
+  // Detect HDR support on this track
+  const track = cameraStream.getVideoTracks()[0];
+  hdrCapabilities = getHDRCapabilities(track);
+  const hdrBtn = document.getElementById('btnHDRToggle');
+  if (hdrBtn) {
+    if (hdrCapabilities) {
+      hdrBtn.style.display = '';
+      _updateHDRButton();
+    } else {
+      hdrBtn.style.display = 'none';
+      hdrMode = false;
+    }
+  }
 }
 
 function stopCamera() {
@@ -189,6 +354,8 @@ async function enterCameraStep() {
   try {
     showStep('camera');
     await startCamera();
+    // Draw crop guide after layout is stable
+    requestAnimationFrame(() => requestAnimationFrame(drawCropGuide));
   } catch (err) {
     showToast('無法啟用相機，改用系統拍照', 'warning');
     showStep('entry');
@@ -201,11 +368,13 @@ function captureFromVideo() {
   const h = cameraVideo.videoHeight;
   if (!w || !h) throw new Error('相機尚未就緒');
 
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  canvas.getContext('2d').drawImage(cameraVideo, 0, 0, w, h);
-  return canvas;
+  const full = document.createElement('canvas');
+  full.width  = w;
+  full.height = h;
+  full.getContext('2d').drawImage(cameraVideo, 0, 0, w, h);
+
+  // Crop to the displayed 1:1 square and apply WB gains
+  return _cropToSquare(full, w, h);
 }
 
 function canvasToImage(canvas) {
@@ -295,15 +464,336 @@ fileInputGallery.addEventListener('change', (e) => handleFile(e.target.files[0])
 // ── Camera controls ───────────────────────────────────────────────────────────
 btnOpenCamera.addEventListener('click', () => enterCameraStep());
 
+// ── White balance ─────────────────────────────────────────────────────────────
+
+/** Reset all WB state and UI to neutral. */
+function _resetWbState() {
+  wbGains    = { r: 1, g: 1, b: 1 };
+  wbApplied  = false;
+  wbActive   = false;
+  wbDragging = false;
+  cameraVideo.style.filter      = '';
+  cameraVideo.style.touchAction = '';
+  cameraVideo.style.clipPath    = '';
+  const matrix = document.getElementById('camWbMatrix');
+  if (matrix) matrix.setAttribute('values', '1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0');
+  const loupe = document.getElementById('camWbLoupe');
+  if (loupe)  loupe.style.display = 'none';
+  const dot = document.getElementById('camWbDot');
+  if (dot)    dot.style.display   = 'none';
+  document.getElementById('camWbHint')?.style.setProperty('display', 'none');
+  document.getElementById('camWbDoneRow')?.style.setProperty('display', 'none');
+  const btn = document.getElementById('btnWbMode');
+  if (btn) {
+    btn.classList.remove('text-sky-300', 'border-sky-400/50');
+    btn.classList.add('text-white/60', 'border-white/20');
+  }
+}
+
+/** Enter WB-pick mode: disable other controls, show instruction. */
+function _enterWbMode() {
+  wbActive = true;
+  btnTakePhoto.disabled  = true;
+  btnCameraBack.disabled = true;
+  document.getElementById('btnHDRToggle')?.setAttribute('disabled', '');
+
+  const btn = document.getElementById('btnWbMode');
+  if (btn) {
+    btn.classList.add('text-sky-300', 'border-sky-400/50');
+    btn.classList.remove('text-white/60', 'border-white/20');
+  }
+
+  const hintDiv = document.getElementById('camHintText')?.closest('div');
+  if (hintDiv) hintDiv.style.display = 'none';
+  const wbHint = document.getElementById('camWbHint');
+  if (wbHint) wbHint.style.display = '';
+  const doneRow = document.getElementById('camWbDoneRow');
+  if (doneRow) doneRow.style.display = 'none';
+
+  cameraVideo.style.touchAction = 'none'; // prevent scroll during WB drag
+}
+
+/** Exit WB-pick mode. Pass applied=true when a WB sample was committed. */
+function _exitWbMode(applied) {
+  wbActive   = false;
+  wbDragging = false;
+  btnTakePhoto.disabled  = false;
+  btnCameraBack.disabled = false;
+  document.getElementById('btnHDRToggle')?.removeAttribute('disabled');
+
+  const btn = document.getElementById('btnWbMode');
+  if (btn) {
+    if (applied || wbApplied) {
+      btn.classList.add('text-sky-300', 'border-sky-400/50');
+      btn.classList.remove('text-white/60', 'border-white/20');
+    } else {
+      btn.classList.remove('text-sky-300', 'border-sky-400/50');
+      btn.classList.add('text-white/60', 'border-white/20');
+    }
+  }
+
+  const hintDiv = document.getElementById('camHintText')?.closest('div');
+  if (hintDiv) { document.getElementById('camHintText').textContent = '對準材質後按下拍照'; hintDiv.style.display = ''; }
+  const wbHint = document.getElementById('camWbHint');
+  if (wbHint) wbHint.style.display = 'none';
+  document.getElementById('camWbLoupe').style.display = 'none';
+  document.getElementById('camWbDot').style.display   = 'none';
+
+  if (applied) {
+    const doneRow = document.getElementById('camWbDoneRow');
+    if (doneRow) doneRow.style.display = '';
+  }
+
+  cameraVideo.style.touchAction = '';
+}
+
+/**
+ * Map viewport pointer coords → native video frame pixel coords,
+ * accounting for object-fit: cover on the camera video.
+ */
+function _clientToVideoCoords(clientX, clientY) {
+  const rect = cameraVideo.getBoundingClientRect();
+  const vw   = cameraVideo.videoWidth;
+  const vh   = cameraVideo.videoHeight;
+  if (!vw || !vh) return { vx: 0, vy: 0 };
+
+  const cw  = rect.width;
+  const ch  = rect.height;
+  const va  = vw / vh;
+  const ca  = cw / ch;
+  let rW, rH, ox, oy;
+  if (va > ca) { rH = ch; rW = rH * va; ox = (cw - rW) / 2; oy = 0; }
+  else         { rW = cw; rH = rW / va; ox = 0; oy = (ch - rH) / 2; }
+
+  const scale = rW / vw;
+  const px    = clientX - rect.left;
+  const py    = clientY - rect.top;
+  return {
+    vx: Math.max(0, Math.min(vw - 1, Math.round((px - ox) / scale))),
+    vy: Math.max(0, Math.min(vh - 1, Math.round((py - oy) / scale))),
+  };
+}
+
+/** Sample the average pixel color at a viewport point from the live video. */
+function _sampleVideoPixel(clientX, clientY) {
+  const { vx, vy } = _clientToVideoCoords(clientX, clientY);
+  const vw = cameraVideo.videoWidth;
+  const vh = cameraVideo.videoHeight;
+  const sx = Math.max(0, Math.min(vw - 3, vx - 1));
+  const sy = Math.max(0, Math.min(vh - 3, vy - 1));
+
+  const tmp = document.createElement('canvas');
+  tmp.width  = 3;
+  tmp.height = 3;
+  tmp.getContext('2d').drawImage(cameraVideo, sx, sy, 3, 3, 0, 0, 3, 3);
+  const d = tmp.getContext('2d').getImageData(0, 0, 3, 3).data;
+  let r = 0, g = 0, b = 0;
+  for (let i = 0; i < 9 * 4; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
+  return { r: r / 9, g: g / 9, b: b / 9 };
+}
+
+/** Compute and store WB gains from a sampled white-point pixel, update SVG filter. */
+function _applyWhiteBalance(r, g, b) {
+  if (Math.max(r, g, b) < 12) {
+    showToast('取樣點太暗，請點擊白色/灰色區域', 'warning');
+    return false;
+  }
+  const rawR = 255 / r;
+  const rawG = 255 / g;
+  const rawB = 255 / b;
+  const mx   = Math.max(rawR, rawG, rawB);
+  wbGains   = { r: rawR / mx, g: rawG / mx, b: rawB / mx };
+  wbApplied = true;
+
+  // Update SVG filter for live preview
+  const v = `${wbGains.r.toFixed(4)} 0 0 0 0  0 ${wbGains.g.toFixed(4)} 0 0 0  0 0 ${wbGains.b.toFixed(4)} 0 0  0 0 0 1 0`;
+  document.getElementById('camWbMatrix')?.setAttribute('values', v);
+  cameraVideo.style.filter = 'url(#camWbFilter)';
+  return true;
+}
+
+/** Show/update the magnifier loupe at the pointer position. */
+function _showWbLoupe(rawClientX, rawClientY) {
+  // Shift sample point to upper-right of finger so user can see it
+  const clientX = rawClientX + WB_SAMPLE_DX;
+  const clientY = rawClientY + WB_SAMPLE_DY;
+
+  const loupe = document.getElementById('camWbLoupe');
+  if (!loupe) return;
+
+  const RADIUS = 80;
+  const ZOOM   = 5;
+  const SIZE   = RADIUS * 2;
+  const dpr    = window.devicePixelRatio || 1;
+
+  loupe.style.width   = SIZE + 'px';
+  loupe.style.height  = SIZE + 'px';
+  loupe.width         = SIZE * dpr;
+  loupe.height        = SIZE * dpr;
+  loupe.style.display = 'block';
+
+  // Position loupe above + centered on the sample point
+  const vfRect     = stepCamera.querySelector('.cam-viewfinder').getBoundingClientRect();
+  const sampleRelX = clientX - vfRect.left;
+  const sampleRelY = clientY - vfRect.top;
+  let lx = sampleRelX - RADIUS;
+  let ly = sampleRelY - SIZE - RADIUS * 0.6;
+
+  // Boundary clamps: keep inside viewfinder
+  if (lx + SIZE > vfRect.width) lx = vfRect.width - SIZE;
+  if (lx < CAM_RULER_SZ)        lx = CAM_RULER_SZ;
+  if (ly < CAM_RULER_SZ)        ly = sampleRelY + RADIUS * 0.6;
+  ly = Math.max(CAM_RULER_SZ, ly);
+
+  loupe.style.left = lx + 'px';
+  loupe.style.top  = ly + 'px';
+
+  // Draw zoomed video frame centred on the sample point
+  const { vx, vy } = _clientToVideoCoords(clientX, clientY);
+  const vw      = cameraVideo.videoWidth;
+  const vh      = cameraVideo.videoHeight;
+  const srcSide = SIZE / ZOOM;
+  const srcX    = Math.max(0, Math.min(vw - srcSide, vx - srcSide / 2));
+  const srcY    = Math.max(0, Math.min(vh - srcSide, vy - srcSide / 2));
+
+  const ctx = loupe.getContext('2d');
+  ctx.save();
+  ctx.scale(dpr, dpr);
+  ctx.beginPath();
+  ctx.arc(RADIUS, RADIUS, RADIUS, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.drawImage(cameraVideo, srcX, srcY, srcSide, srcSide, 0, 0, SIZE, SIZE);
+
+  // Crosshair at centre
+  ctx.strokeStyle = 'rgba(255, 50, 50, 0.9)';
+  ctx.lineWidth   = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, RADIUS); ctx.lineTo(SIZE, RADIUS); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(RADIUS, 0); ctx.lineTo(RADIUS, SIZE); ctx.stroke();
+  ctx.restore();
+
+  // Red dot on the video at the actual sample point
+  const dot = document.getElementById('camWbDot');
+  if (dot) {
+    dot.style.display = 'block';
+    dot.style.left    = sampleRelX + 'px';
+    dot.style.top     = sampleRelY + 'px';
+  }
+}
+
+// WB pointer events on the live camera video
+cameraVideo.addEventListener('pointerdown', (e) => {
+  if (!wbActive) return;
+  e.preventDefault();
+  wbDragging = true;
+  cameraVideo.setPointerCapture(e.pointerId);
+  _showWbLoupe(e.clientX, e.clientY);
+}, { passive: false });
+
+cameraVideo.addEventListener('pointermove', (e) => {
+  if (!wbActive || !wbDragging) return;
+  e.preventDefault();
+  _showWbLoupe(e.clientX, e.clientY);
+}, { passive: false });
+
+cameraVideo.addEventListener('pointerup', (e) => {
+  if (!wbActive) return;
+  wbDragging = false;
+  document.getElementById('camWbLoupe').style.display = 'none';
+  document.getElementById('camWbDot').style.display   = 'none';
+  const { r, g, b } = _sampleVideoPixel(e.clientX + WB_SAMPLE_DX, e.clientY + WB_SAMPLE_DY);
+  const ok = _applyWhiteBalance(r, g, b);
+  _exitWbMode(ok);
+});
+
+cameraVideo.addEventListener('pointercancel', () => {
+  if (!wbActive) return;
+  wbDragging = false;
+  document.getElementById('camWbLoupe').style.display = 'none';
+  document.getElementById('camWbDot').style.display   = 'none';
+  _exitWbMode(false);
+});
+
+// WB button toggle
+document.getElementById('btnWbMode')?.addEventListener('click', () => {
+  if (wbActive) { _exitWbMode(false); } else { _enterWbMode(); }
+});
+
+// ── HDR helpers ───────────────────────────────────────────────────────────────
+function _updateHDRButton() {
+  const btn = document.getElementById('btnHDRToggle');
+  if (!btn) return;
+  if (hdrMode) {
+    btn.classList.add('text-amber-300', 'border-amber-400/50');
+    btn.classList.remove('text-white/50', 'border-white/20');
+    btn.textContent = 'HDR ✓';
+  } else {
+    btn.classList.remove('text-amber-300', 'border-amber-400/50');
+    btn.classList.add('text-white/50', 'border-white/20');
+    btn.textContent = 'HDR';
+  }
+}
+
+document.getElementById('btnHDRToggle')?.addEventListener('click', () => {
+  if (!hdrCapabilities) return;
+  hdrMode = !hdrMode;
+  _updateHDRButton();
+});
+
 btnCameraBack.addEventListener('click', () => {
+  _resetWbState();
   stopCamera();
   showStep('entry');
 });
 
 btnTakePhoto.addEventListener('click', async () => {
+  // ── HDR path ──
+  if (hdrMode && hdrCapabilities) {
+    const overlay      = document.getElementById('hdrOverlay');
+    const progressText = document.getElementById('hdrProgressText');
+    const dots = [
+      document.getElementById('hdrDot0'),
+      document.getElementById('hdrDot1'),
+      document.getElementById('hdrDot2'),
+    ];
+    overlay.style.display = 'flex';
+
+    const onProgress = (step, total, label) => {
+      if (progressText) progressText.textContent = label;
+      dots.forEach((d, i) => {
+        if (!d) return;
+        d.classList.toggle('bg-primary',  i < step);
+        d.classList.toggle('bg-white/20', i >= step);
+      });
+    };
+
+    try {
+      const track  = cameraStream.getVideoTracks()[0];
+      const frames = await captureHDRFrames(track, hdrCapabilities, onProgress);
+      if (progressText) progressText.textContent = '合成 HDR…';
+      const merged       = mergeHDR(...frames);
+      frames.forEach(f => f.close?.());
+      const squaredCanvas = _cropToSquare(merged, merged.width, merged.height);
+      const img = await canvasToImage(squaredCanvas);
+      overlay.style.display = 'none';
+      _resetWbState();
+      stopCamera();
+      if (!cropEditor) initEditors();
+      cropEditor.load(img);
+      currentCrop = cropEditor.getCrop();
+      preview.update(currentCrop);
+      showStep('edit');
+    } catch (err) {
+      overlay.style.display = 'none';
+      showToast('HDR 拍照失敗: ' + err.message, 'error');
+    }
+    return;
+  }
+
+  // ── Single-shot path ──
   try {
     const captureCanvas = captureFromVideo();
     const img = await canvasToImage(captureCanvas);
+    _resetWbState();
     stopCamera();
     if (!cropEditor) initEditors();
     cropEditor.load(img);
@@ -405,9 +895,40 @@ btnConfirmUpload.addEventListener('click', async () => {
 });
 
 // ── Resize ────────────────────────────────────────────────────────────────────
-window.addEventListener('resize', () => cropEditor?.resize());
+window.addEventListener('resize', () => {
+  cropEditor?.resize();
+  if (!stepCamera.classList.contains('hidden')) drawCropGuide();
+});
 window.addEventListener('beforeunload', () => stopCamera());
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) stopCamera();
 });
+
+// ── Vertical split handle ─────────────────────────────────────────────────────
+(function () {
+  const handle   = document.getElementById('splitHandle');
+  const cropCont = document.getElementById('cropContainer');
+  if (!handle || !cropCont) return;
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handle.setPointerCapture(e.pointerId);
+    const startY    = e.clientY;
+    const startFlex = cropCont.offsetHeight;
+    const totalH    = cropCont.parentElement.offsetHeight;
+
+    const onMove = (ev) => {
+      const delta = ev.clientY - startY;
+      const newH  = Math.max(80, Math.min(totalH - 80, startFlex + delta));
+      cropCont.style.flex = `0 0 ${newH}px`;
+      cropEditor?.resize();
+    };
+    const onUp = () => {
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+  });
+})();

@@ -1,0 +1,58 @@
+/* camera.css — camera viewfinder layout with rulers and crop guide */
+:root {
+  --cam-ruler-sz: 22px;
+}
+
+/* ── Viewfinder container ── */
+.cam-viewfinder {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.cam-viewfinder video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Ruler corner block (top-left, covers the axis intersection) ── */
+.cam-ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--cam-ruler-sz);
+  height: var(--cam-ruler-sz);
+  background: rgba(0, 0, 0, 0.60);
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* ── Horizontal ruler (top edge, right of the corner) ── */
+.cam-ruler-h {
+  position: absolute;
+  top: 0;
+  left: var(--cam-ruler-sz);
+  right: 0;
+  height: var(--cam-ruler-sz);
+  display: block;
+  background: rgba(0, 0, 0, 0.50);
+  z-index: 6;
+  pointer-events: none;
+}
+
+/* ── Vertical ruler (left edge, below the corner) ── */
+.cam-ruler-v {
+  position: absolute;
+  top: var(--cam-ruler-sz);
+  left: 0;
+  bottom: 0;
+  width: var(--cam-ruler-sz);
+  display: block;
+  background: rgba(0, 0, 0, 0.50);
+  z-index: 6;
+  pointer-events: none;
+}
