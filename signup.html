@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign Up — Texify</title>
+  <title>Sign Up — SNAPBRIFY</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -108,7 +108,7 @@
   <main class="w-full max-w-[480px] z-10 relative">
     <!-- Brand -->
     <div class="text-center mb-8">
-      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">TEXIFY</a>
+      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">SNAPBRIFY</a>
     </div>
 
     <!-- Glass Card -->
@@ -118,7 +118,7 @@
       <div id="step1">
         <div class="text-center mb-8">
           <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2">Create Your Account</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant">Join Texify and start creating</p>
+          <p class="font-body-md text-body-md text-on-surface-variant">Join SNAPBRIFY and start creating</p>
         </div>
 
         <div id="alertBox1" class="alert-box mb-6"></div>
@@ -357,7 +357,7 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showAlert('alertBox2', 'success', '\u2714 ' + _sanitize(data.message, 'Registration successful! Welcome to Texify.'));
+          showAlert('alertBox2', 'success', '\u2714 ' + _sanitize(data.message, 'Registration successful! Welcome to SNAPBRIFY.'));
           setTimeout(() => window.location.replace('./login.html?ref=app'), 1500);
         } else {
           showAlert('alertBox2', 'error', '\u2718 ' + _sanitize(data.message, 'Verification failed. Please try again.'));

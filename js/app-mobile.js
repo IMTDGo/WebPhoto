@@ -352,8 +352,8 @@ async function enterCameraStep() {
   if (errOverlay) errOverlay.classList.add('hidden');
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('Camera not supported on this device, using system camera', 'warning');
-    fileInputCapture.click();
+    showToast('Camera not supported on this device', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
     return;
   }
 
@@ -362,9 +362,8 @@ async function enterCameraStep() {
     // Draw crop guide after layout is stable
     requestAnimationFrame(() => requestAnimationFrame(drawCropGuide));
   } catch (err) {
-    showToast('Unable to start camera, using system camera', 'warning');
-    showStep('entry');
-    fileInputCapture.click();
+    showToast('Unable to start camera', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
   }
 }
 
