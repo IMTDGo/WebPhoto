@@ -143,6 +143,11 @@
       window.location.replace('./index.html');
     }
 
+    // If accessed directly (no ?ref=app param), redirect to the landing page first
+    if (!new URLSearchParams(window.location.search).get('ref')) {
+      window.location.replace('./index.html');
+    }
+
     const BASE_URL  = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
       ? `${window.location.protocol}//${window.location.host}`
       : 'https://webphoto-lidl.onrender.com';

@@ -144,7 +144,7 @@
         <div class="mt-8 text-center">
           <p class="font-body-md text-body-md text-on-surface-variant">
             Already have an account?
-            <a href="./login.html" class="text-primary hover:text-primary-fixed transition-colors duration-250 underline decoration-primary/30 underline-offset-4 hover:decoration-primary ml-1">Log in</a>
+            <a href="./login.html?ref=app" class="text-primary hover:text-primary-fixed transition-colors duration-250 underline decoration-primary/30 underline-offset-4 hover:decoration-primary ml-1">Log in</a>
           </p>
         </div>
       </div>
@@ -223,7 +223,7 @@
     // ── Cancel / Back ──
     document.getElementById('btnCancel1').addEventListener('click', () => {
       if (history.length > 1) history.back();
-      else window.location.href = './login.html';
+      else window.location.href = './login.html?ref=app';
     });
     document.getElementById('btnBack2').addEventListener('click', () => {
       hideAlert('alertBox2');
@@ -314,7 +314,7 @@
         const data = await res.json();
         if (data.ok) {
           showAlert('alertBox2', 'success', '✔ ' + data.message);
-          setTimeout(() => window.location.replace('./login.html'), 1500);
+          setTimeout(() => window.location.replace('./login.html?ref=app'), 1500);
         } else {
           showAlert('alertBox2', 'error', '✘ ' + data.message);
         }

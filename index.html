@@ -74,7 +74,7 @@
       <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
         Sign Up
       </a>
-      <a href="./login.html" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
         Login
       </a>
     </div>
@@ -178,7 +178,7 @@
     </div>
 
     <div class="flex gap-6">
-      <a href="./login.html"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
+      <a href="./login.html?ref=app"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
       <a href="./signup.html" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
     </div>
   </footer>
@@ -191,7 +191,7 @@
       // "Start Creating" button: go to app if logged in, else login page
       document.getElementById('btnGetStarted').addEventListener('click', () => {
         if (isLoggedIn) _wpGoToApp();
-        else window.location.href = './login.html';
+        else window.location.href = './login.html?ref=app';
       });
 
       // Navbar: if logged in, replace Login with "Open App" and hide Sign Up
