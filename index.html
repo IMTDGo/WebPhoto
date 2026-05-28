@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WEBPHOTO — Transform Reality into Texture</title>
+  <title>Texify — Transform Reality into Texture</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Geist:wght@400;500;600&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;700&family=Geist:wght@400;500;600&family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
@@ -53,6 +53,8 @@
     .perspective-container { perspective: 1000px; }
     .preserve-3d { transform-style: preserve-3d; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
+    #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+    .zh { font-family: 'Noto Serif TC', serif !important; }
   </style>
   <script>
     // Detect if user is already logged in (used later by JS, no auto-redirect)
@@ -61,14 +63,34 @@
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
       window.location.href = isMobile ? './mobile.html' : './desktop.html';
     }
+    // 10-minute inactivity auto-logout
+    if (window._wpIsLoggedIn) {
+      var _wpIdleTimer;
+      function _wpResetIdle() {
+        clearTimeout(_wpIdleTimer);
+        _wpIdleTimer = setTimeout(function() {
+          ['wp_auth','wp_token','wp_sessionId','wp_user'].forEach(function(k) {
+            localStorage.removeItem(k); sessionStorage.removeItem(k);
+          });
+          window.location.reload();
+        }, 10 * 60 * 1000);
+      }
+      ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev) {
+        document.addEventListener(ev, _wpResetIdle, { passive: true });
+      });
+      _wpResetIdle();
+    }
   </script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
 
+  <!-- Animated Background Canvas -->
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
   <!-- Top Navigation -->
   <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
     <div class="font-headline-lg text-headline-lg tracking-tighter text-primary cursor-default select-none">
-      WEBPHOTO
+      TEXIFY
     </div>
     <div class="flex items-center gap-4">
       <!-- Logged-out state -->
@@ -80,16 +102,19 @@
       </a>
       <!-- Logged-in state (hidden by default, shown via JS) -->
       <div id="navUserGroup" class="hidden items-center gap-3">
-        <span class="material-symbols-outlined text-on-surface-variant" style="font-size:18px">account_circle</span>
-        <span id="navUsername" class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest"></span>
-        <span class="text-on-surface-variant/20" style="font-size:10px">|</span>
+        <!-- User identity pill -->
+        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
+          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
+        </div>
         <button id="btnNavOpenApp"
           class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-          Open App
+          Start Creating
         </button>
         <button id="btnNavLogout"
-          class="font-label-sm text-label-sm text-on-surface-variant hover:text-error border border-outline-variant/30 hover:border-error/40 px-4 py-2 rounded-full transition-all duration-250 ease-out active:scale-95 uppercase tracking-widest">
-          Logout
+          class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
+          登出
         </button>
       </div>
     </div>
@@ -179,10 +204,10 @@
 
   <!-- Footer -->
   <footer class="w-full py-10 bg-surface-container-lowest border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center px-margin-mobile md:px-margin-page gap-stack-gap z-10 relative">
-    <div class="font-headline-lg text-headline-lg text-primary select-none">WEBPHOTO</div>
+    <div class="font-headline-lg text-headline-lg text-primary select-none">TEXIFY</div>
 
     <div class="flex flex-col items-center gap-1">
-      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60">制作團隊</p>
+      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60 zh">制作團隊</p>
       <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
         class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
         <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
@@ -194,7 +219,7 @@
 
     <div class="flex gap-6">
       <a href="./login.html?ref=app"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
-      <a href="./signup.html" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
+      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
     </div>
   </footer>
 
@@ -218,19 +243,17 @@
         window.location.reload();
       }
 
-      // Navbar: show correct state based on login
+      // Navbar + footer: show correct state based on login
       if (isLoggedIn) {
-        // Hide logged-out elements
         document.getElementById('navSignUp').classList.add('hidden');
         document.getElementById('navLogin').classList.add('hidden');
         document.getElementById('heroSignUp')?.classList.add('hidden');
+        document.getElementById('footerSignUp')?.classList.add('hidden');
 
-        // Show logged-in elements
         const userGroup = document.getElementById('navUserGroup');
         userGroup.classList.remove('hidden');
         userGroup.classList.add('flex');
 
-        // Populate username
         try {
           const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
           if (raw) {
@@ -243,6 +266,77 @@
         document.getElementById('btnNavLogout').addEventListener('click', doLogout);
       }
 
+      // ── Animated background canvas ──
+      (function () {
+        const bgC = document.getElementById('bg-canvas');
+        if (!bgC || !bgC.getContext) return;
+        const ctx = bgC.getContext('2d');
+        let W = 0, H = 0, mx = 0.5, my = 0.5, tmx = 0.5, tmy = 0.5;
+
+        function resize() { W = bgC.width = window.innerWidth; H = bgC.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        resize();
+
+        document.addEventListener('mousemove', e => { tmx = e.clientX / W; tmy = e.clientY / H; });
+        document.addEventListener('touchmove', e => {
+          if (e.touches[0]) { tmx = e.touches[0].clientX / W; tmy = e.touches[0].clientY / H; }
+        }, { passive: true });
+
+        // Segmented orbital rings — inspired by helix cross-sections
+        const RINGS = [
+          { r: 0.13, segs: 4, gap: 0.38, spd:  0.00025, ph: 0.00, a: 0.065, w: 1.5 },
+          { r: 0.21, segs: 3, gap: 0.42, spd: -0.00018, ph: 1.05, a: 0.055, w: 1.0 },
+          { r: 0.30, segs: 5, gap: 0.35, spd:  0.00014, ph: 2.09, a: 0.045, w: 1.0 },
+          { r: 0.40, segs: 4, gap: 0.40, spd: -0.00010, ph: 0.52, a: 0.036, w: 1.0 },
+          { r: 0.51, segs: 6, gap: 0.44, spd:  0.00007, ph: 1.57, a: 0.027, w: 0.8 },
+          { r: 0.63, segs: 3, gap: 0.32, spd: -0.00005, ph: 3.14, a: 0.019, w: 0.8 },
+          { r: 0.77, segs: 5, gap: 0.46, spd:  0.00003, ph: 0.79, a: 0.013, w: 0.5 },
+          { r: 0.93, segs: 4, gap: 0.38, spd: -0.00002, ph: 2.36, a: 0.009, w: 0.5 },
+        ];
+
+        let t = 0;
+        function draw() {
+          t += 1;
+          mx += (tmx - mx) * 0.035;
+          my += (tmy - my) * 0.035;
+
+          ctx.clearRect(0, 0, W, H);
+
+          const D   = Math.min(W, H);
+          const cx  = W * 0.5  + (mx - 0.5) * W * 0.05;
+          const cy  = H * 0.48 + (my - 0.5) * H * 0.04;
+          const sy  = 0.55 + my * 0.22; // perspective: mouse-Y tilts the rings
+
+          RINGS.forEach(ring => {
+            const r   = ring.r * D;
+            const rot = t * ring.spd + ring.ph;
+            const seg = (Math.PI * 2) / ring.segs;
+            const arc = seg * (1 - ring.gap);
+
+            ctx.strokeStyle = `rgba(242,202,80,${ring.a})`;
+            ctx.lineWidth   = ring.w;
+            ctx.lineCap     = 'round';
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(1, sy);
+            ctx.beginPath();
+            for (let s = 0; s < ring.segs; s++) {
+              const sa = rot + s * seg;
+              ctx.moveTo(r * Math.cos(sa), r * Math.sin(sa));
+              ctx.arc(0, 0, r, sa, sa + arc);
+            }
+            ctx.stroke();
+            ctx.restore();
+          });
+
+          requestAnimationFrame(draw);
+        }
+
+        requestAnimationFrame(draw);
+      })();
+
+      // ── Material canvas mouse interaction ──
       const canvas = document.getElementById('material-canvas');
       const light  = document.getElementById('dynamic-light');
 
@@ -264,7 +358,7 @@
         });
       }
 
-      // Navbar scroll effect
+      // ── Navbar scroll effect ──
       const nav = document.getElementById('global-nav');
       window.addEventListener('scroll', () => {
         if (window.scrollY > 20) {
