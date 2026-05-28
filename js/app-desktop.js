@@ -97,11 +97,15 @@ async function fileToImage(file) {
 
 // ── Load image ────────────────────────────────────────────────────────────────
 async function loadImage(file) {
+  const fsUploadEl = document.getElementById('fsUpload');
+  fsUploadEl?.classList.add('hidden');
+
   let img;
   try {
     img = await fileToImage(file);
   } catch {
     showToast('Failed to load image \u2014 format may not be supported', 'error');
+    fsUploadEl?.classList.remove('hidden');
     return;
   }
 
@@ -170,7 +174,7 @@ dropZone.addEventListener('drop', (e) => {
   dropZone.classList.remove('drag-over');
   const file = e.dataTransfer.files[0];
   if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
-  else showToast('\u8acb\u62d6\u653e\u5716\u7247\u6a94\u6848', 'error');
+  else showToast('Please drop an image file', 'error');
 });
 
 // ── Seamless controls ──────────────────────────────────────────────────────────────────
@@ -259,7 +263,7 @@ btnUpload.addEventListener('click', async () => {
     }
     previewModal.showModal();
   } catch (err) {
-    showToast('\u901a\u9053\u751f\u6210\u5931\u6557: ' + err.message, 'error');
+    showToast('Channel generation failed: ' + err.message, 'error');
   } finally {
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;
@@ -282,7 +286,21 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
 
   try {
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
-    showToast('Upload successful \u2014 6 channels saved', 'success');
+
+    // ── Record upload for auto-cleanup ────────────────────────────────────────
+    const _publicIds = Object.values(result.maps).map(i => i.public_id).filter(Boolean);
+    if (_publicIds.length) {
+      const _raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+      const _user = _raw ? (() => { try { return JSON.parse(_raw); } catch { return null; } })() : null;
+      const _api  = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? `${location.protocol}//${location.host}`
+        : 'https://webphoto-lidl.onrender.com';
+      fetch(`${_api}/record-upload`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ username: _user?.id || null, folderName: name, publicIds: _publicIds })
+      }).catch(e => console.warn('[record-upload]', e.message));
+    }
 
     // ── Send material links via Email ────────────────────────────────────────────────
     if (chkSendEmail?.checked) {
@@ -308,6 +326,9 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
     }
 
     generatedMaps = null;
+
+    // ── Show upload success overlay ──────────────────────────────────
+    document.getElementById('uploadSuccessOverlay')?.classList.remove('hidden');
   } catch (err) {
     showToast('Upload failed: ' + err.message, 'error');
   } finally {
@@ -366,3 +387,40 @@ window.addEventListener('keydown', (e) => {
 
 // ── Resize ────────────────────────────────────────────────────────────────────
 window.addEventListener('resize', () => cropEditor?.resize());
+// ── Full-screen drop zone ──────────────────────────────────────────────────
+const fsDropZone = document.getElementById('fsDropZone');
+if (fsDropZone) {
+  fsDropZone.addEventListener('dragover',  (e) => { e.preventDefault(); fsDropZone.classList.add('drag-over'); });
+  fsDropZone.addEventListener('dragleave', ()  => fsDropZone.classList.remove('drag-over'));
+  fsDropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fsDropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith('image/') || /\.tiff?$/i.test(file?.name)) loadImage(file);
+    else showToast('Please drop an image file', 'error');
+  });
+}
+
+// ── Create Another ───────────────────────────────────────────────────────────
+document.getElementById('btnCreateAnother')?.addEventListener('click', () => {
+  document.getElementById('uploadSuccessOverlay')?.classList.add('hidden');
+  document.getElementById('fsUpload')?.classList.remove('hidden');
+  uploadNameInput.value = '';
+  imageInfo.classList.add('hidden');
+  cropPanel.classList.add('hidden');
+  seamlessPanel.classList.add('hidden');
+  rightCropPanel.style.display = 'none';
+  previewSection.style.display = 'none';
+  uploadPanel.classList.add('hidden');
+  emptyState.classList.remove('hidden');
+  originalImg.classList.add('hidden');
+  originalImg.src = '';
+  if (_lastObjUrl) { URL.revokeObjectURL(_lastObjUrl); _lastObjUrl = null; }
+  // Clear canvas state
+  cropCanvas.width  = cropCanvas.width;
+  previewCanvas.width = previewCanvas.width;
+  cropEditor    = null;
+  preview       = null;
+  currentCrop   = null;
+  generatedMaps = null;
+});

@@ -96,6 +96,15 @@ const otpSchema = new mongoose.Schema({
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
 const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
 
+// ─── Upload record (for Cloudinary auto-cleanup) ─────────────────────────────
+const uploadRecordSchema = new mongoose.Schema({
+  username:   { type: String },
+  folderName: { type: String },
+  publicIds:  [{ type: String }],
+  uploadedAt: { type: Date, default: Date.now, index: true }
+});
+const UploadRecord = mongoose.models.UploadRecord || mongoose.model('UploadRecord', uploadRecordSchema);
+
 // ─── Dev accounts (local testing without MongoDB) ────────────────────────────
 const DEV_ACCOUNTS_FILE = path.join(__dirname, 'dev-accounts.json');
 let devAccounts = {};
@@ -255,6 +264,74 @@ async function sendOtpEmail(to, otp, custom = null) {
   }
 
   throw new Error('NO_MAIL_SERVICE');
+}
+
+// ─── Cloudinary: destroy asset with CDN invalidation ───────────────────────
+async function cloudinaryDestroy(publicId) {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || 'dnxqob2cu';
+  const apiKey    = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  if (!apiKey || !apiSecret) throw new Error('Cloudinary API keys not configured');
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const toSign    = `invalidate=true&public_id=${publicId}&timestamp=${timestamp}${apiSecret}`;
+  const signature = crypto.createHash('sha1').update(toSign).digest('hex');
+
+  const body = new URLSearchParams({
+    public_id:  publicId,
+    invalidate: 'true',
+    timestamp:  String(timestamp),
+    api_key:    apiKey,
+    signature
+  });
+
+  const r = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:    body.toString()
+  });
+  if (!r.ok) throw new Error(`Cloudinary destroy HTTP ${r.status}`);
+  const data = await r.json();
+  // 'ok' = deleted, 'not found' = already gone — both acceptable
+  if (data.result !== 'ok' && data.result !== 'not found') {
+    throw new Error(`Cloudinary destroy result: ${data.result}`);
+  }
+  return data.result;
+}
+
+// ─── Scheduled Cloudinary cleanup (every 24 h, delete assets > 3 days old) ───
+async function runCloudinaryCleanup() {
+  if (!process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) return;
+  if (mongoose.connection.readyState !== 1) return;
+
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  let records;
+  try {
+    records = await UploadRecord.find({ uploadedAt: { $lt: cutoff } }).lean();
+  } catch (e) {
+    console.error('[cleanup] DB query failed:', e.message);
+    return;
+  }
+
+  if (!records.length) {
+    console.log('[cleanup] No expired uploads');
+    return;
+  }
+
+  let deleted = 0;
+  for (const record of records) {
+    for (const publicId of (record.publicIds || [])) {
+      try {
+        const res = await cloudinaryDestroy(publicId);
+        console.log(`[cleanup] ${publicId} → ${res}`);
+        deleted++;
+      } catch (err) {
+        console.error(`[cleanup] Failed ${publicId}:`, err.message);
+      }
+    }
+    await UploadRecord.deleteOne({ _id: record._id }).catch(() => {});
+  }
+  console.log(`[cleanup] Removed ${deleted} asset(s) across ${records.length} upload record(s)`);
 }
 
 // ─── Request handler ──────────────────────────────────────────────────────────
@@ -583,6 +660,31 @@ ${zipButton}
     return;
   }
 
+  // ── POST /record-upload ──────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/record-upload') {
+    readJsonBody(req).then(async body => {
+      const username   = String(body.username   || '').trim() || null;
+      const folderName = String(body.folderName || '').trim() || null;
+      const publicIds  = Array.isArray(body.publicIds) ? body.publicIds.map(String) : [];
+      if (!publicIds.length) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'No publicIds provided' }));
+        return;
+      }
+      if (mongoose.connection.readyState === 1) {
+        await UploadRecord.create({ username, folderName, publicIds, uploadedAt: new Date() });
+        console.log(`[record-upload] Saved ${publicIds.length} id(s) for "${folderName || 'unnamed'}" (${username || 'anon'})`);
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    }).catch(err => {
+      console.error('[record-upload]', err.message);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: err.message }));
+    });
+    return;
+  }
+
   // POST /upload
   if (req.method === 'POST' && rawUrl === '/upload') {
     upload(req, res, (err) => {
@@ -626,6 +728,10 @@ server.listen(PORT, () => {
   console.log(`Upload directory: ${UPLOAD_DIR}\n`);
   checkBrevoKeepalive();
 });
+
+// Run Cloudinary cleanup 30 s after startup (allow DB to connect), then every 24 h
+setTimeout(runCloudinaryCleanup, 30_000);
+setInterval(runCloudinaryCleanup, 24 * 60 * 60 * 1000).unref();
 
 // ─── Brevo API key keepalive ──────────────────────────────────────────────────
 // Brevo API key keepalive: send a heartbeat email if last send was >89 days ago
