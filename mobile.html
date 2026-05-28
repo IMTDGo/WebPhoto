@@ -370,18 +370,21 @@
         <p style="font-size:11px;color:#52525B;margin-top:4px">All 6 channels will be uploaded to the same folder</p>
       </div>
 
-      <label id="sendEmailLabel" class="hidden" style="display:none;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid #27272A;background:#18181B">
+      <label id="sendEmailLabel" style="display:none;align-items:center;gap:12px;cursor:pointer;padding:10px 12px;border-radius:8px;border:1px solid #27272A;background:#18181B">
         <div style="position:relative;flex-shrink:0">
           <input type="checkbox" id="chkSendEmail" class="sr-only peer" />
           <div style="width:20px;height:20px;border-radius:50%;border:1.5px solid #3F3F46;background:#27272A;display:flex;align-items:center;justify-content:center">
             <span class="material-symbols-outlined" style="font-size:12px;color:#E8C854;font-variation-settings:'FILL' 1;opacity:0;transition:opacity .2s" id="emailCheckIcon">check</span>
           </div>
         </div>
-        <span style="font-size:13px;color:#A1A1AA;display:flex;align-items:center;gap:6px">
+        <span style="font-size:13px;color:#A1A1AA;display:flex;align-items:center;gap:6px;flex:1">
           <span class="material-symbols-outlined" style="font-size:15px;color:#52525B">mail</span>
-          Email material links when upload is complete
+          Email material links when done
         </span>
       </label>
+      <div class="email-input-wrap" style="margin-top:6px">
+        <input type="email" id="emailOverrideInput" placeholder="Enter email address" style="width:100%;padding:9px 12px;background:#27272A;border:none;border-bottom:1.5px solid #3F3F46;font-size:13px;color:#F4F4F5;outline:none;transition:border-color .2s" onfocus="this.style.borderBottomColor='#E8C854'" onblur="this.style.borderBottomColor='#3F3F46'" />
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:20px">

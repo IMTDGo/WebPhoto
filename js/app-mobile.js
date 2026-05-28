@@ -46,13 +46,18 @@ const enableSeamless   = document.getElementById('enableSeamless');
 const seamBlendWidth   = document.getElementById('seamBlendWidth');
 const seamBlendWidthVal = document.getElementById('seamBlendWidthVal');
 
-// ── State ─────────────────────────────────────────────────────────────────────
-// Show email checkbox only if user has email stored
+// ── Always show email section ──────────────────────────────────────────────
 (function () {
   try {
     const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
     const user = raw ? JSON.parse(raw) : null;
-    if (user?.email) document.getElementById('sendEmailLabel')?.classList.remove('hidden');
+    const label = document.getElementById('sendEmailLabel');
+    const emailInput = document.getElementById('emailOverrideInput');
+    if (label) { label.classList.remove('hidden'); label.style.display = 'flex'; }
+    if (emailInput && user?.email) {
+      emailInput.value = user.email;
+      emailInput.closest('.email-input-wrap')?.classList.add('hidden');
+    }
   } catch {}
 })();
 let cropEditor      = null;
@@ -1012,7 +1017,9 @@ btnConfirmUpload.addEventListener('click', async () => {
       try {
         const raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
         const user = raw ? JSON.parse(raw) : null;
-        if (user?.email) {
+        const emailOverride = document.getElementById('emailOverrideInput')?.value?.trim();
+        const toEmail = user?.email || emailOverride;
+        if (toEmail) {
           const maps = {};
           for (const [ch, info] of Object.entries(result.maps)) maps[ch] = info.url;
           const apiBase = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
@@ -1021,9 +1028,11 @@ btnConfirmUpload.addEventListener('click', async () => {
           await fetch(`${apiBase}/send-upload-report`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: user.email, name, maps })
+            body:    JSON.stringify({ email: toEmail, name, maps })
           });
-          showToast('Material links sent to ' + user.email, 'info');
+          showToast('Material links sent to ' + toEmail, 'info');
+        } else {
+          showToast('No email address — links not sent', 'warning');
         }
       } catch (mailErr) {
         showToast('Failed to send email: ' + mailErr.message, 'warning');
