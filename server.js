@@ -37,6 +37,16 @@ setInterval(() => {
   for (const [id, e] of zipStore) { if (e.createdAt < cutoff) zipStore.delete(id); }
 }, 60 * 60 * 1000).unref();
 
+// ─── Active session store (TTL 10 min, server-enforced) ──────────────────────
+const activeSessions = new Map(); // sessionId → { username, lastActivity }
+const SESSION_TTL_MS  = 10 * 60 * 1000;
+setInterval(() => {
+  const cutoff = Date.now() - SESSION_TTL_MS;
+  for (const [id, s] of activeSessions) {
+    if (s.lastActivity < cutoff) activeSessions.delete(id);
+  }
+}, 60 * 1000).unref();
+
 const PORT       = process.env.PORT || 3000;
 const UPLOAD_DIR = path.join(__dirname, 'upload');
 const LOGIN_LOG  = path.join(__dirname, 'login_log.txt');
@@ -503,16 +513,62 @@ const server = http.createServer((req, res) => {
         appendLoginLog(username, success);
         console.log(`[login] user=${username} → ${success ? 'SUCCESS' : 'FAILED'}`);
 
+        let sessionId = null;
+        if (success) {
+          sessionId = crypto.randomUUID();
+          activeSessions.set(sessionId, { username, lastActivity: Date.now() });
+        }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
           success
-            ? { ok: true,  message: 'Login successful. Welcome back!', username, email: userEmail }
+            ? { ok: true,  message: 'Login successful. Welcome back!', username, email: userEmail, sessionId }
             : { ok: false, message: 'Incorrect username or password.' }
         ));
       })
       .catch(err => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
+    return;
+  }
+
+  // ── POST /session/heartbeat ───────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/session/heartbeat') {
+    readJsonBody(req)
+      .then(body => {
+        const sessionId = String(body.sessionId || '').trim();
+        if (!sessionId || !activeSessions.has(sessionId)) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: 'Session expired or not found' }));
+          return;
+        }
+        activeSessions.get(sessionId).lastActivity = Date.now();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      })
+      .catch(() => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false }));
+      });
+    return;
+  }
+
+  // ── POST /logout ─────────────────────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/logout') {
+    readJsonBody(req)
+      .then(body => {
+        const sessionId = String(body.sessionId || '').trim();
+        if (sessionId) {
+          activeSessions.delete(sessionId);
+          console.log(`[logout] session ${sessionId} invalidated`);
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      })
+      .catch(() => {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false }));
       });
     return;
   }

@@ -104,11 +104,13 @@ export class CropEditor {
     const parent = this.canvas.parentElement;
     const W = parent.clientWidth  || 400;
     const H = parent.clientHeight || 400;
-    const scale = Math.min(W / this.img.width, H / this.img.height, 1);
-    this.canvas.width  = Math.round(this.img.width  * scale);
-    this.canvas.height = Math.round(this.img.height * scale);
-    // Store scale for coord transforms
-    this._scaleToCanvas = scale;
+    // Canvas fills the entire container
+    this.canvas.width  = W;
+    this.canvas.height = H;
+    // Image is letterboxed; store scale and offset for coord transforms
+    this._scaleToCanvas = Math.min(W / this.img.width, H / this.img.height);
+    this._imgOffX = Math.round((W - this.img.width  * this._scaleToCanvas) / 2);
+    this._imgOffY = Math.round((H - this.img.height * this._scaleToCanvas) / 2);
   }
 
   /** Trigger re-layout (call on window resize). */
@@ -140,21 +142,26 @@ export class CropEditor {
     const { canvas, ctx, img } = this;
     const cw = canvas.width, ch = canvas.height;
     const s  = this._scaleToCanvas;
+    const ox = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const imgW = Math.round(img.width  * s);
+    const imgH = Math.round(img.height * s);
 
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(img, ox, oy, imgW, imgH);
 
-    // Dim area outside crop
-    const cx = Math.round(this.cropX * s);
-    const cy = Math.round(this.cropY * s);
+    // Dim area outside crop (relative to letterboxed image position)
+    const cx  = Math.round(this.cropX * s) + ox;
+    const cy  = Math.round(this.cropY * s) + oy;
     const cw2 = Math.round(this.cropW * s);
     const ch2 = Math.round(this.cropH * s);
 
     ctx.fillStyle = 'rgba(0,0,0,0.52)';
-    ctx.fillRect(0,        0,        cw,       cy);               // top
-    ctx.fillRect(0,        cy + ch2, cw,       ch - cy - ch2);    // bottom
-    ctx.fillRect(0,        cy,       cx,       ch2);              // left
-    ctx.fillRect(cx + cw2, cy,       cw - cx - cw2, ch2);        // right
+    ctx.fillRect(ox,        oy,           imgW,                   cy - oy);            // top strip
+    ctx.fillRect(ox,        cy + ch2,     imgW,                   oy + imgH - cy - ch2); // bottom strip
+    ctx.fillRect(ox,        cy,           cx - ox,                ch2);                // left
+    ctx.fillRect(cx + cw2,  cy,           ox + imgW - cx - cw2,   ch2);               // right
 
     // Crop border
     ctx.strokeStyle = '#ffffff';
@@ -192,9 +199,13 @@ export class CropEditor {
   _clientToImage(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
     const s    = this._scaleToCanvas;
+    const ox   = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy   = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const canvasX = (clientX - rect.left)  * (this.canvas.width  / rect.width);
+    const canvasY = (clientY - rect.top)   * (this.canvas.height / rect.height);
     return {
-      x: (clientX - rect.left)  / (rect.width  / this.canvas.width)  / s,
-      y: (clientY - rect.top)   / (rect.height / this.canvas.height) / s,
+      x: (canvasX - ox) / s,
+      y: (canvasY - oy) / s,
     };
   }
 
@@ -217,8 +228,10 @@ export class CropEditor {
   _hitCorner(clientX, clientY) {
     if (!this.img) return null;
     const s   = this._scaleToCanvas;
-    const cx  = Math.round(this.cropX * s);
-    const cy  = Math.round(this.cropY * s);
+    const ox  = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy  = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const cx  = Math.round(this.cropX * s) + ox;
+    const cy  = Math.round(this.cropY * s) + oy;
     const cw2 = Math.round(this.cropW * s);
     const ch2 = Math.round(this.cropH * s);
     const dp  = this._clientToDisplay(clientX, clientY);
