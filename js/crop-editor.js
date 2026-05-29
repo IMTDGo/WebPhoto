@@ -142,9 +142,14 @@ export class CropEditor {
     const { canvas, ctx, img } = this;
     const cw = canvas.width, ch = canvas.height;
     const s  = this._scaleToCanvas;
+    const ox = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const imgW = Math.round(img.width  * s);
+    const imgH = Math.round(img.height * s);
 
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(img, ox, oy, imgW, imgH);
 
     // Dim area outside crop (relative to letterboxed image position)
     const cx  = Math.round(this.cropX * s) + ox;
