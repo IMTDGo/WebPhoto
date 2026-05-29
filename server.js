@@ -274,6 +274,7 @@ async function sendOtpEmail(to, otp, custom = null) {
       const errText = await r.text();
       throw new Error(`Brevo ${r.status}: ${errText}`);
     }
+    writeLastSystemUse();
     return;
   }
 
@@ -571,6 +572,7 @@ const server = http.createServer((req, res) => {
         if (success) {
           sessionId = crypto.randomUUID();
           activeSessions.set(sessionId, { username, lastActivity: Date.now() });
+          writeLastSystemUse();
         }
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -598,6 +600,7 @@ const server = http.createServer((req, res) => {
           return;
         }
         activeSessions.get(sessionId).lastActivity = Date.now();
+        writeLastSystemUse();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       })
@@ -787,6 +790,7 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
           uploadedAt: new Date().toISOString(),
         });
 
+        writeLastSystemUse();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, ...uploaded }));
       } catch (uploadErr) {
@@ -928,6 +932,7 @@ ${zipButton}
 
         await sendOtpEmail(email, null, { subject: `[SNAPBRIFY] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
+        writeLastSystemUse();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, zipUrl, zipKey }));
       })
@@ -968,37 +973,34 @@ ${zipButton}
       res.end(JSON.stringify({ ok: false, message: 'username required' }));
       return;
     }
-    try {
-      let records = [];
-      if (mongoose.connection.readyState === 1) {
-        records = await UploadRecord
-          .find({ username })
-          .sort({ uploadedAt: -1 })
-          .lean();
-      } else {
-        records = memUploadRecords
-          .filter(r => r.username === username)
-          .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
-      }
-      // Attach public bucket URL so frontend can build direct links
-      const bucketUrl = (process.env.R2_BUCKET_URL || '').replace(/\/$/, '');
-      const projects  = records.map(r => ({
-        folderName: r.folderName,
-        publicIds:  r.publicIds || [],
-        uploadedAt: r.uploadedAt,
-        bucketUrl,
-        // Derive a convenient thumbUrl (first basecolor key found)
-        thumbUrl: (() => {
-          const k = (r.publicIds || []).find(id => id.includes('_basecolor'));
-          return k && bucketUrl ? `${bucketUrl}/${k}` : null;
-        })(),
-      }));
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, projects }));
-    } catch (err) {
-      res.writeHead(500, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ ok: false, message: err.message }));
-    }
+    const recordsPromise = (mongoose.connection.readyState === 1)
+      ? UploadRecord.find({ username }).sort({ uploadedAt: -1 }).lean()
+      : Promise.resolve(
+          memUploadRecords
+            .filter(r => r.username === username)
+            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
+        );
+
+    recordsPromise
+      .then(records => {
+        const bucketUrl = (process.env.R2_BUCKET_URL || '').replace(/\/$/, '');
+        const projects  = records.map(r => ({
+          folderName: r.folderName,
+          publicIds:  r.publicIds || [],
+          uploadedAt: r.uploadedAt,
+          bucketUrl,
+          thumbUrl: (() => {
+            const k = (r.publicIds || []).find(id => id.includes('_basecolor'));
+            return k && bucketUrl ? `${bucketUrl}/${k}` : null;
+          })(),
+        }));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, projects }));
+      })
+      .catch(err => {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: err.message }));
+      });
     return;
   }
 
@@ -1087,10 +1089,14 @@ setTimeout(runR2Cleanup, 30_000);
 setInterval(runR2Cleanup, 24 * 60 * 60 * 1000).unref();
 
 // ─── Brevo API key keepalive ──────────────────────────────────────────────────
-// Brevo API key keepalive: send a heartbeat email if last send was >89 days ago
-// Also re-check every 24 h in case the server runs continuously
+// Keepalive strategy:
+// 1) Track last system activity in a file.
+// 2) Assume API expires after BREVO_API_EXPIRY_DAYS (default 90).
+// 3) Send keepalive at (expiryDays - 1) since last activity.
 const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
-const KEEPALIVE_DAYS = 89;
+const LAST_USE_FILE  = path.join(__dirname, '.system-last-use');
+const BREVO_API_EXPIRY_DAYS = Math.max(2, Number(process.env.BREVO_API_EXPIRY_DAYS || 90));
+const KEEPALIVE_DAYS = BREVO_API_EXPIRY_DAYS - 1;
 const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
 
 function readLastSent() {
@@ -1106,10 +1112,23 @@ function writeLastSent() {
   try { fs.writeFileSync(KEEPALIVE_FILE, new Date().toISOString()); } catch {}
 }
 
+function readLastSystemUse() {
+  try {
+    if (fs.existsSync(LAST_USE_FILE)) {
+      return new Date(fs.readFileSync(LAST_USE_FILE, 'utf8').trim());
+    }
+  } catch {}
+  return null;
+}
+
+function writeLastSystemUse() {
+  try { fs.writeFileSync(LAST_USE_FILE, new Date().toISOString()); } catch {}
+}
+
 async function checkBrevoKeepalive() {
   if (!process.env.BREVO_API_KEY || !KEEPALIVE_TO) return;
 
-  const last     = readLastSent();
+  const last     = readLastSystemUse() || readLastSent();
   const daysSince = last ? (Date.now() - last.getTime()) / 86400000 : Infinity;
 
   if (daysSince >= KEEPALIVE_DAYS) {
@@ -1126,6 +1145,7 @@ async function checkBrevoKeepalive() {
       });
       if (r.ok) {
         writeLastSent();
+        writeLastSystemUse();
         console.log(`[keepalive] Brevo keepalive email sent to ${KEEPALIVE_TO}`);
       } else {
         console.warn('[keepalive] Failed:', await r.text());
@@ -1134,7 +1154,7 @@ async function checkBrevoKeepalive() {
       console.warn('[keepalive] Error:', e.message);
     }
   } else {
-    console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
+    console.log(`[keepalive] Last system use: ${Math.floor(daysSince)}d ago — next keepalive at ${KEEPALIVE_DAYS}d`);
   }
 
   // Re-check every 24 hours

@@ -112,7 +112,7 @@
   <!-- Navigation -->
   <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300">
     <a href="./" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">SNAPBRIFY</a>
-    <div class="hidden md:flex items-center gap-8">
+    <div class="flex items-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap max-w-[52vw] md:max-w-none">
       <a href="./projects.html"   class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
       <a href="./contact.html"    class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
       <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
@@ -128,6 +128,7 @@
         <button id="btnNavOpenApp" class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Start Creating</button>
         <button id="btnNavLogout"  class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">Log Out</button>
       </div>
+      <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Sign Up</a>
       <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Login</a>
     </div>
   </nav>
@@ -156,8 +157,8 @@
         <div class="p-8 md:p-12">
 
           <!-- Scrollable text area -->
-          <div class="relative bg-surface-container-lowest/50 rounded-lg border border-outline-variant/10 mb-10 h-[520px]">
-            <div class="custom-scrollbar overflow-y-auto h-full p-6 md:p-8 space-y-10">
+          <div class="relative bg-surface-container-lowest/50 rounded-lg border border-outline-variant/10 mb-10">
+            <div class="p-6 md:p-8 space-y-10">
 
               <!-- 01 -->
               <section>
@@ -276,8 +277,6 @@
               </section>
 
             </div>
-            <!-- Fade overlay at bottom of scroll area -->
-            <div class="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-surface-container-lowest/90 to-transparent pointer-events-none rounded-b-lg"></div>
           </div>
 
           <!-- Footer action row -->
@@ -290,7 +289,7 @@
               <a href="./contact.html" class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors duration-250">
                 Send Feedback
               </a>
-              <a href="./" class="group relative px-8 py-3 bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-[0.15em] rounded overflow-hidden transition-all duration-300 hover:bg-primary-container active:scale-95">
+              <a href="./?from=beta" class="group relative px-8 py-3 bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-[0.15em] rounded overflow-hidden transition-all duration-300 hover:bg-primary-container active:scale-95">
                 Back to Home
               </a>
             </div>
@@ -323,10 +322,12 @@
     const _raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
     const _user = (() => { try { return _raw ? JSON.parse(_raw) : null; } catch { return null; } })();
     (function () {
+      const navSignUp   = document.getElementById('navSignUp');
       const navLogin     = document.getElementById('navLogin');
       const navUserGroup = document.getElementById('navUserGroup');
       if (_user) {
         document.getElementById('navUsername').textContent = _user.name || _user.id;
+        if (navSignUp) navSignUp.style.display = 'none';
         navLogin.style.display = 'none';
         navUserGroup.classList.remove('hidden');
         navUserGroup.classList.add('flex');

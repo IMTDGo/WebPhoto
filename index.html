@@ -79,6 +79,18 @@
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
       window.location.href = isMobile ? './mobile.html' : './desktop.html';
     }
+
+    // Some mobile browsers may restore cached pages with fixed headers not repainted.
+    // Force nav visibility and a tiny repaint on every pageshow.
+    window.addEventListener('pageshow', function () {
+      const nav = document.getElementById('global-nav');
+      if (!nav) return;
+      nav.style.display = 'flex';
+      nav.style.visibility = 'visible';
+      nav.style.opacity = '1';
+      nav.style.transform = 'translateZ(0)';
+      void nav.offsetHeight;
+    });
   </script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
@@ -87,36 +99,38 @@
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
-    <a href="./" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">
-      SNAPBRIFY
-    </a>
-    <!-- Centre navigation links -->
-    <div class="hidden md:flex items-center gap-8">
-      <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
-      <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
-      <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
-      <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
-    </div>
-    <div class="flex items-center gap-4">
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
+    <div class="h-14 md:h-20 flex items-center gap-3 md:gap-4">
+      <a href="./" class="font-headline-lg text-[26px] md:text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none shrink-0">
+        SNAPBRIFY
+      </a>
+      <!-- Centre navigation links (desktop) -->
+      <div class="hidden md:flex items-center gap-8 flex-1 justify-center">
+        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
+        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
+        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
+        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
+      </div>
+      <div class="flex items-center gap-2 md:gap-4 ml-auto">
       <!-- Logged-out state -->
       <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
         Sign Up
       </a>
-      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-[11px] md:text-label-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
         Login
       </a>
       <!-- Logged-in state (hidden by default, shown via JS) -->
-      <div id="navUserGroup" class="hidden items-center gap-3">
+      <div id="navUserGroup" class="hidden items-center gap-2 md:gap-3">
         <!-- User identity pill -->
-        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
+        <div class="flex items-center gap-1.5 md:gap-2 bg-primary/10 border border-primary/25 rounded-full px-2.5 md:px-3 py-1.5">
           <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
           <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
+          <span id="navUsername" class="font-label-sm text-[10px] md:text-label-sm text-primary uppercase tracking-widest max-w-[88px] md:max-w-[120px] truncate"></span>
         </div>
         <button id="btnNavOpenApp"
-          class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-          Start Creating
+          class="bg-primary text-on-primary font-label-sm text-[10px] md:text-label-sm px-3 md:px-5 py-1.5 md:py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+          <span class="md:hidden">Start</span>
+          <span class="hidden md:inline">Start Creating</span>
         </button>
         <button id="btnNavLogout"
           class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
@@ -124,10 +138,21 @@
         </button>
       </div>
     </div>
+    </div>
+
+    <!-- Navigation links (mobile) -->
+    <div class="md:hidden pb-2">
+      <div class="flex items-center gap-5 overflow-x-auto whitespace-nowrap">
+        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
+        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
+        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
+        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
+      </div>
+    </div>
   </nav>
 
   <!-- Main Content -->
-  <main class="flex-grow pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
+  <main class="flex-grow pt-40 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
 
     <!-- Ambient Background Glow -->
     <div class="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
