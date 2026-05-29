@@ -219,8 +219,8 @@ const memUsers = new Map(); // username → { username, password, email }
 // ─── Send OTP email ───────────────────────────────────────────────────────────
 // Priority order: Brevo → Resend → SendGrid → Gmail SMTP (local fallback)
 async function sendOtpEmail(to, otp, custom = null) {
-  const subject = custom?.subject || 'Texify — Verification Code';
-  const html    = custom?.html    || `<p>Your Texify registration code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. Do not share it with anyone.</p>`;
+  const subject = custom?.subject || 'SNAPBRIFY — Verification Code';
+  const html    = custom?.html    || `<p>Your SNAPBRIFY registration code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. Do not share it with anyone.</p>`;
   const text    = custom?.text    || `Your verification code is: ${otp}. Valid for 10 minutes.`;
 
   // ── Brevo HTTPS ───────────────────────────────────────────────────────────
@@ -630,7 +630,7 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
         }
         console.log(`[register] User created: "${record.username}" (${email}) (${dbReady ? 'DB' : 'memory'})`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, message: 'Registration successful! Welcome to Texify.' + (dbReady ? '' : ' (Test mode — data cleared on restart)') }));
+        res.end(JSON.stringify({ ok: true, message: 'Registration successful! Welcome to SNAPBRIFY.' + (dbReady ? '' : ' (Test mode — data cleared on restart)') }));
       })
       .catch(err => {
         console.error('[register/verify]', err.message);
@@ -726,17 +726,17 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
 <h2 style="margin:0 0 4px">📦 ${name}</h2>
-<p style="color:#64748b;margin:0 0 16px;font-size:13px">Texify — Texture upload complete</p>
+<p style="color:#64748b;margin:0 0 16px;font-size:13px">SNAPBRIFY — Texture upload complete</p>
 ${zipButton}
 <table style="width:100%;border-collapse:collapse;background:#1c2333;border-radius:8px;overflow:hidden;margin-top:16px">
 <thead><tr style="background:#252d3d"><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Channel</th><th style="padding:8px 12px;text-align:left;color:#64748b;font-size:12px">Download</th></tr></thead>
 <tbody>${rows}</tbody></table>
-<p style="color:#374151;font-size:11px;margin-top:16px">This message was sent automatically by Texify.</p></div>`;
+<p style="color:#374151;font-size:11px;margin-top:16px">This message was sent automatically by SNAPBRIFY.</p></div>`;
 
         const text = (zipUrl ? `Download all as ZIP: ${zipUrl}\n\n` : '') +
           Object.entries(maps).map(([ch, url]) => `${name}_${ch}: ${url}`).join('\n');
 
-        await sendOtpEmail(email, null, { subject: `[Texify] ${name} upload complete`, html, text });
+        await sendOtpEmail(email, null, { subject: `[SNAPBRIFY] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, zipUrl }));
@@ -887,8 +887,8 @@ async function checkBrevoKeepalive() {
         body: JSON.stringify({
           sender:      { name: 'WebPhoto', email: process.env.BREVO_FROM || process.env.GMAIL_USER },
           to:          [{ email: KEEPALIVE_TO }],
-          subject:     '[Texify] System keepalive',
-          textContent: `This message was sent automatically by Texify to keep the Brevo API key active.\nTimestamp: ${new Date().toISOString()}`
+          subject:     '[SNAPBRIFY] System keepalive',
+          textContent: `This message was sent automatically by SNAPBRIFY to keep the Brevo API key active.\nTimestamp: ${new Date().toISOString()}`
         })
       });
       if (r.ok) {

@@ -419,12 +419,13 @@ function _applyWbToCanvas(ctx, w, h) {
 
 async function startCamera() {
   stopCamera();
+  // Use ideal-only constraints (no min) to avoid OverconstrainedError on mid-range devices
   const constraints = {
     audio: false,
     video: {
       facingMode: { ideal: 'environment' },
-      width: { min: 1920, ideal: 3840, max: 4096 },
-      height: { min: 1080, ideal: 2160, max: 2160 },
+      width:  { ideal: 3840 },
+      height: { ideal: 2160 },
     },
   };
 
@@ -460,21 +461,24 @@ function stopCamera() {
 }
 
 async function enterCameraStep() {
+  // Show camera section immediately so user sees visual feedback (black bg)
+  showStep('camera');
+  const errOverlay = document.getElementById('cameraError');
+  if (errOverlay) errOverlay.classList.add('hidden');
+
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('Camera not supported on this device, using system camera', 'warning');
-    fileInputCapture.click();
+    showToast('Camera not supported on this device', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
     return;
   }
 
   try {
-    showStep('camera');
     await startCamera();
     // Draw crop guide after layout is stable
     requestAnimationFrame(() => requestAnimationFrame(drawCropGuide));
   } catch (err) {
-    showToast('Unable to start camera, using system camera', 'warning');
-    showStep('entry');
-    fileInputCapture.click();
+    showToast('Unable to start camera', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
   }
 }
 
@@ -857,6 +861,11 @@ document.getElementById('btnHDRToggle')?.addEventListener('click', () => {
 
 btnCameraBack.addEventListener('click', () => {
   _resetWbState();
+  stopCamera();
+  showStep('entry');
+});
+
+document.getElementById('btnCameraErrorBack')?.addEventListener('click', () => {
   stopCamera();
   showStep('entry');
 });
