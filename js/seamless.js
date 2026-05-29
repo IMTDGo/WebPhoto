@@ -162,7 +162,9 @@ function _prepSolveCanvas(srcCanvas) {
   return c;
 }
 
-export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+export function applySeamless(srcCanvas, outW, outH, params = DEFAULT_PARAMS) {
+  // Backward-compat: if outH is an object, it was passed as params
+  if (typeof outH === 'object' || outH === undefined) { if (typeof outH === 'object') params = outH; outH = outW; }
   const { seamBlendWidth, iterations } = params;
 
   const solve  = _prepSolveCanvas(srcCanvas);
@@ -178,8 +180,8 @@ export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
   mid.getContext('2d').putImageData(imgData, 0, 0);
 
   const out = document.createElement('canvas');
-  out.width = outSize; out.height = outSize;
-  out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
+  out.width = outW; out.height = outH;
+  out.getContext('2d').drawImage(mid, 0, 0, outW, outH);
   return out;
 }
 
@@ -192,7 +194,8 @@ export function applySeamless(srcCanvas, outSize, params = DEFAULT_PARAMS) {
  * @param {object}            params
  * @returns {HTMLCanvasElement}
  */
-export function applyEdgeBlendOnly(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+export function applyEdgeBlendOnly(srcCanvas, outW, outH, params = DEFAULT_PARAMS) {
+  if (typeof outH === 'object' || outH === undefined) { if (typeof outH === 'object') params = outH; outH = outW; }
   const solve = _prepSolveCanvas(srcCanvas);
   const sW = solve.width, sH = solve.height;
   const srcPx  = solve.getContext('2d').getImageData(0, 0, sW, sH).data;
@@ -206,8 +209,8 @@ export function applyEdgeBlendOnly(srcCanvas, outSize, params = DEFAULT_PARAMS) 
   mid.getContext('2d').putImageData(imgData, 0, 0);
 
   const out = document.createElement('canvas');
-  out.width = outSize; out.height = outSize;
-  out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
+  out.width = outW; out.height = outH;
+  out.getContext('2d').drawImage(mid, 0, 0, outW, outH);
   return out;
 }
 
@@ -317,7 +320,7 @@ function _ensureWorker() {
     _pending.delete(id);
     if (!entry) return; // stale / superseded
 
-    const { resolve, outSize, sW, sH } = entry;
+    const { resolve, outW, outH, sW, sH } = entry;
     const mid = document.createElement('canvas');
     mid.width = sW; mid.height = sH;
     const imgData = mid.getContext('2d').createImageData(sW, sH);
@@ -325,8 +328,8 @@ function _ensureWorker() {
     mid.getContext('2d').putImageData(imgData, 0, 0);
 
     const out = document.createElement('canvas');
-    out.width = outSize; out.height = outSize;
-    out.getContext('2d').drawImage(mid, 0, 0, outSize, outSize);
+    out.width = outW; out.height = outH !== undefined ? outH : outW;
+    out.getContext('2d').drawImage(mid, 0, 0, out.width, out.height);
     resolve(out);
   });
 
@@ -351,7 +354,8 @@ function _ensureWorker() {
  * @param {object}            params
  * @returns {Promise<HTMLCanvasElement|null>}
  */
-export function applySeamlessAsync(srcCanvas, outSize, params = DEFAULT_PARAMS) {
+export function applySeamlessAsync(srcCanvas, outW, outH, params = DEFAULT_PARAMS) {
+  if (typeof outH === 'object' || outH === undefined) { if (typeof outH === 'object') params = outH; outH = outW; }
   const { seamBlendWidth, iterations } = params;
 
   // Downscale on the main thread (canvas API not available in Worker)
@@ -366,7 +370,7 @@ export function applySeamlessAsync(srcCanvas, outSize, params = DEFAULT_PARAMS) 
   const pixBuf = new Uint8ClampedArray(srcPx).buffer; // copy for transfer
 
   return new Promise((resolve) => {
-    _pending.set(id, { resolve, outSize, sW, sH });
+    _pending.set(id, { resolve, outW, outH, sW, sH });
     _ensureWorker().postMessage(
       { id, pixels: pixBuf, W: sW, H: sH, seamBlendWidth, iterations },
       [pixBuf]
