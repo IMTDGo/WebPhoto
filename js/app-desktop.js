@@ -338,7 +338,7 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
           await fetch(`${apiBase}/send-upload-report`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: user.email, name, maps })
+            body:    JSON.stringify({ email: user.email, name, maps, folder: name, username: user.id || user.name || '' })
           });
           showToast('Material links sent to ' + user.email, 'info');
         }

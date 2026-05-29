@@ -25,7 +25,7 @@ import {
   canvasFromData,
 } from './textureGenerator.js';
 
-const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
   // Last resort: lowest-quality JPEG even if slightly above target
   const fallback = await _encodeBlob(work, 'image/jpeg', 0.5);
   if (fallback.size > maxBytes) {
-    throw new Error('Unable to compress image under 3MB');
+    throw new Error('Unable to compress image under 2MB');
   }
   return { blob: fallback, mime: 'image/jpeg', ext: 'jpg' };
 }

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Plan | SNAPBRIFY</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-low":     "#18181B",
+            "surface-container-lowest":  "#0d0e12",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "error":                     "#ffb4ab",
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
+          fontFamily: {
+            "headline-xl": ["Cinzel", "serif"],
+            "headline-lg": ["Cinzel", "serif"],
+            "body-lg":     ["Cormorant Garamond", "serif"],
+            "body-md":     ["Cormorant Garamond", "serif"],
+            "label-sm":    ["Cormorant Garamond", "serif"],
+            "label-xs":    ["Cormorant Garamond", "serif"],
+          },
+          fontSize: {
+            "headline-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-lg": ["28px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm":    ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs":    ["10px", { lineHeight: "1.0", letterSpacing: "0.1em",  fontWeight: "600" }],
+            "body-lg":     ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md":     ["15px", { lineHeight: "1.6", fontWeight: "400" }],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-family: 'Cormorant Garamond', serif; background: #09090B; color: #F4F4F5; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+    .glass-panel {
+      background: rgba(24,24,27,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+    .gold-glow:hover {
+      border-color: rgba(232,200,84,0.25);
+      box-shadow: 0 0 24px rgba(232,200,84,0.06);
+    }
+    /* WIP banner pulse */
+    @keyframes wip-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(232,200,84,0.4); }
+      50%       { box-shadow: 0 0 20px 6px rgba(232,200,84,0.15); }
+    }
+    .wip-banner { animation: wip-pulse 2.8s ease-in-out infinite; }
+  </style>
+</head>
+<body class="bg-background text-on-surface overflow-x-hidden min-h-screen flex flex-col">
+
+  <!-- Top Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300">
+    <a href="./" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">SNAPBRIFY</a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
+      <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
+      <a href="./manage-plan.html" class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Manage Plan</a>
+      <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="navUserGroup" class="hidden items-center gap-3">
+        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
+          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
+        </div>
+        <a href="./" class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Home</a>
+        <button id="btnNavLogout" class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">Log Out</button>
+      </div>
+      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Login</a>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="flex-grow pt-32 pb-margin-page px-margin-mobile md:px-margin-page">
+    <div class="max-w-5xl mx-auto">
+
+      <!-- ── WIP BANNER ─────────────────────────────────────────────────────── -->
+      <div class="wip-banner mb-12 rounded-xl border border-primary/40 bg-primary/5 px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-primary/15 border border-primary/30 flex items-center justify-center">
+          <span class="material-symbols-outlined text-primary" style="font-size:24px;font-variation-settings:'FILL' 1,'wght' 400">construction</span>
+        </div>
+        <div class="flex-1">
+          <p class="font-label-xs text-label-xs text-primary uppercase tracking-widest mb-1">Status Notice</p>
+          <h2 class="font-headline-lg text-on-surface mb-1" style="font-size:20px">Pricing — Needs Further Discussion</h2>
+          <p class="font-body-md text-on-surface-variant">The subscription tiers and pricing below are <strong class="text-on-surface">not yet finalized</strong>. Plans are currently being evaluated and are subject to change. Please <a href="./contact.html" class="text-primary hover:text-primary-fixed underline">contact us</a> for the latest information.</p>
+        </div>
+        <span class="flex-shrink-0 bg-primary text-on-primary font-label-xs text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full font-bold">TBD</span>
+      </div>
+
+      <!-- Header -->
+      <header class="mb-12">
+        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-2">Manage Your Plan</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">Review available tiers and manage your subscription preferences. Billing is not yet active.</p>
+      </header>
+
+      <!-- Current Plan -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+        <div class="lg:col-span-2 glass-panel p-container-padding rounded-xl relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none"></div>
+          <div class="relative z-10">
+            <div class="flex justify-between items-start mb-8 flex-wrap gap-4">
+              <div>
+                <span class="inline-block bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded font-label-xs text-label-xs mb-4 uppercase tracking-widest">Current Plan</span>
+                <h2 class="font-headline-lg text-headline-lg text-on-surface">Free Tier</h2>
+              </div>
+              <div class="text-right">
+                <span class="font-headline-lg text-headline-lg text-primary">$0</span>
+                <span class="text-on-surface-variant font-body-md block">/ month</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 mb-8">
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
+                <span class="font-body-md text-on-surface">PBR Channel Generation</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
+                <span class="font-body-md text-on-surface">Mobile Capture</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
+                <span class="font-body-md text-on-surface">Seamless Tiling</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
+                <span class="font-body-md text-on-surface">Cloudflare R2 Storage</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-4">
+              <button class="bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-8 py-3 rounded-full cursor-not-allowed opacity-60" disabled>Billing Not Active</button>
+              <a href="./contact.html" class="border border-outline-variant text-on-surface font-label-sm text-label-sm px-8 py-3 rounded-full hover:border-primary/40 hover:text-primary transition-all duration-250 active:scale-95">Contact Us</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass-panel p-container-padding rounded-xl flex flex-col gap-6">
+          <div>
+            <h3 class="font-headline-lg text-on-surface mb-3" style="font-size:18px">Upload Quota</h3>
+            <p class="font-body-md text-on-surface-variant text-sm">Your current daily upload allowance.</p>
+          </div>
+          <div class="space-y-4">
+            <div class="p-4 bg-surface-container rounded-lg border border-white/5">
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Uploads Today</span>
+                <span class="font-label-xs text-label-xs text-primary">3 / 3</span>
+              </div>
+              <div class="w-full bg-outline-variant/30 h-1 rounded-full overflow-hidden">
+                <div class="bg-primary h-full w-full"></div>
+              </div>
+            </div>
+            <div class="p-4 bg-surface-container rounded-lg border border-white/5">
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Daily Uploaders</span>
+                <span class="font-label-xs text-label-xs text-on-surface-variant">200 max</span>
+              </div>
+              <p class="font-body-md text-on-surface-variant text-xs mt-1">Platform-wide daily unique uploader cap</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Available Tiers -->
+      <section class="mb-16">
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="font-headline-lg text-headline-lg text-on-surface">Available Tiers</h2>
+          <span class="bg-primary/10 border border-primary/25 text-primary font-label-xs text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full">Pricing TBD</span>
+        </div>
+        <p class="font-body-md text-on-surface-variant mb-8">The following plans are conceptual and subject to further discussion.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Starter -->
+          <div class="glass-panel gold-glow p-8 rounded-xl flex flex-col transition-all duration-300">
+            <div class="mb-6">
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Starter</h3>
+              <p class="font-body-md text-on-surface-variant">For individual creators just getting started.</p>
+            </div>
+            <div class="mb-6">
+              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px">TBD</span>
+            </div>
+            <ul class="space-y-3 mb-8 flex-grow">
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                Up to 5 uploads / day
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                Standard resolution export
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                Email delivery
+              </li>
+            </ul>
+            <button class="w-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled>Coming Soon</button>
+          </div>
+
+          <!-- Professional (highlighted as TBD current focus) -->
+          <div class="glass-panel p-8 rounded-xl border-2 border-primary/40 relative overflow-hidden flex flex-col">
+            <div class="absolute -top-3 -right-12 bg-primary text-on-primary py-4 px-12 rotate-45 font-label-xs text-[10px] font-bold uppercase tracking-widest shadow-lg">Focus</div>
+            <div class="mb-6">
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Professional</h3>
+              <p class="font-body-md text-on-surface-variant">For studios and professional 3D artists.</p>
+            </div>
+            <div class="mb-6">
+              <span class="font-headline-xl text-primary" style="font-size:28px">TBD</span>
+            </div>
+            <ul class="space-y-3 mb-8 flex-grow">
+              <li class="flex gap-3 font-body-md text-on-surface text-sm">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
+                Unlimited uploads
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface text-sm">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
+                4K / 8K export support
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface text-sm">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
+                Priority processing
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface text-sm">
+                <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
+                Dedicated storage quota
+              </li>
+            </ul>
+            <button class="w-full bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled>Under Discussion</button>
+          </div>
+
+          <!-- Enterprise -->
+          <div class="glass-panel gold-glow p-8 rounded-xl flex flex-col transition-all duration-300">
+            <div class="mb-6">
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Enterprise</h3>
+              <p class="font-body-md text-on-surface-variant">Custom solutions for large teams and studios.</p>
+            </div>
+            <div class="mb-6">
+              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px">Contact Us</span>
+            </div>
+            <ul class="space-y-3 mb-8 flex-grow">
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                Custom quotas
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                Dedicated infrastructure
+              </li>
+              <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
+                <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
+                SLA support
+              </li>
+            </ul>
+            <a href="./contact.html" class="w-full bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded-full text-center hover:bg-primary-container active:scale-95 transition-all duration-250">Get in Touch</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Discussion Notice -->
+      <section class="glass-panel rounded-xl p-container-padding border border-primary/15">
+        <div class="flex items-start gap-4">
+          <span class="material-symbols-outlined text-primary flex-shrink-0" style="font-size:28px">forum</span>
+          <div>
+            <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:18px">Want to help shape the pricing?</h3>
+            <p class="font-body-md text-on-surface-variant mb-4">We're actively gathering feedback from early users. If you have thoughts on what a fair pricing model looks like, we'd love to hear from you.</p>
+            <a href="./contact.html" class="inline-flex items-center gap-2 bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250">
+              Share Feedback
+              <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full px-margin-page py-8 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-white/5 mt-16">
+    <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
+    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
+    <div class="flex gap-gutter">
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html">Manage Plan</a>
+    </div>
+  </footer>
+
+  <script>
+    // Nav auth state
+    (function () {
+      const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+      const navLogin = document.getElementById('navLogin');
+      const navUserGroup = document.getElementById('navUserGroup');
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          document.getElementById('navUsername').textContent = user.name || user.id;
+          navLogin.style.display = 'none';
+          navUserGroup.classList.remove('hidden');
+          navUserGroup.classList.add('flex');
+        } catch (e) {}
+      }
+      const logoutBtn = document.getElementById('btnNavLogout');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          window._wpDoLogout('./login.html?ref=app');
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

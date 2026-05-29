@@ -64,14 +64,73 @@
     }).catch(function () { /* ignore transient network errors */ });
   }
 
-  setInterval(heartbeat, HB_MS);
+  window._wpHbInterval = setInterval(heartbeat, HB_MS);
+
+  // ── Idle modal: shown before auto-logout so user knows what happened ──────
+  function showIdleLogoutModal(onConfirm) {
+    // Inject one-time styles
+    if (!document.getElementById('_wp_idle_style')) {
+      var s = document.createElement('style');
+      s.id = '_wp_idle_style';
+      s.textContent = [
+        '#_wp_idle_overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;',
+        'background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);',
+        'opacity:0;transition:opacity .25s ease;}',
+        '#_wp_idle_overlay.show{opacity:1;}',
+        '#_wp_idle_card{background:#18181B;border:1px solid rgba(232,200,84,0.2);border-radius:12px;',
+        'padding:40px 36px;max-width:380px;width:90%;text-align:center;',
+        'transform:scale(0.94) translateY(12px);transition:transform .3s ease;',
+        'box-shadow:0 0 60px rgba(0,0,0,0.6);}',
+        '#_wp_idle_overlay.show #_wp_idle_card{transform:scale(1) translateY(0);}',
+        '#_wp_idle_icon{font-size:48px;color:#E8C854;margin-bottom:16px;display:block;',
+        'font-family:"Material Symbols Outlined";font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 48;}',
+        '#_wp_idle_title{color:#F4F4F5;font-size:20px;font-weight:600;letter-spacing:0.05em;',
+        'font-family:Cinzel,serif;margin-bottom:10px;}',
+        '#_wp_idle_msg{color:#A1A1AA;font-size:15px;line-height:1.6;margin-bottom:28px;font-family:"Cormorant Garamond",serif;}',
+        '#_wp_idle_btn{display:inline-block;padding:12px 40px;background:#E8C854;color:#18181B;',
+        'border:none;border-radius:999px;font-size:11px;font-weight:600;letter-spacing:0.15em;',
+        'text-transform:uppercase;cursor:pointer;font-family:"Cormorant Garamond",serif;',
+        'transition:background .2s,transform .15s;outline:none;}',
+        '#_wp_idle_btn:hover{background:#C9A630;}',
+        '#_wp_idle_btn:active{transform:scale(0.96);}'
+      ].join('');
+      document.head.appendChild(s);
+    }
+
+    var overlay = document.createElement('div');
+    overlay.id = '_wp_idle_overlay';
+    overlay.innerHTML = [
+      '<div id="_wp_idle_card">',
+      '  <span id="_wp_idle_icon">lock_clock</span>',
+      '  <div id="_wp_idle_title">Session Expired</div>',
+      '  <div id="_wp_idle_msg">You have been signed out due to inactivity.<br>Please log in again to continue.</div>',
+      '  <button id="_wp_idle_btn">Got It</button>',
+      '</div>'
+    ].join('');
+    document.body.appendChild(overlay);
+
+    // Trigger transition on next frame
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { overlay.classList.add('show'); });
+    });
+
+    document.getElementById('_wp_idle_btn').addEventListener('click', function () {
+      overlay.classList.remove('show');
+      setTimeout(onConfirm, 280);
+    });
+  }
 
   // ── Idle timer: auto-logout after 10 minutes without activity ─────────────
   var idleTimer;
   function resetIdle() {
     clearTimeout(idleTimer);
     idleTimer = setTimeout(function () {
-      window._wpDoLogout('./login.html?ref=app');
+      // Clear auth first so heartbeat stops, then show modal
+      clearAuth();
+      try { clearInterval(window._wpHbInterval); } catch (e) {}
+      showIdleLogoutModal(function () {
+        window.location.replace('./login.html?ref=idle');
+      });
     }, IDLE_MS);
   }
 

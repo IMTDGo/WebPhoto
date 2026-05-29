@@ -370,15 +370,24 @@ async function r2DeleteObject(objectKey) {
   }
 }
 
-function startOfTodayUTC() {
+// Daily quota window is anchored to Taiwan Standard Time (UTC+8).
+// "Start of today TST" = today 00:00 TST = today 00:00 UTC+8 expressed as UTC.
+const TST_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8
+
+function startOfTodayTST() {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  // Shift clock to TST, read the calendar date there, then shift back to UTC
+  const tst = new Date(now.getTime() + TST_OFFSET_MS);
+  return new Date(Date.UTC(tst.getUTCFullYear(), tst.getUTCMonth(), tst.getUTCDate()) - TST_OFFSET_MS);
 }
 
-function endOfTodayUTC() {
-  const start = startOfTodayUTC();
-  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
+function endOfTodayTST() {
+  return new Date(startOfTodayTST().getTime() + 24 * 60 * 60 * 1000);
 }
+
+// Keep old names as aliases so nothing else needs changing
+const startOfTodayUTC = startOfTodayTST;
+const endOfTodayUTC   = endOfTodayTST;
 
 function purgeMemUploadRecords() {
   const cutoff = Date.now() - UPLOAD_RETENTION_MS;
@@ -815,9 +824,11 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
   if (req.method === 'POST' && rawUrl === '/send-upload-report') {
     readJsonBody(req)
       .then(async body => {
-        const email  = String(body.email  || '').trim().toLowerCase();
-        const name   = String(body.name   || '').trim();
-        const maps   = body.maps; // { basecolor: url, roughness: url, ... }
+        const email    = String(body.email    || '').trim().toLowerCase();
+        const name     = String(body.name     || '').trim();
+        const maps     = body.maps; // { basecolor: url, roughness: url, ... }
+        const username = String(body.username || '').trim() || null;
+        const folder   = _sanitizeSlug(body.folder || name, 'material');
 
         if (!email || !name || !maps || typeof maps !== 'object') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -834,8 +845,9 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
           normal:    'Normal'
         };
 
-        // ── Build ZIP from Cloudflare delivery URLs ──────────────────────
+        // ── Build ZIP from Cloudflare R2 delivery URLs ───────────────────
         let zipUrl = null;
+        let zipKey = null;
         try {
           const zip = new AdmZip();
           const fetches = await Promise.allSettled(
@@ -854,22 +866,52 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
             }
           }
           const zipBuffer = zip.toBuffer();
-          const zipId     = crypto.randomUUID();
-          zipStore.set(zipId, { name, buffer: zipBuffer, createdAt: Date.now() });
-          const serverUrl = (process.env.SERVER_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
-          zipUrl = `${serverUrl}/download-zip/${zipId}`;
-          console.log(`[upload-report] ZIP ready: ${zipId} (${(zipBuffer.length / 1024).toFixed(0)} KB)`);
+          console.log(`[upload-report] ZIP built: ${(zipBuffer.length / 1024).toFixed(0)} KB`);
+
+          // ── Try uploading ZIP to R2 (preferred: no server memory used) ──
+          if (isR2Configured()) {
+            try {
+              zipKey = `${folder}/${folder}_textures.zip`;
+              const uploaded = await r2UploadBuffer(zipBuffer, zipKey, {
+                contentType: 'application/zip',
+                username: username || '',
+                folder,
+                uploadedAt: new Date().toISOString(),
+              });
+              zipUrl = uploaded.url;
+              // Register zip key for 24h R2 cleanup alongside the image files
+              const record = { username, folderName: folder, publicIds: [zipKey], uploadedAt: new Date() };
+              if (mongoose.connection.readyState === 1) {
+                await UploadRecord.create(record).catch(() => {});
+              } else {
+                memUploadRecords.push(record);
+              }
+              console.log(`[upload-report] ZIP uploaded to R2: ${zipKey}`);
+            } catch (r2Err) {
+              console.warn(`[upload-report] R2 zip upload failed (${r2Err.message}), falling back to memory`);
+              zipKey = null;
+            }
+          }
+
+          // ── Fallback: store ZIP in server memory if R2 unavailable ──────
+          if (!zipUrl) {
+            const zipId = crypto.randomUUID();
+            zipStore.set(zipId, { name, buffer: zipBuffer, createdAt: Date.now() });
+            const serverUrl = (process.env.SERVER_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
+            zipUrl = `${serverUrl}/download-zip/${zipId}`;
+            console.log(`[upload-report] ZIP stored in memory (fallback): ${zipId}`);
+          }
         } catch (zipErr) {
           console.error('[upload-report] ZIP build failed:', zipErr.message);
         }
 
         const rows = Object.entries(maps).map(([ch, url]) => {
           const label = CHANNEL_LABELS[ch] || ch;
-          return `<tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">${label}</td><td style="padding:6px 12px"><a href="${url}" style="color:#60a5fa">${name}_${ch}</a></td></tr>`;
+          return `<tr><td style="padding:6px 12px;font-weight:600;color:#94a3b8">${label}</td><td style="padding:6px 12px"><a href="${url}" style="color:#e8c854">${name}_${ch}</a></td></tr>`;
         }).join('');
 
         const zipButton = zipUrl
-          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 24 h)</a></div>`
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#E8C854;color:#18181B;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 24 h)</a></div>`
           : '';
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
@@ -887,7 +929,7 @@ ${zipButton}
         await sendOtpEmail(email, null, { subject: `[SNAPBRIFY] ${name} upload complete`, html, text });
         console.log(`[upload-report] Sent to ${email} for "${name}"`);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, zipUrl }));
+        res.end(JSON.stringify({ ok: true, zipUrl, zipKey }));
       })
       .catch(err => {
         console.error('[upload-report]', err.message);
@@ -914,6 +956,49 @@ ${zipButton}
       'Cache-Control':       'no-store',
     });
     res.end(entry.buffer);
+    return;
+  }
+
+  // ── GET /projects ─────────────────────────────────────────────────────────
+  if (req.method === 'GET' && rawUrl.startsWith('/projects')) {
+    const qs       = new URL(req.url, `http://localhost`).searchParams;
+    const username = String(qs.get('username') || '').trim();
+    if (!username) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: 'username required' }));
+      return;
+    }
+    try {
+      let records = [];
+      if (mongoose.connection.readyState === 1) {
+        records = await UploadRecord
+          .find({ username })
+          .sort({ uploadedAt: -1 })
+          .lean();
+      } else {
+        records = memUploadRecords
+          .filter(r => r.username === username)
+          .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+      }
+      // Attach public bucket URL so frontend can build direct links
+      const bucketUrl = (process.env.R2_BUCKET_URL || '').replace(/\/$/, '');
+      const projects  = records.map(r => ({
+        folderName: r.folderName,
+        publicIds:  r.publicIds || [],
+        uploadedAt: r.uploadedAt,
+        bucketUrl,
+        // Derive a convenient thumbUrl (first basecolor key found)
+        thumbUrl: (() => {
+          const k = (r.publicIds || []).find(id => id.includes('_basecolor'));
+          return k && bucketUrl ? `${bucketUrl}/${k}` : null;
+        })(),
+      }));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, projects }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: err.message }));
+    }
     return;
   }
 

@@ -28,9 +28,28 @@
             "on-dim":         "#A1A1AA",
             "outline":        "#52525B",
             "outline-dim":    "#3F3F46",
+            "primary":        "#E8C854",
+            "primary-fixed":  "#F5E080",
+            "on-primary":     "#18181B",
             "secondary":      "#E8C854",
             "secondary-dim":  "#C9A630",
             "error":          "#ffb4ab",
+          },
+          fontFamily: {
+            "headline-lg": ["Cinzel", "serif"],
+            "headline-xl": ["Cinzel", "serif"],
+            "body-lg":     ["Cormorant Garamond", "serif"],
+            "body-md":     ["Cormorant Garamond", "serif"],
+            "label-sm":    ["Cormorant Garamond", "serif"],
+            "label-xs":    ["Cormorant Garamond", "serif"],
+          },
+          fontSize: {
+            "headline-lg": ["18px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
+            "headline-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "label-sm":    ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs":    ["10px", { lineHeight: "1.0", letterSpacing: "0.1em",  fontWeight: "600" }],
+            "body-lg":     ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md":     ["15px", { lineHeight: "1.6", fontWeight: "400" }],
           }
         }
       }
@@ -42,7 +61,7 @@
     * { box-sizing: border-box; }
     html, body { height: 100%; }
     body {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Cormorant Garamond', serif;
       overscroll-behavior: none;
       touch-action: manipulation;
       background: #09090B;
@@ -117,7 +136,7 @@
     <!-- Step 1: Entry -->
     <section id="stepEntry" class="h-full flex flex-col p-4 gap-4">
       <div class="rounded-2xl p-4" style="background:#18181B;border:1px solid #27272A">
-        <h1 class="text-xl font-semibold text-on-surface" style="font-family:'Montserrat',sans-serif">Get Started</h1>
+        <h1 class="text-xl font-semibold text-on-surface" style="font-family:'Cinzel',serif">Get Started</h1>
         <p class="text-sm text-on-dim mt-1">Take a photo or choose one from your gallery, then adjust the crop area.</p>
       </div>
 
@@ -286,7 +305,7 @@
     <!-- Step 4: Channel Preview -->
     <section id="stepPreview" class="hidden h-full flex flex-col overflow-hidden" style="min-height:0;background:#09090B">
       <div class="shrink-0 aura-glass px-4 pt-4 pb-3" style="border-bottom:1px solid #27272A">
-        <h2 style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:600;color:#F4F4F5;letter-spacing:-0.01em">Confirm Channel Maps</h2>
+        <h2 style="font-family:'Cinzel',serif;font-size:20px;font-weight:600;color:#F4F4F5;letter-spacing:-0.01em">Confirm Channel Maps</h2>
         <p style="font-size:12px;color:#A1A1AA;margin-top:4px">Review each channel before uploading</p>
       </div>
 
@@ -374,14 +393,14 @@
 
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">
       <span style="width:3px;height:20px;background:#E8C854;border-radius:2px;display:inline-block"></span>
-      <h3 style="font-family:'Montserrat',sans-serif;font-size:18px;font-weight:600;color:#F4F4F5;margin:0">Name &amp; Upload</h3>
+      <h3 style="font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:#F4F4F5;margin:0">Name &amp; Upload</h3>
     </div>
 
     <div style="display:flex;flex-direction:column;gap:16px">
       <div>
         <label style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A1A1AA;display:block;margin-bottom:8px">Folder Name</label>
         <input type="text" id="uploadName" placeholder="e.g. wood_floor_01" maxlength="100"
-          style="width:100%;padding:10px 12px;background:#27272A;border:none;border-bottom:1.5px solid #3F3F46;font-family:'Inter',monospace;font-size:14px;color:#F4F4F5;outline:none;transition:border-color .2s"
+          style="width:100%;padding:10px 12px;background:#27272A;border:none;border-bottom:1.5px solid #3F3F46;font-family:'Cormorant Garamond',serif;font-size:14px;color:#F4F4F5;outline:none;transition:border-color .2s"
           onfocus="this.style.borderBottomColor='#E8C854'" onblur="this.style.borderBottomColor='#3F3F46'" />
         <p style="font-size:11px;color:#52525B;margin-top:4px">All 6 channels will be uploaded to the same folder</p>
       </div>
