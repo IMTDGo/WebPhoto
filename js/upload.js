@@ -158,7 +158,7 @@ export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024, 
 
   let baseCanvas;
   if (params) {
-    baseCanvas = applySeamless(srcCanvas, outW, params);
+    baseCanvas = applySeamless(srcCanvas, outW, outH, params);
   } else {
     baseCanvas = document.createElement('canvas');
     baseCanvas.width  = outW;

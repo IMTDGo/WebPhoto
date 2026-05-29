@@ -64,29 +64,20 @@
     #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
     .zh { font-family: 'Noto Serif TC', serif !important; }
   </style>
+  <script src="./js/auth.js"></script>
   <script>
+    // Canonical URL: redirect /index.html → /
+    if (window.location.pathname.endsWith('/index.html')) {
+      window.location.replace(
+        window.location.pathname.slice(0, -10) +
+        window.location.search + window.location.hash
+      );
+    }
     // Detect if user is already logged in (used later by JS, no auto-redirect)
     window._wpIsLoggedIn = !!(sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
     function _wpGoToApp() {
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
       window.location.href = isMobile ? './mobile.html' : './desktop.html';
-    }
-    // 10-minute inactivity auto-logout
-    if (window._wpIsLoggedIn) {
-      var _wpIdleTimer;
-      function _wpResetIdle() {
-        clearTimeout(_wpIdleTimer);
-        _wpIdleTimer = setTimeout(function() {
-          ['wp_auth','wp_token','wp_sessionId','wp_user'].forEach(function(k) {
-            localStorage.removeItem(k); sessionStorage.removeItem(k);
-          });
-          window.location.reload();
-        }, 10 * 60 * 1000);
-      }
-      ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev) {
-        document.addEventListener(ev, _wpResetIdle, { passive: true });
-      });
-      _wpResetIdle();
     }
   </script>
 </head>
@@ -97,9 +88,9 @@
 
   <!-- Top Navigation -->
   <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
-    <div class="font-headline-lg text-headline-lg tracking-tighter text-primary cursor-default select-none">
+    <a href="./" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">
       SNAPBRIFY
-    </div>
+    </a>
     <div class="flex items-center gap-4">
       <!-- Logged-out state -->
       <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
@@ -226,7 +217,6 @@
     </div>
 
     <div class="flex gap-6">
-      <a href="./login.html?ref=app"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
       <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
     </div>
   </footer>
@@ -244,19 +234,29 @@
 
       // ── Real logout helper ──
       function doLogout() {
+        // Reload to show the logged-out landing page instead of going to login
+        const sid = sessionStorage.getItem('wp_sessionId') || localStorage.getItem('wp_sessionId');
         ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
           localStorage.removeItem(k);
           sessionStorage.removeItem(k);
         });
+        if (sid) {
+          const base = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? location.protocol + '//' + location.host
+            : 'https://webphoto-lidl.onrender.com';
+          try { navigator.sendBeacon(base + '/logout', new Blob([JSON.stringify({ sessionId: sid })], { type: 'application/json' })); } catch (e) {}
+        }
         window.location.reload();
       }
 
       // Navbar + footer: show correct state based on login
       if (isLoggedIn) {
-        document.getElementById('navSignUp').classList.add('hidden');
-        document.getElementById('navLogin').classList.add('hidden');
-        document.getElementById('heroSignUp')?.classList.add('hidden');
-        document.getElementById('footerSignUp')?.classList.add('hidden');
+        document.getElementById('navSignUp').style.display = 'none';
+        document.getElementById('navLogin').style.display = 'none';
+        const heroSignUp = document.getElementById('heroSignUp');
+        if (heroSignUp) heroSignUp.style.display = 'none';
+        const footerSignUp = document.getElementById('footerSignUp');
+        if (footerSignUp) footerSignUp.style.display = 'none';
 
         const userGroup = document.getElementById('navUserGroup');
         userGroup.classList.remove('hidden');
