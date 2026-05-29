@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-  <title>Texify &mdash; Mobile</title>
+  <title>SNAPBRIFY &mdash; Mobile</title>
   <script>
     if (!sessionStorage.getItem('wp_auth') && !localStorage.getItem('wp_auth')) {
       window.location.replace('./login.html');
     }
     const isLargeScreen = window.innerWidth >= 1024 && window.innerHeight >= 768 && !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
     if (isLargeScreen) window.location.replace('./desktop.html');
-  <\/script>
+  </script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -34,9 +35,9 @@
         }
       }
     }
-  <\/script>
-  <script src="https://cdn.tailwindcss.com"><\/script>
+  </script>
   <link rel="stylesheet" href="./css/camera.css" />
+  <script src="./js/auth.js"></script>
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -78,12 +79,19 @@
 
   <!-- Navigation -->
   <nav class="aura-glass shrink-0 flex items-center px-4 h-12 border-b border-white/5" style="z-index:30">
-    <span class="font-semibold tracking-wide text-secondary" style="font-family:'Cinzel',serif">TEXIFY</span>
-    <span class="text-[10px] text-on-dim/50 ml-1.5 self-end mb-0.5">MOBILE</span>
+    <a href="./index.html" class="flex items-center text-on-dim hover:text-on-surface transition-colors mr-2" title="Back to home">
+      <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+    </a>
+    <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">SNAPBRIFY</a>
     <div class="flex-1"></div>
-    <span id="navUsername" class="text-xs text-on-dim hidden mr-2"></span>
-    <button id="btnLogout" class="hidden mr-2 px-2 py-1 text-[11px] text-error border border-error/30 rounded-md tracking-wider uppercase hover:bg-error/10 transition-colors">Log Out</button>
-    <a href="desktop.html" class="px-2 py-1 text-[11px] text-on-dim border border-outline-dim/40 rounded-md tracking-wider uppercase hover:text-on-surface hover:border-outline transition-colors">Desktop</a>
+    <div id="navUserGroup" class="hidden items-center gap-2">
+      <div class="flex items-center gap-1.5 bg-primary/10 border border-primary/25 rounded-full px-2.5 py-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+        <span class="material-symbols-outlined text-primary/80" style="font-size:12px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
+        <span id="navUsername" class="text-[10px] text-primary uppercase tracking-widest max-w-[84px] truncate"></span>
+      </div>
+      <button id="btnLogout" class="font-label-sm text-[10px] text-on-dim/60 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest px-1">Log Out</button>
+    </div>
   </nav>
   <script>
     (function () {
@@ -92,20 +100,17 @@
         try {
           const user = JSON.parse(raw);
           const el = document.getElementById('navUsername');
+          const userGroup = document.getElementById('navUserGroup');
           el.textContent = user.name || user.id;
-          el.classList.remove('hidden');
-          document.getElementById('btnLogout').classList.remove('hidden');
+          userGroup.classList.remove('hidden');
+          userGroup.classList.add('flex');
         } catch (e) {}
       }
-      document.getElementById('btnLogout').addEventListener('click', () => {
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k);
-          sessionStorage.removeItem(k);
-        });
-        window.location.replace('./login.html');
+      document.getElementById('btnLogout').addEventListener('click', function () {
+        window._wpDoLogout('./login.html?ref=app');
       });
     })();
-  <\/script>
+  </script>
 
   <main class="flex-1 relative overflow-hidden" style="min-height:0">
 
@@ -189,6 +194,15 @@
         </div>
         <p class="text-white/40 text-xs">Keep your device steady</p>
       </div>
+      <!-- Fallback overlay shown when getUserMedia fails (uses native label+input, safe on iOS) -->
+      <div id="cameraError" class="hidden absolute inset-0 flex flex-col items-center justify-center gap-5 p-6" style="background:#000;z-index:20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:rgba(255,255,255,0.3)">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+        </svg>
+        <p style="color:rgba(255,255,255,0.7);font-size:14px;text-align:center">無法開啟內建相機<br><span style="color:rgba(255,255,255,0.4);font-size:12px">請使用系統相機拍照</span></p>
+        <label for="fileInputCapture" class="btn btn-primary w-full" style="max-width:240px">📷 開啟系統相機</label>
+        <button id="btnCameraErrorBack" class="btn btn-ghost btn-sm" style="color:rgba(255,255,255,0.5)">返回</button>
+      </div>
     </section>
 
     <!-- Step 3: Edit -->
@@ -228,8 +242,8 @@
         <div class="shrink-0 px-3 pb-2">
           <input type="range" id="previewGridSlider" min="1" max="10" value="3" class="aura-range w-full mt-1" />
         </div>
-        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden relative" style="touch-action:none">
-          <canvas id="previewCanvas" style="display:block" class="w-full"></canvas>
+        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden relative flex items-center justify-center" style="touch-action:none">
+          <canvas id="previewCanvas" style="display:block;position:absolute;top:50%;left:50%;transform-origin:50% 50%;will-change:transform"></canvas>
           <div id="previewGestureHint" class="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-2 px-2 py-1 rounded-md text-[10px] tracking-wide" style="color:rgba(255,255,255,0.7);background:rgba(0,0,0,0.35)">Drag to pan · Pinch to zoom</div>
         </div>
       </div>
@@ -338,6 +352,17 @@
     <p id="genOverlayLabel" class="text-sm" style="color:rgba(255,255,255,0.75)">Generating channels...</p>
   </div>
 
+  <!-- Upload progress overlay -->
+  <div id="uploadProgressOverlay" class="hidden fixed inset-0 flex flex-col items-center justify-center" style="z-index:70;background:rgba(9,9,11,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
+    <div style="width:48px;height:48px;border:2px solid #3F3F46;border-top-color:#E8C854;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:24px"></div>
+    <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A1A1AA;margin-bottom:8px">Uploading to Cloud</p>
+    <p id="uploadProgressLabel" style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#E8C854;margin-bottom:24px">Preparing…</p>
+    <div style="width:220px;height:2px;background:#27272A;border-radius:1px;overflow:hidden;position:relative">
+      <div id="uploadProgressBar" style="position:absolute;left:0;top:0;height:100%;background:#E8C854;border-radius:1px;transition:width 0.45s cubic-bezier(0.4,0,0.2,1);width:0%"></div>
+    </div>
+    <p id="uploadProgressCount" style="font-family:monospace;font-size:11px;color:#52525B;margin-top:8px;letter-spacing:0.08em">0 / 6</p>
+  </div>
+
   <!-- Upload sheet backdrop -->
   <div id="uploadSheetBackdrop" class="hidden fixed inset-0 z-40" style="background:rgba(0,0,0,0.6);backdrop-filter:blur(4px)"></div>
 
@@ -392,7 +417,7 @@
     </div>
   </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const chk = document.getElementById('chkSendEmail');
@@ -404,7 +429,7 @@
         });
       }
     });
-  <\/script>
-  <script type="module" src="./js/app-mobile.js"><\/script>
+  </script>
+  <script type="module" src="./js/app-mobile.js"></script>
 </body>
 </html>

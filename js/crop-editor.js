@@ -104,11 +104,13 @@ export class CropEditor {
     const parent = this.canvas.parentElement;
     const W = parent.clientWidth  || 400;
     const H = parent.clientHeight || 400;
-    const scale = Math.min(W / this.img.width, H / this.img.height, 1);
-    this.canvas.width  = Math.round(this.img.width  * scale);
-    this.canvas.height = Math.round(this.img.height * scale);
-    // Store scale for coord transforms
-    this._scaleToCanvas = scale;
+    // Canvas fills the entire container
+    this.canvas.width  = W;
+    this.canvas.height = H;
+    // Image is letterboxed; store scale and offset for coord transforms
+    this._scaleToCanvas = Math.min(W / this.img.width, H / this.img.height);
+    this._imgOffX = Math.round((W - this.img.width  * this._scaleToCanvas) / 2);
+    this._imgOffY = Math.round((H - this.img.height * this._scaleToCanvas) / 2);
   }
 
   /** Trigger re-layout (call on window resize). */
@@ -138,51 +140,65 @@ export class CropEditor {
 
   _draw() {
     const { canvas, ctx, img } = this;
-    const cw = canvas.width, ch = canvas.height;
-    const s  = this._scaleToCanvas;
+    const cw = canvas.width;
+    const ch = canvas.height;
+    const scale = this._scaleToCanvas;
+    const offsetX = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const offsetY = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const imgW = Math.round(img.width * scale);
+    const imgH = Math.round(img.height * scale);
 
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.drawImage(img, 0, 0, cw, ch);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.drawImage(img, offsetX, offsetY, imgW, imgH);
 
-    // Dim area outside crop
-    const cx = Math.round(this.cropX * s);
-    const cy = Math.round(this.cropY * s);
-    const cw2 = Math.round(this.cropW * s);
-    const ch2 = Math.round(this.cropH * s);
+    const cropCanvasX = Math.round(this.cropX * scale) + offsetX;
+    const cropCanvasY = Math.round(this.cropY * scale) + offsetY;
+    const cropCanvasW = Math.round(this.cropW * scale);
+    const cropCanvasH = Math.round(this.cropH * scale);
 
     ctx.fillStyle = 'rgba(0,0,0,0.52)';
-    ctx.fillRect(0,        0,        cw,       cy);               // top
-    ctx.fillRect(0,        cy + ch2, cw,       ch - cy - ch2);    // bottom
-    ctx.fillRect(0,        cy,       cx,       ch2);              // left
-    ctx.fillRect(cx + cw2, cy,       cw - cx - cw2, ch2);        // right
+    ctx.fillRect(offsetX, offsetY, imgW, cropCanvasY - offsetY);
+    ctx.fillRect(offsetX, cropCanvasY + cropCanvasH, imgW, offsetY + imgH - cropCanvasY - cropCanvasH);
+    ctx.fillRect(offsetX, cropCanvasY, cropCanvasX - offsetX, cropCanvasH);
+    ctx.fillRect(cropCanvasX + cropCanvasW, cropCanvasY, offsetX + imgW - cropCanvasX - cropCanvasW, cropCanvasH);
 
-    // Crop border
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth   = 1.5;
-    ctx.strokeRect(cx + 0.5, cy + 0.5, cw2 - 1, ch2 - 1);
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(cropCanvasX + 0.5, cropCanvasY + 0.5, cropCanvasW - 1, cropCanvasH - 1);
 
-    // Rule-of-thirds grid inside crop
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth   = 0.5;
+    ctx.lineWidth = 0.5;
     for (let i = 1; i <= 2; i++) {
-      const gx = cx + Math.round(cw2 * i / 3);
-      const gy = cy + Math.round(ch2 * i / 3);
-      ctx.beginPath(); ctx.moveTo(gx, cy); ctx.lineTo(gx, cy + ch2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx, gy); ctx.lineTo(cx + cw2, gy); ctx.stroke();
+      const gridX = cropCanvasX + Math.round(cropCanvasW * i / 3);
+      const gridY = cropCanvasY + Math.round(cropCanvasH * i / 3);
+      ctx.beginPath();
+      ctx.moveTo(gridX, cropCanvasY);
+      ctx.lineTo(gridX, cropCanvasY + cropCanvasH);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cropCanvasX, gridY);
+      ctx.lineTo(cropCanvasX + cropCanvasW, gridY);
+      ctx.stroke();
     }
 
-    // Corner handles
-    const hLen = Math.min(18, Math.min(cw2, ch2) * 0.2);
+    const handleLength = Math.min(18, Math.min(cropCanvasW, cropCanvasH) * 0.2);
     ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth   = 3;
-    const corners = [[cx, cy], [cx + cw2, cy], [cx, cy + ch2], [cx + cw2, cy + ch2]];
+    ctx.lineWidth = 3;
+    const corners = [
+      [cropCanvasX, cropCanvasY],
+      [cropCanvasX + cropCanvasW, cropCanvasY],
+      [cropCanvasX, cropCanvasY + cropCanvasH],
+      [cropCanvasX + cropCanvasW, cropCanvasY + cropCanvasH],
+    ];
+
     corners.forEach(([px, py]) => {
-      const sx = px === cx ? 1 : -1;
-      const sy = py === cy ? 1 : -1;
+      const sx = px === cropCanvasX ? 1 : -1;
+      const sy = py === cropCanvasY ? 1 : -1;
       ctx.beginPath();
-      ctx.moveTo(px + sx * hLen, py);
+      ctx.moveTo(px + sx * handleLength, py);
       ctx.lineTo(px, py);
-      ctx.lineTo(px, py + sy * hLen);
+      ctx.lineTo(px, py + sy * handleLength);
       ctx.stroke();
     });
   }
@@ -192,9 +208,13 @@ export class CropEditor {
   _clientToImage(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
     const s    = this._scaleToCanvas;
+    const ox   = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy   = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const canvasX = (clientX - rect.left)  * (this.canvas.width  / rect.width);
+    const canvasY = (clientY - rect.top)   * (this.canvas.height / rect.height);
     return {
-      x: (clientX - rect.left)  / (rect.width  / this.canvas.width)  / s,
-      y: (clientY - rect.top)   / (rect.height / this.canvas.height) / s,
+      x: (canvasX - ox) / s,
+      y: (canvasY - oy) / s,
     };
   }
 
@@ -217,8 +237,10 @@ export class CropEditor {
   _hitCorner(clientX, clientY) {
     if (!this.img) return null;
     const s   = this._scaleToCanvas;
-    const cx  = Math.round(this.cropX * s);
-    const cy  = Math.round(this.cropY * s);
+    const ox  = this._imgOffX !== undefined ? this._imgOffX : 0;
+    const oy  = this._imgOffY !== undefined ? this._imgOffY : 0;
+    const cx  = Math.round(this.cropX * s) + ox;
+    const cy  = Math.round(this.cropY * s) + oy;
     const cw2 = Math.round(this.cropW * s);
     const ch2 = Math.round(this.cropH * s);
     const dp  = this._clientToDisplay(clientX, clientY);

@@ -37,7 +37,6 @@ const uploadSheetBackdrop = document.getElementById('uploadSheetBackdrop');
 const uploadNameInput = document.getElementById('uploadName');
 const btnConfirmUpload = document.getElementById('btnConfirmUpload');
 const btnCancelUpload  = document.getElementById('btnCancelUpload');
-const uploadResolution = document.getElementById('uploadResolution');
 const btnAspectLock    = document.getElementById('btnAspectLock');
 const lockIconClosed   = document.getElementById('lockIconClosed');
 const lockIconOpen     = document.getElementById('lockIconOpen');
@@ -194,7 +193,7 @@ function _syncPreviewTransform() {
   const bounds = _getPanBounds();
   previewPanX = Math.max(-bounds.x, Math.min(bounds.x, previewPanX));
   previewPanY = Math.max(-bounds.y, Math.min(bounds.y, previewPanY));
-  previewCanvas.style.transform = `translate(${previewPanX}px, ${previewPanY}px) scale(${previewScale})`;
+  previewCanvas.style.transform = `translate(calc(-50% + ${previewPanX}px), calc(-50% + ${previewPanY}px)) scale(${previewScale})`;
 }
 
 function _resetPreviewTransform() {
@@ -419,12 +418,13 @@ function _applyWbToCanvas(ctx, w, h) {
 
 async function startCamera() {
   stopCamera();
+  // Use ideal-only constraints (no min) to avoid OverconstrainedError on mid-range devices
   const constraints = {
     audio: false,
     video: {
       facingMode: { ideal: 'environment' },
-      width: { min: 1920, ideal: 3840, max: 4096 },
-      height: { min: 1080, ideal: 2160, max: 2160 },
+      width:  { ideal: 3840 },
+      height: { ideal: 2160 },
     },
   };
 
@@ -460,21 +460,24 @@ function stopCamera() {
 }
 
 async function enterCameraStep() {
+  // Show camera section immediately so user sees visual feedback (black bg)
+  showStep('camera');
+  const errOverlay = document.getElementById('cameraError');
+  if (errOverlay) errOverlay.classList.add('hidden');
+
   if (!navigator.mediaDevices?.getUserMedia) {
-    showToast('Camera not supported on this device, using system camera', 'warning');
-    fileInputCapture.click();
+    showToast('Camera not supported on this device', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
     return;
   }
 
   try {
-    showStep('camera');
     await startCamera();
     // Draw crop guide after layout is stable
     requestAnimationFrame(() => requestAnimationFrame(drawCropGuide));
   } catch (err) {
-    showToast('Unable to start camera, using system camera', 'warning');
-    showStep('entry');
-    fileInputCapture.click();
+    showToast('Unable to start camera', 'warning');
+    if (errOverlay) errOverlay.classList.remove('hidden');
   }
 }
 
@@ -861,6 +864,11 @@ btnCameraBack.addEventListener('click', () => {
   showStep('entry');
 });
 
+document.getElementById('btnCameraErrorBack')?.addEventListener('click', () => {
+  stopCamera();
+  showStep('entry');
+});
+
 btnTakePhoto.addEventListener('click', async () => {
   // ── HDR path ──
   if (hdrMode && hdrCapabilities) {
@@ -937,7 +945,7 @@ btnShowUpload.addEventListener('click', async () => {
   genOverlayLabel.textContent = 'Generating channels...';
   genOverlay.classList.remove('hidden');
   try {
-    const outSize = parseInt(uploadResolution?.value || '1024');
+    const outSize = Infinity;  // upload at actual crop resolution — no downscaling
     const params  = seamlessEnabled ? { ...seamlessParams } : null;
     generatedMaps = await generateChannels(currentCrop, params, outSize);
     paintPreviewThumbnails(generatedMaps);
@@ -966,11 +974,28 @@ btnConfirmUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('Please select a crop area first', 'warning'); return; }
 
   if (!generatedMaps) { showToast('Please preview channels first', 'warning'); return; }
+
+  const uploadOverlay = document.getElementById('uploadProgressOverlay');
+  const uploadLabel   = document.getElementById('uploadProgressLabel');
+  const uploadBar     = document.getElementById('uploadProgressBar');
+  const uploadCount   = document.getElementById('uploadProgressCount');
+
+  if (uploadOverlay) {
+    uploadBar.style.width = '0%';
+    uploadLabel.textContent = 'Preparing\u2026';
+    uploadCount.textContent = '0 / 6';
+    uploadOverlay.classList.remove('hidden');
+  }
+
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnConfirmUpload.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid #18181B;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Uploading... (${done}/${total})`;
+    if (uploadOverlay) {
+      uploadBar.style.width = `${Math.round((done / total) * 100)}%`;
+      uploadLabel.textContent = done < total ? `Channel ${done} / ${total}` : 'Finalizing\u2026';
+      uploadCount.textContent = `${done} / ${total}`;
+    }
   };
 
   try {
@@ -1026,6 +1051,7 @@ btnConfirmUpload.addEventListener('click', async () => {
   } catch (err) {
     showToast('Upload failed: ' + err.message, 'error');
   } finally {
+    if (uploadOverlay) uploadOverlay.classList.add('hidden');
     btnConfirmUpload.disabled = false;
     btnConfirmUpload.innerHTML = origHTML;
   }
