@@ -37,6 +37,7 @@
     }
   </script>
   <link rel="stylesheet" href="./css/camera.css" />
+  <script src="./js/auth.js"></script>
   <style>
     * { box-sizing: border-box; }
     html, body { height: 100%; }
@@ -78,12 +79,14 @@
 
   <!-- Navigation -->
   <nav class="aura-glass shrink-0 flex items-center px-4 h-12 border-b border-white/5" style="z-index:30">
-    <span class="font-semibold tracking-wide text-secondary" style="font-family:'Cinzel',serif">SNAPBRIFY</span>
+    <a href="./index.html" class="flex items-center text-on-dim hover:text-on-surface transition-colors mr-2" title="Back to home">
+      <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+    </a>
+    <a href="./index.html" class="font-semibold tracking-wide text-secondary hover:text-on-surface transition-colors" style="font-family:'Cinzel',serif">SNAPBRIFY</a>
     <span class="text-[10px] text-on-dim/50 ml-1.5 self-end mb-0.5">MOBILE</span>
     <div class="flex-1"></div>
     <span id="navUsername" class="text-xs text-on-dim hidden mr-2"></span>
-    <button id="btnLogout" class="hidden mr-2 px-2 py-1 text-[11px] text-error border border-error/30 rounded-md tracking-wider uppercase hover:bg-error/10 transition-colors">Log Out</button>
-    <a href="desktop.html" class="px-2 py-1 text-[11px] text-on-dim border border-outline-dim/40 rounded-md tracking-wider uppercase hover:text-on-surface hover:border-outline transition-colors">Desktop</a>
+    <button id="btnLogout" class="hidden px-2 py-1 text-[11px] text-error border border-error/30 rounded-md tracking-wider uppercase hover:bg-error/10 transition-colors">Log Out</button>
   </nav>
   <script>
     (function () {
@@ -97,12 +100,8 @@
           document.getElementById('btnLogout').classList.remove('hidden');
         } catch (e) {}
       }
-      document.getElementById('btnLogout').addEventListener('click', () => {
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k);
-          sessionStorage.removeItem(k);
-        });
-        window.location.replace('./login.html');
+      document.getElementById('btnLogout').addEventListener('click', function () {
+        window._wpDoLogout('./login.html?ref=app');
       });
     })();
   </script>
@@ -237,8 +236,8 @@
         <div class="shrink-0 px-3 pb-2">
           <input type="range" id="previewGridSlider" min="1" max="10" value="3" class="aura-range w-full mt-1" />
         </div>
-        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden relative" style="touch-action:none">
-          <canvas id="previewCanvas" style="display:block" class="w-full"></canvas>
+        <div id="previewWrap" class="flex-1 min-h-0 overflow-hidden relative flex items-center justify-center" style="touch-action:none">
+          <canvas id="previewCanvas" style="display:block;position:absolute;top:50%;left:50%;transform-origin:50% 50%;will-change:transform"></canvas>
           <div id="previewGestureHint" class="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-2 px-2 py-1 rounded-md text-[10px] tracking-wide" style="color:rgba(255,255,255,0.7);background:rgba(0,0,0,0.35)">Drag to pan · Pinch to zoom</div>
         </div>
       </div>
@@ -345,6 +344,17 @@
   <div id="genOverlay" class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center gap-3" style="background:rgba(9,9,11,0.88)">
     <div class="aura-spinner"></div>
     <p id="genOverlayLabel" class="text-sm" style="color:rgba(255,255,255,0.75)">Generating channels...</p>
+  </div>
+
+  <!-- Upload progress overlay -->
+  <div id="uploadProgressOverlay" class="hidden fixed inset-0 flex flex-col items-center justify-center" style="z-index:70;background:rgba(9,9,11,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
+    <div style="width:48px;height:48px;border:2px solid #3F3F46;border-top-color:#E8C854;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:24px"></div>
+    <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A1A1AA;margin-bottom:8px">Uploading to Cloud</p>
+    <p id="uploadProgressLabel" style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#E8C854;margin-bottom:24px">Preparing…</p>
+    <div style="width:220px;height:2px;background:#27272A;border-radius:1px;overflow:hidden;position:relative">
+      <div id="uploadProgressBar" style="position:absolute;left:0;top:0;height:100%;background:#E8C854;border-radius:1px;transition:width 0.45s cubic-bezier(0.4,0,0.2,1);width:0%"></div>
+    </div>
+    <p id="uploadProgressCount" style="font-family:monospace;font-size:11px;color:#52525B;margin-top:8px;letter-spacing:0.08em">0 / 6</p>
   </div>
 
   <!-- Upload sheet backdrop -->

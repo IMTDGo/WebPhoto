@@ -51,7 +51,7 @@ export class PatternPreview {
 
     let tileCanvas;
     if (this.seamlessEnabled) {
-      tileCanvas = applyEdgeBlendOnly(srcCanvas, tileW, this.params);
+      tileCanvas = applyEdgeBlendOnly(srcCanvas, tileW, tileH, this.params);
     } else {
       tileCanvas = document.createElement('canvas');
       tileCanvas.width  = tileW;
@@ -87,7 +87,7 @@ export class PatternPreview {
 
     let tileCanvas;
     if (this.seamlessEnabled) {
-      tileCanvas = await applySeamlessAsync(srcCanvas, tileW, this.params);
+      tileCanvas = await applySeamlessAsync(srcCanvas, tileW, tileH, this.params);
       if (!tileCanvas) return; // superseded by a newer call
     } else {
       tileCanvas = document.createElement('canvas');
@@ -108,14 +108,14 @@ export class PatternPreview {
     this._fitDisplay();
   }
 
-  /** Fit the canvas display size to fill its container, maintaining aspect ratio. */
+  /** Fill canvas display to cover its container (overflow:hidden clips excess). */
   _fitDisplay() {
     const parent = this.canvas.parentElement;
     if (!parent) return;
-    const maxW  = (parent.clientWidth  || this.canvas.width)  - 4;
-    const maxH  = (parent.clientHeight || this.canvas.height) - 4;
-    // No upper cap — allows upscaling low-res tiles during fast drag so size stays stable
-    const scale = Math.min(maxW / this.canvas.width, maxH / this.canvas.height);
+    const maxW = (parent.clientWidth  || this.canvas.width);
+    const maxH = (parent.clientHeight || this.canvas.height);
+    // Cover: scale so the smaller container dimension is exactly filled
+    const scale = Math.max(maxW / this.canvas.width, maxH / this.canvas.height);
     this.canvas.style.width  = Math.round(this.canvas.width  * scale) + 'px';
     this.canvas.style.height = Math.round(this.canvas.height * scale) + 'px';
   }

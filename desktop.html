@@ -16,6 +16,7 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -111,15 +112,18 @@
 
   <!-- ── Top Navigation ── -->
   <nav class="fixed top-0 left-0 w-full h-20 flex items-center justify-between px-10 bg-background/80 backdrop-blur-xl border-b border-white/5 z-50">
-    <div class="flex items-center gap-10">
-      <span class="font-headline text-headline-md tracking-[0.25em] text-on-surface uppercase">SNAPBRIFY</span>
-      <a class="text-secondary text-label-sm tracking-widest uppercase relative after:absolute after:-bottom-2 after:left-0 after:w-full after:h-px after:bg-secondary">Editor</a>
+    <div class="flex items-center gap-6">
+      <a href="./index.html"
+         class="flex items-center gap-2 text-on-surface-variant hover:text-on-surface transition-colors"
+         title="Back to home">
+        <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
+      </a>
+      <a href="./index.html" class="font-headline text-headline-md tracking-[0.25em] text-on-surface uppercase hover:text-secondary transition-colors">SNAPBRIFY</a>
+      <span class="text-secondary text-label-sm tracking-widest uppercase relative after:absolute after:-bottom-2 after:left-0 after:w-full after:h-px after:bg-secondary">Editor</span>
     </div>
     <div class="flex items-center gap-6">
       <span id="navUsername" class="text-label-sm text-on-surface-variant tracking-widest uppercase hidden"></span>
       <button id="btnLogout" class="text-label-sm text-on-surface-variant hover:text-error tracking-widest uppercase transition-colors hidden">Log Out</button>
-      <div class="w-px h-5 bg-white/10"></div>
-      <a href="./mobile.html" class="text-label-sm text-on-surface-variant hover:text-on-surface tracking-widest uppercase transition-colors">Mobile</a>
     </div>
   </nav>
 
@@ -135,11 +139,8 @@
           document.getElementById('btnLogout').classList.remove('hidden');
         } catch (e) {}
       }
-      document.getElementById('btnLogout').addEventListener('click', () => {
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k); sessionStorage.removeItem(k);
-        });
-        window.location.replace('./login.html');
+      document.getElementById('btnLogout').addEventListener('click', function () {
+        window._wpDoLogout('./login.html?ref=app');
       });
     })();
   </script>
@@ -306,8 +307,8 @@
             <div id="previewEmpty" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <p class="text-label-sm text-on-surface-variant/20">NO PREVIEW</p>
             </div>
-            <div id="previewSection" style="display:none" class="w-full h-full flex items-center justify-center">
-              <canvas id="previewCanvas" class="max-w-full max-h-full object-contain"></canvas>
+            <div id="previewSection" style="display:none" class="absolute inset-0 flex items-center justify-center overflow-hidden">
+              <canvas id="previewCanvas"></canvas>
             </div>
           </div>
         </div>
@@ -479,5 +480,29 @@
 
   <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   <script type="module" src="./js/app-desktop.js"></script>
+
+  <!-- ── Upload Progress Overlay ── -->
+  <div id="uploadProgressOverlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center" style="pointer-events:all">
+    <div class="absolute inset-0 bg-background/97 backdrop-blur-2xl"></div>
+    <div class="absolute inset-0 pointer-events-none opacity-[0.015] bg-[radial-gradient(#e5e2e1_1px,transparent_1px)] [background-size:24px_24px]"></div>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vmin] h-[50vmin] max-w-[500px] max-h-[500px] rounded-full bg-secondary/5 blur-[120px] pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-md px-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <p class="font-headline text-label-sm text-on-surface-variant tracking-widest uppercase">Uploading to Cloud</p>
+        <p id="uploadProgressLabel" class="font-headline text-headline-md text-secondary tracking-widest uppercase">Preparing…</p>
+      </div>
+      <div class="w-full flex flex-col gap-3">
+        <div class="relative w-full rounded-full overflow-hidden" style="height:2px;background:rgba(82,82,91,0.3)">
+          <div id="uploadProgressBar"
+               class="absolute left-0 top-0 h-full rounded-full bg-secondary"
+               style="width:0%;transition:width 0.45s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-label-xs text-label-xs text-on-surface-variant/40 tracking-widest uppercase">Channel Maps</span>
+          <span id="uploadProgressCount" class="font-mono text-on-surface-variant/40" style="font-size:11px">0 / 6</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
