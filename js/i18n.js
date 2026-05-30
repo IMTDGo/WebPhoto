@@ -59,7 +59,50 @@ const I18N_SYSTEM = (() => {
       beta_title: 'Beta Testing Notice',
       beta_desc: 'Please read the following information before using SNAPBRIFY. This document outlines what the platform does, how your data is handled, and the current limitations of the beta environment.',
       // editor pages
-      editor_label: 'Editor'
+      editor_label: 'Editor',
+      // projects.html modal
+      projects_ch_maps: 'Channel Maps',
+      // contact.html subject options
+      contact_opt_support: 'Technical Support',
+      contact_opt_billing: 'Account & Billing',
+      contact_opt_feature: 'Feature Request',
+      contact_opt_partner: 'Partnership',
+      contact_opt_other: 'Other',
+      // desktop.html
+      editor_subtitle: 'Material Editor · PBR Channel Generator',
+      editor_upload_title: 'Upload Source Image',
+      editor_drop_desc: 'Drop a texture to generate Base Color, Roughness, AO, Height, Metallic and Normal maps',
+      editor_drop_hint: 'Drop image here',
+      editor_browse_or: 'or <span class="text-secondary">browse files</span>',
+      editor_browse_btn: 'BROWSE FILES',
+      editor_generate_btn: 'Generate Channels',
+      editor_confirm_title: 'Confirm Channel Maps',
+      editor_confirm_desc: 'Review each channel before uploading to Cloudflare',
+      editor_cancel: 'Cancel',
+      editor_confirm_upload: 'Confirm Upload',
+      editor_success_title: 'Upload Successful',
+      editor_success_desc: 'All 6 channel maps have been generated and saved to Cloudflare.',
+      editor_back_home: 'Back to Homepage',
+      editor_new_material: 'Create Another',
+      editor_upload_cloud: 'Uploading to Cloud',
+      // mobile.html
+      mobile_get_started: 'Get Started',
+      mobile_take_desc: 'Take a photo or choose one from your gallery, then adjust the crop area.',
+      mobile_take_photo: 'Take a Photo',
+      mobile_gallery: 'Choose from Gallery',
+      mobile_tip: 'Tip: Drag to reposition · pinch to resize crop area',
+      mobile_retake: 'Retake',
+      mobile_reselect: 'Reselect',
+      mobile_next: 'Next →',
+      mobile_confirm_maps: 'Confirm Channel Maps',
+      mobile_review_desc: 'Review each channel before uploading',
+      mobile_upload_btn: 'Confirm Upload',
+      mobile_back: '← Back',
+      mobile_generating: 'Generating channels...',
+      mobile_upload_cloud: 'Uploading to Cloud',
+      mobile_name_upload: 'Name & Upload',
+      mobile_folder_name: 'Folder Name',
+      mobile_email_done: 'Email material links when done'
     },
     zh: {
       meta_title: 'SNAPBRIFY — 將真實轉化為材質',
@@ -112,7 +155,50 @@ const I18N_SYSTEM = (() => {
       beta_title: '測試須知',
       beta_desc: '使用 SNAPBRIFY 前，請詳閱以下資訊。本文說明平台功能、資料處理方式及測試版目前的限制。',
       // editor pages
-      editor_label: '編輯器'
+      editor_label: '編輯器',
+      // projects.html modal
+      projects_ch_maps: '通道圖',
+      // contact.html subject options
+      contact_opt_support: '技術支援',
+      contact_opt_billing: '帳號與付款',
+      contact_opt_feature: '功能建議',
+      contact_opt_partner: '合作洽談',
+      contact_opt_other: '其他',
+      // desktop.html
+      editor_subtitle: '材質編輯器 · PBR 通道生成器',
+      editor_upload_title: '上傳來源圖片',
+      editor_drop_desc: '拖放材質圖片，自動生成 Base Color、Roughness、AO、Height、Metallic 及 Normal 通道',
+      editor_drop_hint: '拖放圖片至此',
+      editor_browse_or: '或 <span class="text-secondary">選擇檔案</span>',
+      editor_browse_btn: '選擇檔案',
+      editor_generate_btn: '生成通道',
+      editor_confirm_title: '確認通道圖',
+      editor_confirm_desc: '上傳至 Cloudflare 前，請先確認各通道',
+      editor_cancel: '取消',
+      editor_confirm_upload: '確認上傳',
+      editor_success_title: '上傳成功',
+      editor_success_desc: '已成功生成 6 個通道圖並儲存至 Cloudflare。',
+      editor_back_home: '返回主頁',
+      editor_new_material: '繼續製作',
+      editor_upload_cloud: '上傳至雲端',
+      // mobile.html
+      mobile_get_started: '開始使用',
+      mobile_take_desc: '拍攝照片或從相簿選擇，再調整裁切範圍。',
+      mobile_take_photo: '拍攝照片',
+      mobile_gallery: '從相簿選擇',
+      mobile_tip: '提示：拖動以移動 · 捏合以調整裁切範圍',
+      mobile_retake: '重新拍攝',
+      mobile_reselect: '重新選擇',
+      mobile_next: '下一步 →',
+      mobile_confirm_maps: '確認通道圖',
+      mobile_review_desc: '上傳前請確認各通道',
+      mobile_upload_btn: '確認上傳',
+      mobile_back: '← 返回',
+      mobile_generating: '生成通道中…',
+      mobile_upload_cloud: '上傳至雲端',
+      mobile_name_upload: '命名並上傳',
+      mobile_folder_name: '資料夾名稱',
+      mobile_email_done: '完成後以電子郵件傳送材質連結'
     }
   };
 

@@ -57,9 +57,12 @@
       keepalive: true
     }).then(function (r) { return r.json(); }).then(function (data) {
       if (!data.ok) {
-        // Server says session is gone – force logout
+        // Server says session is gone – show modal, wait for user to dismiss
         clearAuth();
-        window.location.replace('./login.html?ref=app');
+        try { clearInterval(window._wpHbInterval); } catch (e) {}
+        showIdleLogoutModal(function () {
+          window.location.replace('./login.html?ref=app');
+        });
       }
     }).catch(function () { /* ignore transient network errors */ });
   }
