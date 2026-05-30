@@ -20,12 +20,14 @@
       left: 0;
       right: 0;
       z-index: 50;
+       display: block !important;
     }
     #global-nav .nav-shell {
       display: grid;
       grid-template-columns: auto 1fr auto;
       align-items: center;
       column-gap: clamp(10px, 2vw, 28px);
+       width: 100%;
       height: 56px;
     }
     @media (min-width: 768px) {
