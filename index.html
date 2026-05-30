@@ -172,6 +172,7 @@
       void nav.offsetHeight;
     });
   </script>
+  <script src="./js/i18n.js"></script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
 
@@ -370,110 +371,7 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // ── Language detection + i18n ──
-      const I18N = {
-        en: {
-          meta_title: 'SNAPBRIFY — Transform Reality into Texture',
-          nav_projects: 'Projects',
-          nav_contact: 'Contact Us',
-          nav_manage: 'Manage Plan',
-          nav_beta: 'Beta Notice',
-          language_label: 'Language',
-          sign_up: 'Sign Up',
-          login: 'Login',
-          start_short: 'Start',
-          start_creating: 'Start Creating',
-          logout: 'Log Out',
-          hero_badge: 'Material Texture Intelligence',
-          hero_title_html: 'Transform Reality<br />into Texture',
-          hero_desc: 'The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.',
-          create_account: 'Create Account',
-          created_by: 'Created By',
-          signed_in_as: 'Signed In As'
-        },
-        zh: {
-          meta_title: 'SNAPBRIFY — 將真實轉化為材質',
-          nav_projects: '專案列表',
-          nav_contact: '聯絡我們',
-          nav_manage: '方案管理',
-          nav_beta: '測試須知',
-          language_label: '語言',
-          sign_up: '註冊',
-          login: '登入',
-          start_short: '開始',
-          start_creating: '開始製作',
-          logout: '登出',
-          hero_badge: '材質智慧引擎',
-          hero_title_html: '將真實世界<br />轉化為材質',
-          hero_desc: '為現代創作者打造的影像轉 3D 材質平台。拍攝、微調並部署高品質 PBR 貼圖，直接在你的手機完成。',
-          create_account: '建立帳號',
-          created_by: '創作者',
-          signed_in_as: '已登入帳號'
-        }
-      };
-
-      const LANG_PREF_KEY = 'wp_lang_pref';
-      const browserLocales = Array.isArray(navigator.languages) && navigator.languages.length
-        ? navigator.languages
-        : [navigator.language || 'en'];
-      const desktopLangSelect = document.getElementById('desktopLangSelect');
-      const mobileLangSelect = document.getElementById('mobileLangSelect');
-
-      function resolveLang(locales) {
-        for (const locale of locales) {
-          const normalized = String(locale || '').toLowerCase();
-          if (normalized.startsWith('zh')) return 'zh';
-        }
-        return 'en';
-      }
-
-      function getLanguagePreference() {
-        const saved = localStorage.getItem(LANG_PREF_KEY);
-        if (saved === 'zh' || saved === 'en') return saved;
-        const detected = resolveLang(browserLocales);
-        localStorage.setItem(LANG_PREF_KEY, detected);
-        return detected;
-      }
-
-      function applyI18n(activeLang) {
-        const dict = I18N[activeLang] || I18N.en;
-        document.documentElement.lang = activeLang === 'zh' ? 'zh-Hant' : 'en';
-        document.title = dict.meta_title || I18N.en.meta_title;
-
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-          const key = el.getAttribute('data-i18n');
-          if (dict[key]) el.textContent = dict[key];
-        });
-        document.querySelectorAll('[data-i18n-html]').forEach(el => {
-          const key = el.getAttribute('data-i18n-html');
-          if (dict[key]) el.innerHTML = dict[key];
-        });
-      }
-
-      function syncLangSelects(prefMode) {
-        if (desktopLangSelect) desktopLangSelect.value = prefMode;
-        if (mobileLangSelect) mobileLangSelect.value = prefMode;
-      }
-
-      let languagePreference = getLanguagePreference();
-      applyI18n(languagePreference);
-      syncLangSelects(languagePreference);
-
-      function onLanguageChanged(mode) {
-        const next = (mode === 'zh' || mode === 'en') ? mode : 'en';
-        languagePreference = next;
-        localStorage.setItem(LANG_PREF_KEY, next);
-        applyI18n(next);
-        syncLangSelects(next);
-      }
-
-      if (desktopLangSelect) {
-        desktopLangSelect.addEventListener('change', (e) => onLanguageChanged(e.target.value));
-      }
-      
-      if (mobileLangSelect) {
-        mobileLangSelect.addEventListener('change', (e) => onLanguageChanged(e.target.value));
-      }
+      // ── i18n system is now in js/i18n.js (auto-initialized) ──
 
       // ── Auth-aware UI ──
       const isLoggedIn = window._wpIsLoggedIn;

@@ -98,6 +98,8 @@
       border-radius: 50%; animation: _spin 0.6s linear infinite; vertical-align: -2px;
     }
     @keyframes _spin { to { transform: rotate(360deg); } }
+    .lang-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding-right: 2.2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; background-size: 0.75rem; }
+    .lang-select::-ms-expand { display: none; }
     /* Full-screen confirmation dialog */
     dialog#previewModal {
       position: fixed; inset: 0; max-width: 100vw; max-height: 100vh;
@@ -111,6 +113,7 @@
       font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
     }
   </style>
+  <script src="./js/i18n.js"></script>
 </head>
 
 <body class="h-screen w-screen overflow-hidden flex flex-col bg-background text-on-surface selection:bg-secondary/20 selection:text-secondary">
