@@ -99,60 +99,81 @@
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300 relative" id="global-nav">
     <div class="h-14 md:h-20 flex items-center gap-3 md:gap-4">
       <a href="./" class="font-headline-lg text-[26px] md:text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none shrink-0">
         SNAPBRIFY
       </a>
-      <!-- Centre navigation links (desktop) -->
-      <div class="hidden md:flex items-center gap-8 flex-1 justify-center">
-        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
-        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
-        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
-        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
+
+      <!-- Centre navigation links (desktop, viewport-centered) -->
+      <div class="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_projects">Projects</a>
+        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_contact">Contact Us</a>
+        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_manage">Manage Plan</a>
+        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_beta">Beta Notice</a>
       </div>
-      <div class="flex items-center gap-2 md:gap-4 ml-auto">
-      <!-- Logged-out state -->
-      <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
-        Sign Up
-      </a>
-      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-[11px] md:text-label-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-        Login
-      </a>
-      <!-- Logged-in state (hidden by default, shown via JS) -->
-      <div id="navUserGroup" class="hidden items-center gap-2 md:gap-3">
-        <!-- User identity pill -->
-        <div class="flex items-center gap-1.5 md:gap-2 bg-primary/10 border border-primary/25 rounded-full px-2.5 md:px-3 py-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
-          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-          <span id="navUsername" class="font-label-sm text-[10px] md:text-label-sm text-primary uppercase tracking-widest max-w-[88px] md:max-w-[120px] truncate"></span>
+
+      <div class="ml-auto flex items-center">
+        <!-- Desktop auth controls -->
+        <div class="hidden md:flex items-center gap-2 md:gap-4">
+          <a href="./signup.html" id="navSignUp" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="sign_up">
+            Sign Up
+          </a>
+          <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-[11px] md:text-label-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95" data-i18n="login">
+            Login
+          </a>
+          <div id="navUserGroup" class="hidden md:flex items-center gap-2 md:gap-3">
+            <div class="flex items-center gap-1.5 md:gap-2 bg-primary/10 border border-primary/25 rounded-full px-2.5 md:px-3 py-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+              <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
+              <span id="navUsername" class="font-label-sm text-[10px] md:text-label-sm text-primary uppercase tracking-widest max-w-[88px] md:max-w-[120px] truncate"></span>
+            </div>
+            <button id="btnNavOpenApp"
+              class="bg-primary text-on-primary font-label-sm text-[10px] md:text-label-sm px-3 md:px-5 py-1.5 md:py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
+              <span data-i18n="start_creating">Start Creating</span>
+            </button>
+            <button id="btnNavLogout"
+              class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1" data-i18n="logout">
+              Log Out
+            </button>
+          </div>
         </div>
-        <button id="btnNavOpenApp"
-          class="bg-primary text-on-primary font-label-sm text-[10px] md:text-label-sm px-3 md:px-5 py-1.5 md:py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-          <span class="md:hidden">Start</span>
-          <span class="hidden md:inline">Start Creating</span>
-        </button>
-        <button id="btnNavLogout"
-          class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
-          Log Out
+
+        <!-- Mobile menu button -->
+        <button id="mobileMenuBtn" class="md:hidden w-10 h-10 rounded-full border border-outline-variant/40 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-colors flex items-center justify-center" aria-label="Open menu" aria-expanded="false">
+          <span class="material-symbols-outlined" style="font-size:20px">menu</span>
         </button>
       </div>
-    </div>
     </div>
 
-    <!-- Navigation links (mobile) -->
-    <div class="md:hidden pb-2">
-      <div class="flex items-center gap-5 overflow-x-auto whitespace-nowrap">
-        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
-        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Contact Us</a>
-        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
-        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
+    <!-- Mobile dropdown menu -->
+    <div id="mobileMenuBackdrop" class="hidden md:hidden fixed inset-0 bg-black/55"></div>
+    <div id="mobileMenuPanel" class="hidden md:hidden absolute right-0 top-full mt-2 w-[min(88vw,320px)] rounded-xl border border-outline-variant/30 bg-surface/95 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.45)] p-3">
+      <div id="mobileMenuUserRow" class="hidden mb-3 pb-3 border-b border-outline-variant/20">
+        <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mb-1" data-i18n="signed_in_as">Signed In As</p>
+        <p id="mobileMenuUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest truncate"></p>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <a href="./projects.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_projects">Projects</a>
+        <a href="./contact.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_contact">Contact Us</a>
+        <a href="./manage-plan.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_manage">Manage Plan</a>
+        <a href="./beta-notice.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_beta">Beta Notice</a>
+      </div>
+
+      <div class="my-3 border-t border-outline-variant/20"></div>
+
+      <div class="flex flex-col gap-2">
+        <a href="./login.html?ref=app" id="mobileMenuLogin" class="mobile-menu-link px-3 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-widest text-center" data-i18n="login">Login</a>
+        <a href="./signup.html" id="mobileMenuSignUp" class="mobile-menu-link px-3 py-2 rounded-lg border border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest text-center hover:border-primary/40 hover:text-primary transition-colors" data-i18n="sign_up">Sign Up</a>
+        <button id="mobileMenuStart" class="hidden px-3 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-widest" data-i18n="start_creating">Start Creating</button>
+        <button id="mobileMenuLogout" class="hidden px-3 py-2 rounded-lg border border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest hover:text-error/80 transition-colors" data-i18n="logout">Log Out</button>
       </div>
     </div>
   </nav>
 
   <!-- Main Content -->
-  <main class="flex-grow pt-40 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
+  <main class="flex-grow pt-28 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
 
     <!-- Ambient Background Glow -->
     <div class="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
@@ -161,19 +182,19 @@
     <section class="z-10 flex flex-col items-center text-center max-w-4xl mt-12 mb-16 relative">
       <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-8 bg-surface-container/60 backdrop-blur">
         <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-        <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Material Texture Intelligence</span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="hero_badge">Material Texture Intelligence</span>
       </div>
-      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight">
+      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight" data-i18n-html="hero_title_html">
         Transform Reality<br />into Texture
       </h1>
-      <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6">
+      <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6" data-i18n="hero_desc">
         The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.
       </p>
       <div class="flex flex-col sm:flex-row items-center gap-4 mt-10">
-        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]">
+        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]" data-i18n="start_creating">
           Start Creating
         </button>
-        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out">
+        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out" data-i18n="create_account">
           Create Account
         </a>
       </div>
@@ -238,7 +259,7 @@
     <div class="font-headline-lg text-headline-lg text-primary select-none">SNAPBRIFY</div>
 
     <div class="flex flex-col items-center gap-1">
-      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60">Created By</p>
+      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60" data-i18n="created_by">Created By</p>
       <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
         class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
         <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
@@ -249,14 +270,126 @@
     </div>
 
     <div class="flex gap-6">
-      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
+      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100" data-i18n="sign_up">Sign Up</a>
     </div>
   </footer>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // ── Language detection + i18n (auto) ──
+      const I18N = {
+        en: {
+          meta_title: 'SNAPBRIFY — Transform Reality into Texture',
+          nav_projects: 'Projects',
+          nav_contact: 'Contact Us',
+          nav_manage: 'Manage Plan',
+          nav_beta: 'Beta Notice',
+          sign_up: 'Sign Up',
+          login: 'Login',
+          start_short: 'Start',
+          start_creating: 'Start Creating',
+          logout: 'Log Out',
+          hero_badge: 'Material Texture Intelligence',
+          hero_title_html: 'Transform Reality<br />into Texture',
+          hero_desc: 'The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.',
+          create_account: 'Create Account',
+          created_by: 'Created By',
+          signed_in_as: 'Signed In As'
+        },
+        zh: {
+          meta_title: 'SNAPBRIFY — 將真實轉化為材質',
+          nav_projects: '專案列表',
+          nav_contact: '聯絡我們',
+          nav_manage: '方案管理',
+          nav_beta: '測試須知',
+          sign_up: '註冊',
+          login: '登入',
+          start_short: '開始',
+          start_creating: '開始製作',
+          logout: '登出',
+          hero_badge: '材質智慧引擎',
+          hero_title_html: '將真實世界<br />轉化為材質',
+          hero_desc: '為現代創作者打造的影像轉 3D 材質平台。拍攝、微調並部署高品質 PBR 貼圖，直接在你的手機完成。',
+          create_account: '建立帳號',
+          created_by: '創作者',
+          signed_in_as: '已登入帳號'
+        }
+      };
+
+      const browserLocales = Array.isArray(navigator.languages) && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language || 'en'];
+
+      function resolveLang(locales) {
+        for (const locale of locales) {
+          const normalized = String(locale || '').toLowerCase();
+          if (normalized.startsWith('zh')) return 'zh';
+        }
+        return 'en';
+      }
+
+      const activeLang = resolveLang(browserLocales);
+      const dict = I18N[activeLang] || I18N.en;
+      document.documentElement.lang = activeLang === 'zh' ? 'zh-Hant' : 'en';
+      document.title = dict.meta_title || I18N.en.meta_title;
+
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.querySelectorAll('[data-i18n-html]').forEach(el => {
+        const key = el.getAttribute('data-i18n-html');
+        if (dict[key]) el.innerHTML = dict[key];
+      });
+
       // ── Auth-aware UI ──
       const isLoggedIn = window._wpIsLoggedIn;
+      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+      const mobileMenuPanel = document.getElementById('mobileMenuPanel');
+      const mobileMenuBackdrop = document.getElementById('mobileMenuBackdrop');
+      const mobileMenuUserRow = document.getElementById('mobileMenuUserRow');
+      const mobileMenuUsername = document.getElementById('mobileMenuUsername');
+      const mobileMenuLogin = document.getElementById('mobileMenuLogin');
+      const mobileMenuSignUp = document.getElementById('mobileMenuSignUp');
+      const mobileMenuStart = document.getElementById('mobileMenuStart');
+      const mobileMenuLogout = document.getElementById('mobileMenuLogout');
+
+      function closeMobileMenu() {
+        if (!mobileMenuPanel || !mobileMenuBackdrop || !mobileMenuBtn) return;
+        mobileMenuPanel.classList.add('hidden');
+        mobileMenuBackdrop.classList.add('hidden');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+      }
+
+      function openMobileMenu() {
+        if (!mobileMenuPanel || !mobileMenuBackdrop || !mobileMenuBtn) return;
+        mobileMenuPanel.classList.remove('hidden');
+        mobileMenuBackdrop.classList.remove('hidden');
+        mobileMenuBtn.setAttribute('aria-expanded', 'true');
+      }
+
+      if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = mobileMenuPanel && !mobileMenuPanel.classList.contains('hidden');
+          if (isOpen) closeMobileMenu();
+          else openMobileMenu();
+        });
+      }
+
+      if (mobileMenuBackdrop) {
+        mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
+      }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMobileMenu();
+      });
+
+      if (mobileMenuPanel) {
+        mobileMenuPanel.querySelectorAll('.mobile-menu-link, button').forEach((el) => {
+          el.addEventListener('click', closeMobileMenu);
+        });
+      }
 
       // "Start Creating" button: go to app if logged in, else login page
       document.getElementById('btnGetStarted').addEventListener('click', () => {
@@ -291,19 +424,37 @@
         if (footerSignUp) footerSignUp.style.display = 'none';
 
         const userGroup = document.getElementById('navUserGroup');
-        userGroup.classList.remove('hidden');
-        userGroup.classList.add('flex');
+        if (userGroup) userGroup.classList.add('md:flex');
 
         try {
           const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
           if (raw) {
             const u = JSON.parse(raw);
             document.getElementById('navUsername').textContent = u.name || u.id || '';
+            if (mobileMenuUsername) mobileMenuUsername.textContent = u.name || u.id || '';
           }
         } catch (e) {}
 
         document.getElementById('btnNavOpenApp').addEventListener('click', _wpGoToApp);
         document.getElementById('btnNavLogout').addEventListener('click', doLogout);
+
+        if (mobileMenuUserRow) mobileMenuUserRow.classList.remove('hidden');
+        if (mobileMenuLogin) mobileMenuLogin.classList.add('hidden');
+        if (mobileMenuSignUp) mobileMenuSignUp.classList.add('hidden');
+        if (mobileMenuStart) {
+          mobileMenuStart.classList.remove('hidden');
+          mobileMenuStart.addEventListener('click', _wpGoToApp);
+        }
+        if (mobileMenuLogout) {
+          mobileMenuLogout.classList.remove('hidden');
+          mobileMenuLogout.addEventListener('click', doLogout);
+        }
+      } else {
+        if (mobileMenuUserRow) mobileMenuUserRow.classList.add('hidden');
+        if (mobileMenuLogin) mobileMenuLogin.classList.remove('hidden');
+        if (mobileMenuSignUp) mobileMenuSignUp.classList.remove('hidden');
+        if (mobileMenuStart) mobileMenuStart.classList.add('hidden');
+        if (mobileMenuLogout) mobileMenuLogout.classList.add('hidden');
       }
 
       // ── Animated background canvas ──
