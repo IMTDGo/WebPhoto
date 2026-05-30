@@ -99,7 +99,7 @@
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300 relative" id="global-nav">
+  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300" style="position:fixed" id="global-nav">
     <div class="h-14 md:h-20 flex items-center gap-3 md:gap-4">
       <a href="./" class="font-headline-lg text-[26px] md:text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none shrink-0">
         SNAPBRIFY
@@ -129,7 +129,7 @@
           <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-[11px] md:text-label-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95" data-i18n="login">
             Login
           </a>
-          <div id="navUserGroup" class="hidden md:flex items-center gap-2 md:gap-3">
+          <div id="navUserGroup" class="hidden items-center gap-2 md:gap-3">
             <div class="flex items-center gap-1.5 md:gap-2 bg-primary/10 border border-primary/25 rounded-full px-2.5 md:px-3 py-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
               <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
@@ -498,7 +498,7 @@
         if (footerSignUp) footerSignUp.style.display = 'none';
 
         const userGroup = document.getElementById('navUserGroup');
-        if (userGroup) userGroup.classList.add('md:flex');
+        if (userGroup) { userGroup.classList.remove('hidden'); userGroup.style.display = 'flex'; }
 
         try {
           const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
