@@ -145,6 +145,8 @@
     #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
   </style>
   <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
   <script>
     // Canonical URL: redirect /index.html → /
     if (window.location.pathname.endsWith('/index.html')) {
@@ -172,100 +174,11 @@
       void nav.offsetHeight;
     });
   </script>
-  <script src="./js/i18n.js"></script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
 
   <!-- Animated Background Canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
-
-  <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 px-margin-mobile md:px-margin-page transition-all duration-300" style="position:fixed" id="global-nav">
-    <div class="nav-shell h-14 md:h-20">
-      <a href="./" class="font-headline-lg text-[26px] md:text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none shrink-0">
-        SNAPBRIFY
-      </a>
-
-      <!-- Centre navigation links (desktop, viewport-centered) -->
-      <div id="desktopCenterNav" class="hidden md:flex items-center">
-        <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_projects">Projects</a>
-        <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_contact">Contact Us</a>
-        <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_manage">Manage Plan</a>
-        <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_beta">Beta Notice</a>
-      </div>
-
-      <div class="flex items-center justify-self-end">
-        <!-- Desktop auth controls -->
-        <div id="desktopAuthControls" class="hidden md:flex items-center gap-2 md:gap-4">
-          <!-- Language selector -->
-          <select id="desktopLangSelect" class="lang-select px-3 py-1.5 rounded-full border border-outline-variant/40 bg-surface-container/50 text-on-surface-variant hover:text-primary hover:border-primary/40 text-[12px] outline-none cursor-pointer transition-colors font-label-sm leading-none">
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-          </select>
-
-          <a href="./signup.html" id="navSignUp" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="sign_up">
-            Sign Up
-          </a>
-          <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-[11px] md:text-label-sm px-4 md:px-6 py-2 md:py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95" data-i18n="login">
-            Login
-          </a>
-          <div id="navUserGroup" class="hidden items-center gap-2 md:gap-3">
-            <div class="flex items-center gap-1.5 md:gap-2 bg-primary/10 border border-primary/25 rounded-full px-2.5 md:px-3 py-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
-              <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-              <span id="navUsername" class="font-label-sm text-[10px] md:text-label-sm text-primary uppercase tracking-widest max-w-[88px] md:max-w-[120px] truncate"></span>
-            </div>
-            <button id="btnNavOpenApp"
-              class="bg-primary text-on-primary font-label-sm text-[10px] md:text-label-sm px-3 md:px-5 py-1.5 md:py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-              <span data-i18n="start_creating">Start Creating</span>
-            </button>
-            <button id="btnNavLogout"
-              class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1" data-i18n="logout">
-              Log Out
-            </button>
-          </div>
-        </div>
-
-        <!-- Mobile menu button -->
-        <button id="mobileMenuBtn" class="hidden w-10 h-10 rounded-full border border-outline-variant/40 text-on-surface-variant hover:text-primary hover:border-primary/50 transition-colors items-center justify-center" aria-label="Open menu" aria-expanded="false">
-          <span class="material-symbols-outlined" style="font-size:20px">menu</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Mobile dropdown menu -->
-    <div id="mobileMenuBackdrop" class="hidden fixed inset-0 bg-black/55"></div>
-    <div id="mobileMenuPanel" class="hidden absolute right-0 top-full mt-2 w-[min(88vw,320px)] rounded-xl border border-outline-variant/30 bg-surface/95 backdrop-blur-xl shadow-[0_12px_32px_rgba(0,0,0,0.45)] p-3">
-      <div id="mobileMenuUserRow" class="hidden mb-3 pb-3 border-b border-outline-variant/20">
-        <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mb-1" data-i18n="signed_in_as">Signed In As</p>
-        <p id="mobileMenuUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest truncate"></p>
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <a href="./projects.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_projects">Projects</a>
-        <a href="./contact.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_contact">Contact Us</a>
-        <a href="./manage-plan.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_manage">Manage Plan</a>
-        <a href="./beta-notice.html" class="mobile-menu-link px-3 py-2 rounded-lg font-label-sm text-label-sm text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors uppercase tracking-widest" data-i18n="nav_beta">Beta Notice</a>
-      </div>
-
-      <div class="my-3 border-t border-outline-variant/20"></div>
-
-      <div class="mb-3 px-3 py-2 rounded-lg border border-outline-variant/25 bg-surface-container/40">
-        <p class="mb-2 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="language_label">Language</p>
-        <select id="mobileLangSelect" class="lang-select w-full px-2 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-on-surface text-sm outline-none cursor-pointer hover:border-primary/40 transition-colors font-label-sm">
-          <option value="en">English</option>
-          <option value="zh">中文</option>
-        </select>
-      </div>
-
-      <div class="flex flex-col gap-2">
-        <a href="./login.html?ref=app" id="mobileMenuLogin" class="mobile-menu-link px-3 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-widest text-center" data-i18n="login">Login</a>
-        <a href="./signup.html" id="mobileMenuSignUp" class="mobile-menu-link px-3 py-2 rounded-lg border border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest text-center hover:border-primary/40 hover:text-primary transition-colors" data-i18n="sign_up">Sign Up</a>
-        <button id="mobileMenuStart" class="hidden px-3 py-2 rounded-lg bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-widest" data-i18n="start_creating">Start Creating</button>
-        <button id="mobileMenuLogout" class="hidden px-3 py-2 rounded-lg border border-outline-variant/30 text-on-surface-variant font-label-sm text-label-sm uppercase tracking-widest hover:text-error/80 transition-colors" data-i18n="logout">Log Out</button>
-      </div>
-    </div>
-  </nav>
 
   <!-- Main Content -->
   <main class="flex-grow pt-28 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
@@ -372,124 +285,16 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // ── i18n system is now in js/i18n.js (auto-initialized) ──
+      // ── Auth + nav is now in js/navbar.js ──
 
-      // ── Auth-aware UI ──
-      const isLoggedIn = window._wpIsLoggedIn;
-      const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-      const mobileMenuPanel = document.getElementById('mobileMenuPanel');
-      const mobileMenuBackdrop = document.getElementById('mobileMenuBackdrop');
-      const mobileMenuUserRow = document.getElementById('mobileMenuUserRow');
-      const mobileMenuUsername = document.getElementById('mobileMenuUsername');
-      const mobileMenuLogin = document.getElementById('mobileMenuLogin');
-      const mobileMenuSignUp = document.getElementById('mobileMenuSignUp');
-      const mobileMenuStart = document.getElementById('mobileMenuStart');
-      const mobileMenuLogout = document.getElementById('mobileMenuLogout');
-
-      function closeMobileMenu() {
-        if (!mobileMenuPanel || !mobileMenuBackdrop || !mobileMenuBtn) return;
-        mobileMenuPanel.classList.add('hidden');
-        mobileMenuBackdrop.classList.add('hidden');
-        mobileMenuBtn.setAttribute('aria-expanded', 'false');
-      }
-
-      function openMobileMenu() {
-        if (!mobileMenuPanel || !mobileMenuBackdrop || !mobileMenuBtn) return;
-        mobileMenuPanel.classList.remove('hidden');
-        mobileMenuBackdrop.classList.remove('hidden');
-        mobileMenuBtn.setAttribute('aria-expanded', 'true');
-      }
-
-      if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isOpen = mobileMenuPanel && !mobileMenuPanel.classList.contains('hidden');
-          if (isOpen) closeMobileMenu();
-          else openMobileMenu();
+      // "Start Creating" hero button (index-page-specific)
+      const btnGetStarted = document.getElementById('btnGetStarted');
+      if (btnGetStarted) {
+        btnGetStarted.addEventListener('click', () => {
+          const loggedIn = !!(window._wpIsLoggedIn || sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
+          if (loggedIn) { if (typeof _wpGoToApp === 'function') _wpGoToApp(); }
+          else window.location.href = './login.html?ref=app';
         });
-      }
-
-      if (mobileMenuBackdrop) {
-        mobileMenuBackdrop.addEventListener('click', closeMobileMenu);
-      }
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeMobileMenu();
-      });
-
-      window.addEventListener('resize', () => {
-        if (window.innerWidth > 1024) closeMobileMenu();
-      });
-
-      if (mobileMenuPanel) {
-        mobileMenuPanel.querySelectorAll('.mobile-menu-link, button').forEach((el) => {
-          el.addEventListener('click', closeMobileMenu);
-        });
-      }
-
-      // "Start Creating" button: go to app if logged in, else login page
-      document.getElementById('btnGetStarted').addEventListener('click', () => {
-        if (isLoggedIn) _wpGoToApp();
-        else window.location.href = './login.html?ref=app';
-      });
-
-      // ── Real logout helper ──
-      function doLogout() {
-        // Reload to show the logged-out landing page instead of going to login
-        const sid = sessionStorage.getItem('wp_sessionId') || localStorage.getItem('wp_sessionId');
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k);
-          sessionStorage.removeItem(k);
-        });
-        if (sid) {
-          const base = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-            ? location.protocol + '//' + location.host
-            : 'https://webphoto-lidl.onrender.com';
-          try { navigator.sendBeacon(base + '/logout', new Blob([JSON.stringify({ sessionId: sid })], { type: 'application/json' })); } catch (e) {}
-        }
-        window.location.reload();
-      }
-
-      // Navbar + footer: show correct state based on login
-      if (isLoggedIn) {
-        document.getElementById('navSignUp').style.display = 'none';
-        document.getElementById('navLogin').style.display = 'none';
-        const heroSignUp = document.getElementById('heroSignUp');
-        if (heroSignUp) heroSignUp.style.display = 'none';
-        const footerSignUp = document.getElementById('footerSignUp');
-        if (footerSignUp) footerSignUp.style.display = 'none';
-
-        const userGroup = document.getElementById('navUserGroup');
-        if (userGroup) { userGroup.classList.remove('hidden'); userGroup.style.display = 'flex'; }
-
-        try {
-          const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-          if (raw) {
-            const u = JSON.parse(raw);
-            document.getElementById('navUsername').textContent = u.name || u.id || '';
-            if (mobileMenuUsername) mobileMenuUsername.textContent = u.name || u.id || '';
-          }
-        } catch (e) {}
-
-        document.getElementById('btnNavOpenApp').addEventListener('click', _wpGoToApp);
-        document.getElementById('btnNavLogout').addEventListener('click', doLogout);
-
-        if (mobileMenuUserRow) mobileMenuUserRow.classList.remove('hidden');
-        if (mobileMenuLogin) mobileMenuLogin.classList.add('hidden');
-        if (mobileMenuSignUp) mobileMenuSignUp.classList.add('hidden');
-        if (mobileMenuStart) {
-          mobileMenuStart.classList.remove('hidden');
-          mobileMenuStart.addEventListener('click', _wpGoToApp);
-        }
-        if (mobileMenuLogout) {
-          mobileMenuLogout.classList.remove('hidden');
-          mobileMenuLogout.addEventListener('click', doLogout);
-        }
-      } else {
-        if (mobileMenuUserRow) mobileMenuUserRow.classList.add('hidden');
-        if (mobileMenuLogin) mobileMenuLogin.classList.remove('hidden');
-        if (mobileMenuSignUp) mobileMenuSignUp.classList.remove('hidden');
-        if (mobileMenuStart) mobileMenuStart.classList.add('hidden');
-        if (mobileMenuLogout) mobileMenuLogout.classList.add('hidden');
       }
 
       // ── Animated background canvas ──

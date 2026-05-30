@@ -87,9 +87,9 @@ const I18N_SYSTEM = (() => {
     });
   }
 
-  // Sync language selectors on page
+  // Sync language selectors on page (covers both .lang-select and .snap-lang-select)
   function syncLangSelects(lang) {
-    document.querySelectorAll('.lang-select').forEach(select => {
+    document.querySelectorAll('.lang-select, .snap-lang-select').forEach(select => {
       select.value = lang;
     });
   }
@@ -108,14 +108,17 @@ const I18N_SYSTEM = (() => {
     applyI18n(currentLang);
     syncLangSelects(currentLang);
 
-    // Setup event listeners on all language selectors
-    document.querySelectorAll('.lang-select').forEach(select => {
+    // Re-sync after a short delay to catch selectors injected by navbar.js
+    setTimeout(() => syncLangSelects(currentLang), 0);
+
+    // Setup event listeners on all language selectors (both classes)
+    document.querySelectorAll('.lang-select, .snap-lang-select').forEach(select => {
       select.addEventListener('change', (e) => changeLanguage(e.target.value));
     });
 
     // Cross-page sync: listen to localStorage changes from other tabs/windows
     window.addEventListener('storage', (e) => {
-      if (e.key === LANG_PREF_KEY && e.newValue) {
+      if (e.key === LANG_PREF_KEY && e.newValue && (e.newValue === 'zh' || e.newValue === 'en')) {
         applyI18n(e.newValue);
         syncLangSelects(e.newValue);
       }

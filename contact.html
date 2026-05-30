@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -95,30 +97,7 @@
 </head>
 <body class="bg-background text-on-surface overflow-x-hidden min-h-screen flex flex-col">
 
-  <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300">
-    <a href="./" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">SNAPBRIFY</a>
-    <div class="flex items-center gap-4 md:gap-8 overflow-x-auto whitespace-nowrap max-w-[52vw] md:max-w-none">
-      <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Projects</a>
-      <a href="./contact.html" class="font-label-sm text-label-sm text-primary uppercase tracking-widest">Contact Us</a>
-      <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Manage Plan</a>
-      <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Beta Notice</a>
-    </div>
-    <div class="flex items-center gap-4">
-      <select class="lang-select px-3 py-1.5 rounded-full border border-outline-variant/40 bg-surface-container/50 text-on-surface-variant hover:text-primary hover:border-primary/40 text-[12px] outline-none cursor-pointer transition-colors font-label-sm leading-none"><option value="en">English</option><option value="zh">中文</option></select>
-      <div id="navUserGroup" class="hidden items-center gap-3">
-        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
-          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
-        </div>
-        <a href="./" class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Home</a>
-        <button id="btnNavLogout" class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">Log Out</button>
-      </div>
-      <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">Sign Up</a>
-      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95">Login</a>
-    </div>
-  </nav>
+  <!-- Top Navigation injected by js/navbar.js -->
 
   <!-- Main -->
   <main class="flex-grow pt-32 pb-margin-page px-margin-mobile md:px-margin-page relative">
