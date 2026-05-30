@@ -116,14 +116,12 @@
       <div class="ml-auto flex items-center">
         <!-- Desktop auth controls -->
         <div class="hidden md:flex items-center gap-2 md:gap-4">
-          <div class="flex items-center gap-2 rounded-full border border-outline-variant/30 px-3 py-1.5">
-            <span class="material-symbols-outlined text-on-surface-variant" style="font-size:14px">language</span>
-            <select id="desktopLangSelect" class="bg-transparent text-on-surface-variant text-[11px] tracking-widest uppercase outline-none cursor-pointer">
-              <option value="auto">Auto</option>
-              <option value="en">English</option>
-              <option value="zh">中文</option>
-            </select>
-          </div>
+          <!-- Language selector -->
+          <select id="desktopLangSelect" class="px-3 py-1.5 rounded-full border border-outline-variant/40 bg-surface-container/50 text-on-surface-variant hover:text-primary hover:border-primary/40 text-[12px] tracking-widest uppercase outline-none cursor-pointer transition-colors font-label-sm">
+            <option value="auto">Auto</option>
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
 
           <a href="./signup.html" id="navSignUp" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="sign_up">
             Sign Up
@@ -172,16 +170,13 @@
 
       <div class="my-3 border-t border-outline-variant/20"></div>
 
-      <div class="mb-3">
-        <p class="px-3 mb-1 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="language_label">Language</p>
-        <div class="px-3 py-2 rounded-lg border border-outline-variant/25 bg-surface-container/40 flex items-center gap-2">
-          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:16px">language</span>
-          <select id="mobileLangSelect" class="w-full bg-transparent text-on-surface text-sm outline-none cursor-pointer">
-            <option value="auto">Auto</option>
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-          </select>
-        </div>
+      <div class="mb-3 px-3 py-2 rounded-lg border border-outline-variant/25 bg-surface-container/40">
+        <p class="mb-2 font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="language_label">Language</p>
+        <select id="mobileLangSelect" class="w-full px-2 py-1 rounded-lg bg-surface-container border border-outline-variant/30 text-on-surface text-sm outline-none cursor-pointer hover:border-primary/40 transition-colors font-label-sm">
+          <option value="auto">Auto</option>
+          <option value="en">English</option>
+          <option value="zh">中文</option>
+        </select>
       </div>
 
       <div class="flex flex-col gap-2">
@@ -385,22 +380,40 @@
       }
 
       let languagePreference = getLanguagePreference();
-      applyI18n(pickActiveLang(languagePreference));
+      const activeLanguage = pickActiveLang(languagePreference);
+      console.log('[i18n] Init: pref=%s, active=%s', languagePreference, activeLanguage);
+      console.log('[i18n] desktopLangSelect:', desktopLangSelect, 'mobileLangSelect:', mobileLangSelect);
+      
+      applyI18n(activeLanguage);
       syncLangSelects(languagePreference);
 
       function onLanguageChanged(mode) {
+        console.log('[i18n] Change event: mode=%s', mode);
         const next = (mode === 'zh' || mode === 'en' || mode === 'auto') ? mode : 'auto';
         languagePreference = next;
         localStorage.setItem(LANG_PREF_KEY, next);
-        applyI18n(pickActiveLang(next));
+        const newActiveLang = pickActiveLang(next);
+        console.log('[i18n] After change: next=%s, newActiveLang=%s', next, newActiveLang);
+        applyI18n(newActiveLang);
         syncLangSelects(next);
       }
 
       if (desktopLangSelect) {
-        desktopLangSelect.addEventListener('change', (e) => onLanguageChanged(e.target.value));
+        desktopLangSelect.addEventListener('change', (e) => {
+          console.log('[i18n] Desktop select changed:', e.target.value);
+          onLanguageChanged(e.target.value);
+        });
+      } else {
+        console.warn('[i18n] desktopLangSelect not found');
       }
+      
       if (mobileLangSelect) {
-        mobileLangSelect.addEventListener('change', (e) => onLanguageChanged(e.target.value));
+        mobileLangSelect.addEventListener('change', (e) => {
+          console.log('[i18n] Mobile select changed:', e.target.value);
+          onLanguageChanged(e.target.value);
+        });
+      } else {
+        console.warn('[i18n] mobileLangSelect not found');
       }
 
       // ── Auth-aware UI ──

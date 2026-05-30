@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>i18n Test</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; }
+    .control { margin: 20px 0; padding: 10px; border: 1px solid #444; border-radius: 5px; }
+    .result { margin: 20px 0; padding: 10px; background: #333; border-radius: 5px; }
+    select { padding: 5px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>i18n Language Switch Test</h1>
+  
+  <div class="control">
+    <label>Desktop Lang Select:</label>
+    <select id="desktopLangSelect">
+      <option value="auto">Auto</option>
+      <option value="en">English</option>
+      <option value="zh">中文</option>
+    </select>
+  </div>
+
+  <div class="control">
+    <label>Mobile Lang Select:</label>
+    <select id="mobileLangSelect">
+      <option value="auto">Auto</option>
+      <option value="en">English</option>
+      <option value="zh">中文</option>
+    </select>
+  </div>
+
+  <div class="result">
+    <h2 data-i18n="hero_badge">Material Texture Intelligence</h2>
+    <p data-i18n="hero_desc">The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.</p>
+    <p><strong>Language Label:</strong> <span data-i18n="language_label">Language</span></p>
+    <p><strong>Sign Up:</strong> <span data-i18n="sign_up">Sign Up</span></p>
+    <p><strong>Login:</strong> <span data-i18n="login">Login</span></p>
+  </div>
+
+  <div class="result">
+    <h3>Debug Info:</h3>
+    <p>Browser languages: <span id="browserLangsDebug"></span></p>
+    <p>Detected lang: <span id="detectedLangDebug"></span></p>
+    <p>Preference: <span id="prefDebug"></span></p>
+    <p>Active lang: <span id="activeLangDebug"></span></p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const I18N = {
+        en: {
+          meta_title: 'SNAPBRIFY — Transform Reality into Texture',
+          nav_projects: 'Projects',
+          nav_contact: 'Contact Us',
+          nav_manage: 'Manage Plan',
+          nav_beta: 'Beta Notice',
+          language_label: 'Language',
+          sign_up: 'Sign Up',
+          login: 'Login',
+          start_short: 'Start',
+          start_creating: 'Start Creating',
+          logout: 'Log Out',
+          hero_badge: 'Material Texture Intelligence',
+          hero_title_html: 'Transform Reality<br />into Texture',
+          hero_desc: 'The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.',
+          create_account: 'Create Account',
+          created_by: 'Created By',
+          signed_in_as: 'Signed In As'
+        },
+        zh: {
+          meta_title: 'SNAPBRIFY — 將真實轉化為材質',
+          nav_projects: '專案列表',
+          nav_contact: '聯絡我們',
+          nav_manage: '方案管理',
+          nav_beta: '測試須知',
+          language_label: '語言',
+          sign_up: '註冊',
+          login: '登入',
+          start_short: '開始',
+          start_creating: '開始製作',
+          logout: '登出',
+          hero_badge: '材質智慧引擎',
+          hero_title_html: '將真實世界<br />轉化為材質',
+          hero_desc: '為現代創作者打造的影像轉 3D 材質平台。拍攝、微調並部署高品質 PBR 貼圖，直接在你的手機完成。',
+          create_account: '建立帳號',
+          created_by: '創作者',
+          signed_in_as: '已登入帳號'
+        }
+      };
+
+      const LANG_PREF_KEY = 'wp_lang_pref';
+      const browserLocales = Array.isArray(navigator.languages) && navigator.languages.length
+        ? navigator.languages
+        : [navigator.language || 'en'];
+
+      const desktopLangSelect = document.getElementById('desktopLangSelect');
+      const mobileLangSelect = document.getElementById('mobileLangSelect');
+
+      console.log('Browser locales:', browserLocales);
+      console.log('desktopLangSelect element:', desktopLangSelect);
+      console.log('mobileLangSelect element:', mobileLangSelect);
+
+      function resolveLang(locales) {
+        for (const locale of locales) {
+          const normalized = String(locale || '').toLowerCase();
+          if (normalized.startsWith('zh')) return 'zh';
+        }
+        return 'en';
+      }
+
+      function getLanguagePreference() {
+        const saved = localStorage.getItem(LANG_PREF_KEY);
+        console.log('Saved pref:', saved);
+        return (saved === 'zh' || saved === 'en' || saved === 'auto') ? saved : 'auto';
+      }
+
+      function pickActiveLang(prefMode) {
+        if (prefMode === 'zh' || prefMode === 'en') return prefMode;
+        return resolveLang(browserLocales);
+      }
+
+      function applyI18n(activeLang) {
+        console.log('Applying i18n for:', activeLang);
+        const dict = I18N[activeLang] || I18N.en;
+        document.documentElement.lang = activeLang === 'zh' ? 'zh-Hant' : 'en';
+        document.title = dict.meta_title || I18N.en.meta_title;
+
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+          const key = el.getAttribute('data-i18n');
+          if (dict[key]) {
+            el.textContent = dict[key];
+            console.log(`Set ${key} = ${dict[key]}`);
+          }
+        });
+        document.querySelectorAll('[data-i18n-html]').forEach(el => {
+          const key = el.getAttribute('data-i18n-html');
+          if (dict[key]) el.innerHTML = dict[key];
+        });
+      }
+
+      function syncLangSelects(prefMode) {
+        console.log('Syncing selects to:', prefMode);
+        if (desktopLangSelect) {
+          desktopLangSelect.value = prefMode;
+          console.log('Desktop select value set to:', desktopLangSelect.value);
+        }
+        if (mobileLangSelect) {
+          mobileLangSelect.value = prefMode;
+          console.log('Mobile select value set to:', mobileLangSelect.value);
+        }
+      }
+
+      let languagePreference = getLanguagePreference();
+      const activeLanguage = pickActiveLang(languagePreference);
+      console.log('Preference:', languagePreference, 'Active:', activeLanguage);
+      
+      applyI18n(activeLanguage);
+      syncLangSelects(languagePreference);
+
+      // Update debug info
+      document.getElementById('browserLangsDebug').textContent = browserLocales.join(', ');
+      document.getElementById('detectedLangDebug').textContent = resolveLang(browserLocales);
+      document.getElementById('prefDebug').textContent = languagePreference;
+      document.getElementById('activeLangDebug').textContent = activeLanguage;
+
+      function onLanguageChanged(mode) {
+        console.log('Language changed to:', mode);
+        const next = (mode === 'zh' || mode === 'en' || mode === 'auto') ? mode : 'auto';
+        languagePreference = next;
+        localStorage.setItem(LANG_PREF_KEY, next);
+        const newActiveLang = pickActiveLang(next);
+        applyI18n(newActiveLang);
+        syncLangSelects(next);
+        document.getElementById('prefDebug').textContent = next;
+        document.getElementById('activeLangDebug').textContent = newActiveLang;
+        console.log('Applied:', newActiveLang);
+      }
+
+      if (desktopLangSelect) {
+        desktopLangSelect.addEventListener('change', (e) => {
+          console.log('Desktop select changed to:', e.target.value);
+          onLanguageChanged(e.target.value);
+        });
+      }
+      if (mobileLangSelect) {
+        mobileLangSelect.addEventListener('change', (e) => {
+          console.log('Mobile select changed to:', e.target.value);
+          onLanguageChanged(e.target.value);
+        });
+      }
+
+      console.log('Initialization complete');
+    });
+  </script>
+</body>
+</html>
