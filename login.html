@@ -117,8 +117,8 @@
     <!-- Glass Card -->
     <div class="bg-surface-container/60 backdrop-blur-2xl border border-outline-variant/30 rounded-xl p-container-padding glass-card transition-all duration-500 hover:border-outline-variant/50 hover:bg-surface-container/80">
       <header class="mb-10 text-center">
-        <h2 class="font-headline-xl text-headline-lg-mobile md:text-[36px] text-on-surface mb-2 tracking-tight">Welcome Back</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant">Sign in to access your workspace.</p>
+        <h2 class="font-headline-xl text-headline-lg-mobile md:text-[36px] text-on-surface mb-2 tracking-tight" data-i18n="login_welcome">Welcome Back</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="login_desc">Sign in to access your workspace.</p>
       </header>
 
       <!-- Alert area -->
@@ -127,7 +127,7 @@
       <form id="loginForm" autocomplete="on" novalidate class="flex flex-col gap-gutter">
         <!-- Username -->
         <div class="flex flex-col gap-unit">
-          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="username">Account</label>
+          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="username" data-i18n="login_account_label">Account</label>
           <div class="relative group">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors duration-250">person</span>
             <input id="username" name="username" type="text" autocomplete="username" required
@@ -138,7 +138,7 @@
 
         <!-- Password -->
         <div class="flex flex-col gap-unit mb-2">
-          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="password">Password</label>
+          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="password" data-i18n="login_password_label">Password</label>
           <div class="relative group">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors duration-250">lock</span>
             <input id="password" name="password" type="password" autocomplete="current-password" required
@@ -152,18 +152,18 @@
           <input type="checkbox" id="rememberMe" name="rememberMe" checked
             class="w-4 h-4 rounded border border-outline-variant/50 bg-surface-variant/30 accent-primary cursor-pointer" />
           <label for="rememberMe" class="font-label-sm text-label-sm text-on-surface-variant cursor-pointer select-none">
-            Remember Me <span class="text-on-surface-variant/40">(Do not use on public computers)</span>
+            <span data-i18n="login_remember">Remember Me</span> <span class="text-on-surface-variant/40" data-i18n="login_remember_hint">(Do not use on public computers)</span>
           </label>
         </div>
 
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-stack-gap mt-4 pt-4 border-t border-outline-variant/10">
           <button type="submit" id="btnLogin"
-            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest bg-primary text-on-primary hover:bg-primary-container hover:shadow-[0_0_15px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-[0.98]">
+            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest bg-primary text-on-primary hover:bg-primary-container hover:shadow-[0_0_15px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-[0.98]" data-i18n="login_btn">
             Log In
           </button>
           <button type="button" id="btnCancel"
-            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest border border-outline-variant/30 text-on-surface-variant bg-transparent hover:bg-surface-variant hover:text-on-surface hover:border-outline-variant transition-all duration-250 ease-out active:scale-[0.98]">
+            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest border border-outline-variant/30 text-on-surface-variant bg-transparent hover:bg-surface-variant hover:text-on-surface hover:border-outline-variant transition-all duration-250 ease-out active:scale-[0.98]" data-i18n="editor_cancel">
             Cancel
           </button>
         </div>
@@ -173,8 +173,8 @@
     <!-- Sign up -->
     <div class="mt-8 text-center">
       <p class="font-body-md text-body-md text-on-surface-variant">
-        Don't have an account?
-        <a href="./signup.html" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary">Sign Up</a>
+        <span data-i18n="login_no_account">Don't have an account?</span>
+        <a href="./signup.html" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary" data-i18n="sign_up">Sign Up</a>
       </p>
     </div>
   </main>

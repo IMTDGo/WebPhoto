@@ -92,11 +92,11 @@
           <span class="material-symbols-outlined text-primary" style="font-size:24px;font-variation-settings:'FILL' 1,'wght' 400">construction</span>
         </div>
         <div class="flex-1">
-          <p class="font-label-xs text-label-xs text-primary uppercase tracking-widest mb-1">Status Notice</p>
-          <h2 class="font-headline-lg text-on-surface mb-1" style="font-size:20px">Pricing — Needs Further Discussion</h2>
-          <p class="font-body-md text-on-surface-variant">The subscription tiers and pricing below are <strong class="text-on-surface">not yet finalized</strong>. Plans are currently being evaluated and are subject to change. Please <a href="./contact.html" class="text-primary hover:text-primary-fixed underline">contact us</a> for the latest information.</p>
+          <p class="font-label-xs text-label-xs text-primary uppercase tracking-widest mb-1" data-i18n="plan_status_notice">Status Notice</p>
+          <h2 class="font-headline-lg text-on-surface mb-1" style="font-size:20px" data-i18n="plan_wip_title">Pricing — Needs Further Discussion</h2>
+          <p class="font-body-md text-on-surface-variant" data-i18n-html="plan_wip_desc_html">The subscription tiers and pricing below are <strong class="text-on-surface">not yet finalized</strong>. Plans are currently being evaluated and are subject to change. Please <a href="./contact.html" class="text-primary hover:text-primary-fixed underline">contact us</a> for the latest information.</p>
         </div>
-        <span class="flex-shrink-0 bg-primary text-on-primary font-label-xs text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full font-bold">TBD</span>
+        <span class="flex-shrink-0 bg-primary text-on-primary font-label-xs text-[10px] uppercase tracking-widest px-3 py-1.5 rounded-full font-bold" data-i18n="plan_tbd_badge">TBD</span>
       </div>
 
       <!-- Header -->
@@ -112,48 +112,48 @@
           <div class="relative z-10">
             <div class="flex justify-between items-start mb-8 flex-wrap gap-4">
               <div>
-                <span class="inline-block bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded font-label-xs text-label-xs mb-4 uppercase tracking-widest">Current Plan</span>
-                <h2 class="font-headline-lg text-headline-lg text-on-surface">Free Tier</h2>
+                <span class="inline-block bg-primary/10 border border-primary/20 text-primary px-3 py-1 rounded font-label-xs text-label-xs mb-4 uppercase tracking-widest" data-i18n="plan_current_badge">Current Plan</span>
+                <h2 class="font-headline-lg text-headline-lg text-on-surface" data-i18n="plan_free_tier">Free Tier</h2>
               </div>
               <div class="text-right">
                 <span class="font-headline-lg text-headline-lg text-primary">$0</span>
-                <span class="text-on-surface-variant font-body-md block">/ month</span>
+                <span class="text-on-surface-variant font-body-md block" data-i18n="plan_per_month">/ month</span>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 mb-8">
               <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
-                <span class="font-body-md text-on-surface">PBR Channel Generation</span>
+                <span class="font-body-md text-on-surface" data-i18n="plan_feat_pbr">PBR Channel Generation</span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
-                <span class="font-body-md text-on-surface">Mobile Capture</span>
+                <span class="font-body-md text-on-surface" data-i18n="plan_feat_mobile_cap">Mobile Capture</span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
-                <span class="font-body-md text-on-surface">Seamless Tiling</span>
+                <span class="font-body-md text-on-surface" data-i18n="plan_feat_seamless">Seamless Tiling</span>
               </div>
               <div class="flex items-center gap-3">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check_circle</span>
-                <span class="font-body-md text-on-surface">Cloudflare R2 Storage</span>
+                <span class="font-body-md text-on-surface" data-i18n="plan_feat_storage">Cloudflare R2 Storage</span>
               </div>
             </div>
             <div class="flex flex-wrap gap-4">
-              <button class="bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-8 py-3 rounded-full cursor-not-allowed opacity-60" disabled>Billing Not Active</button>
-              <a href="./contact.html" class="border border-outline-variant text-on-surface font-label-sm text-label-sm px-8 py-3 rounded-full hover:border-primary/40 hover:text-primary transition-all duration-250 active:scale-95">Contact Us</a>
+              <button class="bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-8 py-3 rounded-full cursor-not-allowed opacity-60" disabled data-i18n="plan_billing_inactive">Billing Not Active</button>
+              <a href="./contact.html" class="border border-outline-variant text-on-surface font-label-sm text-label-sm px-8 py-3 rounded-full hover:border-primary/40 hover:text-primary transition-all duration-250 active:scale-95" data-i18n="plan_contact_us">Contact Us</a>
             </div>
           </div>
         </div>
 
         <div class="glass-panel p-container-padding rounded-xl flex flex-col gap-6">
           <div>
-            <h3 class="font-headline-lg text-on-surface mb-3" style="font-size:18px">Upload Quota</h3>
-            <p class="font-body-md text-on-surface-variant text-sm">Your current daily upload allowance.</p>
+            <h3 class="font-headline-lg text-on-surface mb-3" style="font-size:18px" data-i18n="plan_quota_title">Upload Quota</h3>
+            <p class="font-body-md text-on-surface-variant text-sm" data-i18n="plan_quota_desc">Your current daily upload allowance.</p>
           </div>
           <div class="space-y-4">
             <div class="p-4 bg-surface-container rounded-lg border border-white/5">
               <div class="flex justify-between items-center mb-2">
-                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Uploads Today</span>
+                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="plan_uploads_today">Uploads Today</span>
                 <span class="font-label-xs text-label-xs text-primary">3 / 3</span>
               </div>
               <div class="w-full bg-outline-variant/30 h-1 rounded-full overflow-hidden">
@@ -162,10 +162,10 @@
             </div>
             <div class="p-4 bg-surface-container rounded-lg border border-white/5">
               <div class="flex justify-between items-center mb-2">
-                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Daily Uploaders</span>
-                <span class="font-label-xs text-label-xs text-on-surface-variant">200 max</span>
+                <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="plan_daily_uploaders">Daily Uploaders</span>
+                <span class="font-label-xs text-label-xs text-on-surface-variant" data-i18n="plan_200_max">200 max</span>
               </div>
-              <p class="font-body-md text-on-surface-variant text-xs mt-1">Platform-wide daily unique uploader cap</p>
+              <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="plan_platform_cap">Platform-wide daily unique uploader cap</p>
             </div>
           </div>
         </div>
@@ -174,93 +174,93 @@
       <!-- Available Tiers -->
       <section class="mb-16">
         <div class="flex items-center gap-3 mb-2">
-          <h2 class="font-headline-lg text-headline-lg text-on-surface">Available Tiers</h2>
-          <span class="bg-primary/10 border border-primary/25 text-primary font-label-xs text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full">Pricing TBD</span>
+          <h2 class="font-headline-lg text-headline-lg text-on-surface" data-i18n="plan_tiers_title">Available Tiers</h2>
+          <span class="bg-primary/10 border border-primary/25 text-primary font-label-xs text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full" data-i18n="plan_pricing_tbd_badge">Pricing TBD</span>
         </div>
-        <p class="font-body-md text-on-surface-variant mb-8">The following plans are conceptual and subject to further discussion.</p>
+        <p class="font-body-md text-on-surface-variant mb-8" data-i18n="plan_tiers_desc">The following plans are conceptual and subject to further discussion.</p>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <!-- Starter -->
           <div class="glass-panel gold-glow p-8 rounded-xl flex flex-col transition-all duration-300">
             <div class="mb-6">
-              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Starter</h3>
-              <p class="font-body-md text-on-surface-variant">For individual creators just getting started.</p>
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px" data-i18n="plan_starter_title">Starter</h3>
+              <p class="font-body-md text-on-surface-variant" data-i18n="plan_starter_desc">For individual creators just getting started.</p>
             </div>
             <div class="mb-6">
-              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px">TBD</span>
+              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px" data-i18n="plan_tbd_badge">TBD</span>
             </div>
             <ul class="space-y-3 mb-8 flex-grow">
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                Up to 5 uploads / day
+                <span data-i18n="plan_feat_5uploads">Up to 5 uploads / day</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                Standard resolution export
+                <span data-i18n="plan_feat_standard_res">Standard resolution export</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                Email delivery
+                <span data-i18n="plan_feat_email">Email delivery</span>
               </li>
             </ul>
-            <button class="w-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled>Coming Soon</button>
+            <button class="w-full border border-outline-variant text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled data-i18n="plan_coming_soon">Coming Soon</button>
           </div>
 
           <!-- Professional (highlighted as TBD current focus) -->
           <div class="glass-panel p-8 rounded-xl border-2 border-primary/40 relative overflow-hidden flex flex-col">
-            <div class="absolute -top-3 -right-12 bg-primary text-on-primary py-4 px-12 rotate-45 font-label-xs text-[10px] font-bold uppercase tracking-widest shadow-lg">Focus</div>
+            <div class="absolute -top-3 -right-12 bg-primary text-on-primary py-4 px-12 rotate-45 font-label-xs text-[10px] font-bold uppercase tracking-widest shadow-lg" data-i18n="plan_focus_badge">Focus</div>
             <div class="mb-6">
-              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Professional</h3>
-              <p class="font-body-md text-on-surface-variant">For studios and professional 3D artists.</p>
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px" data-i18n="plan_pro_title">Professional</h3>
+              <p class="font-body-md text-on-surface-variant" data-i18n="plan_pro_desc">For studios and professional 3D artists.</p>
             </div>
             <div class="mb-6">
-              <span class="font-headline-xl text-primary" style="font-size:28px">TBD</span>
+              <span class="font-headline-xl text-primary" style="font-size:28px" data-i18n="plan_tbd_badge">TBD</span>
             </div>
             <ul class="space-y-3 mb-8 flex-grow">
               <li class="flex gap-3 font-body-md text-on-surface text-sm">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
-                Unlimited uploads
+                <span data-i18n="plan_feat_unlimited">Unlimited uploads</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface text-sm">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
-                4K / 8K export support
+                <span data-i18n="plan_feat_4k8k">4K / 8K export support</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface text-sm">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
-                Priority processing
+                <span data-i18n="plan_feat_priority">Priority processing</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface text-sm">
                 <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1,'wght' 400">check</span>
-                Dedicated storage quota
+                <span data-i18n="plan_feat_dedicated">Dedicated storage quota</span>
               </li>
             </ul>
-            <button class="w-full bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled>Under Discussion</button>
+            <button class="w-full bg-outline-variant/20 text-on-surface-variant font-label-sm text-label-sm px-6 py-3 rounded-full cursor-not-allowed opacity-50" disabled data-i18n="plan_under_discussion">Under Discussion</button>
           </div>
 
           <!-- Enterprise -->
           <div class="glass-panel gold-glow p-8 rounded-xl flex flex-col transition-all duration-300">
             <div class="mb-6">
-              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px">Enterprise</h3>
-              <p class="font-body-md text-on-surface-variant">Custom solutions for large teams and studios.</p>
+              <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:20px" data-i18n="plan_enterprise_title">Enterprise</h3>
+              <p class="font-body-md text-on-surface-variant" data-i18n="plan_enterprise_desc">Custom solutions for large teams and studios.</p>
             </div>
             <div class="mb-6">
-              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px">Contact Us</span>
+              <span class="font-headline-xl text-on-surface-variant" style="font-size:28px" data-i18n="plan_enterprise_price">Contact Us</span>
             </div>
             <ul class="space-y-3 mb-8 flex-grow">
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                Custom quotas
+                <span data-i18n="plan_feat_custom_quotas">Custom quotas</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                Dedicated infrastructure
+                <span data-i18n="plan_feat_infra">Dedicated infrastructure</span>
               </li>
               <li class="flex gap-3 font-body-md text-on-surface-variant text-sm">
                 <span class="material-symbols-outlined text-on-surface-variant/40" style="font-size:16px">check</span>
-                SLA support
+                <span data-i18n="plan_feat_sla">SLA support</span>
               </li>
             </ul>
-            <a href="./contact.html" class="w-full bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded-full text-center hover:bg-primary-container active:scale-95 transition-all duration-250">Get in Touch</a>
+            <a href="./contact.html" class="w-full bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded-full text-center hover:bg-primary-container active:scale-95 transition-all duration-250" data-i18n="plan_get_in_touch">Get in Touch</a>
           </div>
         </div>
       </section>
@@ -270,10 +270,10 @@
         <div class="flex items-start gap-4">
           <span class="material-symbols-outlined text-primary flex-shrink-0" style="font-size:28px">forum</span>
           <div>
-            <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:18px">Want to help shape the pricing?</h3>
-            <p class="font-body-md text-on-surface-variant mb-4">We're actively gathering feedback from early users. If you have thoughts on what a fair pricing model looks like, we'd love to hear from you.</p>
+            <h3 class="font-headline-lg text-on-surface mb-2" style="font-size:18px" data-i18n="plan_discuss_title">Want to help shape the pricing?</h3>
+            <p class="font-body-md text-on-surface-variant mb-4" data-i18n="plan_discuss_desc">We're actively gathering feedback from early users. If you have thoughts on what a fair pricing model looks like, we'd love to hear from you.</p>
             <a href="./contact.html" class="inline-flex items-center gap-2 bg-primary text-on-primary font-label-sm text-label-sm px-6 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250">
-              Share Feedback
+              <span data-i18n="plan_share_feedback">Share Feedback</span>
               <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
             </a>
           </div>
@@ -288,8 +288,8 @@
     <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
     <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
     <div class="flex gap-gutter">
-      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html">Contact</a>
-      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html">Manage Plan</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html" data-i18n="footer_contact">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
     </div>
   </footer>
 

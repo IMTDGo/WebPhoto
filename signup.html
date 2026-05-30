@@ -120,8 +120,8 @@
       <!-- ── STEP 1: Fill in details ── -->
       <div id="step1">
         <div class="text-center mb-8">
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2">Create Your Account</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant">Join SNAPBRIFY and start creating</p>
+          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" data-i18n="signup_create_title">Create Your Account</h2>
+          <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="signup_subtitle">Join SNAPBRIFY and start creating</p>
         </div>
 
         <div id="alertBox1" class="alert-box mb-6"></div>
@@ -129,29 +129,29 @@
         <form id="step1Form" autocomplete="on" novalidate class="flex flex-col gap-8">
           <!-- Username -->
           <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Username">Username</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Username" data-i18n="signup_username_label">Username</label>
             <div class="relative">
               <input id="s1Username" name="username" type="text" autocomplete="username" required
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
                 placeholder=" " />
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">Letters, numbers or underscore · 3–30 chars</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_username_hint">Letters, numbers or underscore · 3–30 chars</p>
           </div>
 
           <!-- Password -->
           <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Password">Password</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Password" data-i18n="signup_password_label">Password</label>
             <div class="relative">
               <input id="s1Password" name="password" type="password" autocomplete="new-password" required
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
                 placeholder=" " />
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">Minimum 8 characters</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_password_hint">Minimum 8 characters</p>
           </div>
 
           <!-- Confirm Password -->
           <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Confirm">Confirm Password</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Confirm" data-i18n="signup_confirm_label">Confirm Password</label>
             <div class="relative">
               <input id="s1Confirm" name="confirm" type="password" autocomplete="new-password" required
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
@@ -161,25 +161,25 @@
 
           <!-- Email -->
           <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Email">Gmail Address</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Email" data-i18n="signup_email_label">Gmail Address</label>
             <div class="relative">
               <input id="s1Email" name="email" type="email" autocomplete="email" required
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 pr-8 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
                 placeholder=" " />
               <span class="absolute right-2 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none material-symbols-outlined text-[18px]">mail</span>
             </div>
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50">A 6-digit code will be sent to your inbox · valid 10 min</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_email_hint">A 6-digit code will be sent to your inbox · valid 10 min</p>
           </div>
 
           <!-- Actions -->
           <div class="flex flex-col gap-4 mt-2">
             <button type="submit" id="btnSendOtp"
               class="w-full bg-primary text-on-primary font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-primary-fixed hover:scale-[0.98] active:scale-[0.95] flex items-center justify-center gap-2 uppercase tracking-widest">
-              Send OTP
+              <span data-i18n="signup_send_otp">Send OTP</span>
               <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
             <button type="button" id="btnCancel1"
-              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 hover:text-primary active:scale-[0.98] uppercase tracking-widest">
+              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 hover:text-primary active:scale-[0.98] uppercase tracking-widest" data-i18n="editor_cancel">
               Cancel
             </button>
           </div>
@@ -187,8 +187,8 @@
 
         <div class="mt-8 text-center">
           <p class="font-body-md text-body-md text-on-surface-variant">
-            Already have an account?
-            <a href="./login.html?ref=app" class="text-primary hover:text-primary-fixed transition-colors duration-250 underline decoration-primary/30 underline-offset-4 hover:decoration-primary ml-1">Log in</a>
+            <span data-i18n="signup_already">Already have an account?</span>
+            <a href="./login.html?ref=app" class="text-primary hover:text-primary-fixed transition-colors duration-250 underline decoration-primary/30 underline-offset-4 hover:decoration-primary ml-1" data-i18n="login_btn">Log in</a>
           </p>
         </div>
       </div>
@@ -197,8 +197,8 @@
       <div id="step2" class="hidden">
         <div class="text-center mb-8">
           <span class="material-symbols-outlined text-primary text-[48px] mb-3 block">mark_email_unread</span>
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2">Verify Email</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-1">Verification code sent to</p>
+          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" data-i18n="signup_verify_title">Verify Email</h2>
+          <p class="font-body-md text-body-md text-on-surface-variant mb-1" data-i18n="signup_verify_sent">Verification code sent to</p>
           <p class="font-label-sm text-label-sm text-primary tracking-widest" id="displayEmail"></p>
         </div>
 
@@ -206,27 +206,27 @@
 
         <form id="step2Form" novalidate class="flex flex-col gap-8">
           <div class="flex flex-col gap-2 group">
-            <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Verification Code</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="signup_otp_label">Verification Code</label>
             <input id="s2Otp" type="text" inputmode="numeric" maxlength="6" required
               class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out otp-input"
               placeholder="______" />
-            <p class="font-label-xs text-label-xs text-on-surface-variant/50 text-center">Enter the 6-digit verification code</p>
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50 text-center" data-i18n="signup_otp_hint">Enter the 6-digit verification code</p>
           </div>
 
           <div class="text-center">
-            <span class="font-body-md text-body-md text-on-surface-variant">Didn't receive it?</span>
-            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary">Resend</button>
+            <span class="font-body-md text-body-md text-on-surface-variant" data-i18n="signup_no_code">Didn't receive it?</span>
+            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary" data-i18n="signup_resend">Resend</button>
             <span id="resendCooldown" class="font-label-xs text-label-xs text-on-surface-variant/40 ml-1 hidden"></span>
           </div>
 
           <div class="flex flex-col gap-3">
             <button type="submit" id="btnVerify"
               class="w-full bg-primary text-on-primary font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-primary-fixed hover:scale-[0.98] active:scale-[0.95] flex items-center justify-center gap-2 uppercase tracking-widest">
-              Verify
+              <span data-i18n="signup_verify_btn">Verify</span>
               <span class="material-symbols-outlined text-[16px]">verified</span>
             </button>
             <button type="button" id="btnBack2"
-              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 active:scale-[0.98] uppercase tracking-widest">
+              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 active:scale-[0.98] uppercase tracking-widest" data-i18n="signup_back">
               Back
             </button>
           </div>
