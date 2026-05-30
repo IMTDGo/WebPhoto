@@ -50,14 +50,14 @@
       min-width: fit-content;
     }
     .snap-lang-select {
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      padding-right: 2rem;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 0.6rem center;
-      background-size: 0.7rem;
+      appearance: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      padding-right: 2rem !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: right 0.6rem center !important;
+      background-size: 0.7rem !important;
       cursor: pointer;
     }
     .snap-lang-select::-ms-expand { display: none; }
@@ -279,15 +279,20 @@
       // Sync all selectors on this page
       if (dLang) dLang.value = next;
       if (mLang) mLang.value = next;
-      // Delegate to i18n.js if available (may load after navbar.js)
-      if (window.I18N_SYSTEM) {
-        window.I18N_SYSTEM.applyI18n(next);
-        window.I18N_SYSTEM.syncLangSelects(next);
+      // Delegate to i18n.js
+      if (typeof I18N_SYSTEM !== 'undefined' && I18N_SYSTEM.applyI18n) {
+        I18N_SYSTEM.applyI18n(next);
+        I18N_SYSTEM.syncLangSelects(next);
       }
     }
 
     if (dLang) dLang.addEventListener('change', (e) => onLangChange(e.target.value));
     if (mLang) mLang.addEventListener('change', (e) => onLangChange(e.target.value));
+
+    // Apply saved language to the just-injected nav elements
+    if (typeof I18N_SYSTEM !== 'undefined' && I18N_SYSTEM.applyI18n) {
+      I18N_SYSTEM.applyI18n(savedLang);
+    }
 
     /* ── Auth state ── */
     const isLoggedIn = !!(

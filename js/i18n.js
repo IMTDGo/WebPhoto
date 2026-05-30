@@ -109,7 +109,11 @@ const I18N_SYSTEM = (() => {
     syncLangSelects(currentLang);
 
     // Re-sync after a short delay to catch selectors injected by navbar.js
-    setTimeout(() => syncLangSelects(currentLang), 0);
+    // Re-sync and re-apply after navbar.js DOMContentLoaded fires (setTimeout fires after all sync listeners)
+    setTimeout(() => {
+      syncLangSelects(currentLang);
+      applyI18n(currentLang);
+    }, 0);
 
     // Setup event listeners on all language selectors (both classes)
     document.querySelectorAll('.lang-select, .snap-lang-select').forEach(select => {
@@ -136,6 +140,9 @@ const I18N_SYSTEM = (() => {
 })();
 
 // Auto-init when DOM is ready
+// Expose on window so other scripts can reference window.I18N_SYSTEM
+window.I18N_SYSTEM = I18N_SYSTEM;
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => I18N_SYSTEM.init());
 } else {
