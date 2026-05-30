@@ -101,7 +101,6 @@
       font-family: 'GenRyuMin2 TW', 'Mantou Sans', 'BIZ UDPMincho', 'Noto Serif TC', serif;
     }
   </style>
-  <script src="./js/i18n.js"></script>
 </head>
 <body class="overflow-x-hidden min-h-screen flex flex-col">
 
@@ -115,10 +114,10 @@
       <div>
         <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-4 bg-surface-container/60 backdrop-blur">
           <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Material Archive</span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="projects_badge">Material Archive</span>
         </div>
-        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-2">Project History</h1>
-        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">All your uploaded PBR material sets. Download ZIPs or revisit individual channels.</p>
+        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-2" data-i18n="projects_title">Project History</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl" data-i18n="projects_desc">All your uploaded PBR material sets. Download ZIPs or revisit individual channels.</p>
       </div>
       <div class="flex items-center gap-4">
         <div id="searchWrap" class="relative group">
@@ -131,7 +130,7 @@
     <!-- Filters Bar -->
     <div class="flex flex-wrap items-center gap-4 mb-8">
       <div class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant cursor-pointer hover:border-primary transition-colors select-none">
-        <span class="font-label-sm text-label-sm">Date: Newest First</span>
+        <span class="font-label-sm text-label-sm" data-i18n="projects_filter_date">Date: Newest First</span>
         <span class="material-symbols-outlined" style="font-size:16px">keyboard_arrow_down</span>
       </div>
       <div class="ml-auto font-label-sm text-label-sm text-on-surface-variant opacity-60" id="projectCount">Loading…</div>
@@ -142,11 +141,11 @@
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="border-b border-outline-variant/30">
-            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium w-24">Thumb</th>
-            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium">Project Name</th>
-            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden sm:table-cell">Channels</th>
-            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden md:table-cell">Uploaded</th>
-            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium text-right">Actions</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium w-24" data-i18n="projects_th_thumb">Thumb</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium" data-i18n="projects_th_name">Project Name</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden sm:table-cell" data-i18n="projects_th_channels">Channels</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden md:table-cell" data-i18n="projects_th_uploaded">Uploaded</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium text-right" data-i18n="projects_th_actions">Actions</th>
           </tr>
         </thead>
         <tbody id="projectTableBody" class="divide-y divide-outline-variant/10">
@@ -173,8 +172,8 @@
     <div id="emptyState" class="hidden flex-col items-center justify-center py-32 gap-6 text-center">
       <span class="material-symbols-outlined text-on-surface-variant/20" style="font-size:72px">folder_open</span>
       <div>
-        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px">No projects yet</p>
-        <p class="font-body-md text-on-surface-variant/60 mt-2">Upload your first texture set to see it here.</p>
+        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px" data-i18n="projects_empty_title">No projects yet</p>
+        <p class="font-body-md text-on-surface-variant/60 mt-2" data-i18n="projects_empty_desc">Upload your first texture set to see it here.</p>
       </div>
       <button onclick="window._wpGoToApp()" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250">
         Start Creating
@@ -185,8 +184,8 @@
     <div id="loginRequired" class="hidden flex-col items-center justify-center py-32 gap-6 text-center">
       <span class="material-symbols-outlined text-on-surface-variant/20" style="font-size:72px">lock</span>
       <div>
-        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px">Sign in to view your projects</p>
-        <p class="font-body-md text-on-surface-variant/60 mt-2">Your upload history is tied to your account.</p>
+        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px" data-i18n="projects_login_title">Sign in to view your projects</p>
+        <p class="font-body-md text-on-surface-variant/60 mt-2" data-i18n="projects_login_desc">Your upload history is tied to your account.</p>
       </div>
       <a href="./login.html?ref=projects" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250">
         Log In

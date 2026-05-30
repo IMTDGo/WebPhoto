@@ -94,46 +94,13 @@
     details > summary::-webkit-details-marker { display: none; }
   </style>
   <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
 </head>
 <body class="min-h-screen flex flex-col">
 
-  <!-- Navigation -->
-  <nav class="aura-glass shrink-0 flex items-center px-4 h-12 border-b border-white/5" style="z-index:30">
-    <a href="./index.html" class="flex items-center text-on-dim hover:text-on-surface transition-colors mr-2" title="Back to home">
-      <span class="material-symbols-outlined" style="font-size:18px">arrow_back</span>
-    </a>
-    <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250 select-none">SNAPBRIFY</a>
-    <div class="flex-1"></div>
-    <select class="lang-select px-2 py-0.5 rounded-full border border-outline-variant/40 bg-surface-container/50 text-on-surface-variant hover:text-primary hover:border-primary/40 text-[11px] outline-none cursor-pointer transition-colors font-label-sm leading-none mr-2"><option value="en">English</option><option value="zh">中文</option></select>
-    <div id="navUserGroup" class="hidden items-center gap-2">
-      <div class="flex items-center gap-1.5 bg-primary/10 border border-primary/25 rounded-full px-2.5 py-1">
-        <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
-        <span class="material-symbols-outlined text-primary/80" style="font-size:12px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-        <span id="navUsername" class="text-[10px] text-primary uppercase tracking-widest max-w-[84px] truncate"></span>
-      </div>
-      <button id="btnLogout" class="font-label-sm text-[10px] text-on-dim/60 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest px-1">Log Out</button>
-    </div>
-  </nav>
-  <script>
-    (function () {
-      const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-      if (raw) {
-        try {
-          const user = JSON.parse(raw);
-          const el = document.getElementById('navUsername');
-          const userGroup = document.getElementById('navUserGroup');
-          el.textContent = user.name || user.id;
-          userGroup.classList.remove('hidden');
-          userGroup.classList.add('flex');
-        } catch (e) {}
-      }
-      document.getElementById('btnLogout').addEventListener('click', function () {
-        window._wpDoLogout('./login.html?ref=app');
-      });
-    })();
-  </script>
+  <!-- navbar injected by js/navbar.js -->
 
-  <main class="flex-1 relative overflow-hidden" style="min-height:0">
+  <main class="flex-1 relative overflow-hidden pt-14" style="min-height:0">
 
     <!-- Step 1: Entry -->
     <section id="stepEntry" class="h-full flex flex-col p-4 gap-4">
