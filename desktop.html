@@ -165,6 +165,16 @@
           <p class="text-label-sm text-on-surface-variant opacity-40 mt-3">JPG &middot; PNG &middot; TIFF &middot; Max 50 MB</p>
         </div>
       </div>
+
+      <!-- ── Recent Materials ── -->
+      <div id="fsRecentProjects" class="hidden relative z-10 w-full max-w-[700px] px-8 pb-6">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Recent Materials</span>
+          <button id="fsClearRecent" class="text-[10px] text-on-surface-variant/40 hover:text-red-400/80 transition-colors uppercase tracking-widest">Clear</button>
+        </div>
+        <div id="fsRecentGrid" class="grid grid-cols-5 gap-3"></div>
+      </div>
+
     </div>
 
     <!-- Canvas + Controls Area -->
@@ -479,5 +489,72 @@
 
   <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   <script type="module" src="./js/app-desktop.js"></script>
+
+  <!-- ── Recent Projects Panel ── -->
+  <script>
+    (function () {
+      function renderRecent() {
+        try {
+          const projs = JSON.parse(localStorage.getItem('wp_projects') || '[]');
+          const panel = document.getElementById('fsRecentProjects');
+          const grid  = document.getElementById('fsRecentGrid');
+          if (!panel || !grid || !projs.length) return;
+
+          grid.innerHTML = '';
+          projs.slice(0, 10).forEach(function (p) {
+            const card = document.createElement('div');
+            card.className = 'flex flex-col gap-1.5 group cursor-default';
+
+            const thumb = document.createElement('div');
+            thumb.className = 'aspect-square rounded-lg overflow-hidden border border-white/5 group-hover:border-secondary/30 transition-colors';
+            thumb.style.background = '#1c1b1f';
+
+            if (p.basecolorUrl && p.basecolorUrl.startsWith('https://')) {
+              const img = document.createElement('img');
+              img.className = 'w-full h-full object-cover';
+              img.loading  = 'lazy';
+              img.alt      = '';
+              img.src      = p.basecolorUrl;
+              thumb.appendChild(img);
+            } else {
+              thumb.innerHTML = '<span class="material-symbols-outlined w-full h-full flex items-center justify-center text-on-surface-variant/20" style="font-size:24px;display:flex;align-items:center;justify-content:center">texture</span>';
+            }
+
+            const label = document.createElement('span');
+            label.className = 'text-[10px] text-on-surface-variant/60 truncate text-center leading-tight';
+            label.textContent = p.name || 'Untitled';
+
+            card.appendChild(thumb);
+            card.appendChild(label);
+            grid.appendChild(card);
+          });
+
+          panel.classList.remove('hidden');
+
+          document.getElementById('fsClearRecent').addEventListener('click', function () {
+            localStorage.removeItem('wp_projects');
+            panel.classList.add('hidden');
+          }, { once: true });
+        } catch (e) { /* ignore */ }
+      }
+
+      // Run after DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', renderRecent);
+      } else {
+        renderRecent();
+      }
+
+      // Re-render when returning to the entry screen (fsUpload becomes visible)
+      const obs = new MutationObserver(function () {
+        const fs = document.getElementById('fsUpload');
+        if (fs && !fs.classList.contains('hidden')) renderRecent();
+      });
+      document.addEventListener('DOMContentLoaded', function () {
+        const fs = document.getElementById('fsUpload');
+        if (fs) obs.observe(fs, { attributes: true, attributeFilter: ['class', 'style'] });
+      });
+    })();
+  </script>
 </body>
 </html>

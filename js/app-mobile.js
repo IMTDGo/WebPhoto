@@ -995,6 +995,15 @@ btnConfirmUpload.addEventListener('click', async () => {
 
     const result = await uploadAllMaps(name, generatedMaps, onProgress);
 
+    // ── Save to local project history ─────────────────────────────────────────
+    try {
+      const _basecolorUrl = result.maps?.basecolor?.url || null;
+      const _proj = { name, basecolorUrl: _basecolorUrl, uploadedAt: new Date().toISOString() };
+      const _hist = JSON.parse(localStorage.getItem('wp_projects') || '[]');
+      _hist.unshift(_proj);
+      localStorage.setItem('wp_projects', JSON.stringify(_hist.slice(0, 20)));
+    } catch { /* storage unavailable — ignore */ }
+
     // Persist upload record for quota and cleanup.
     const publicIds = Object.values(result.maps).map(i => i.public_id).filter(Boolean);
     if (publicIds.length) {

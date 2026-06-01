@@ -55,6 +55,75 @@ const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
 const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
 const R2_BUCKET_URL = process.env.R2_BUCKET_URL || '';
 
+// ─── CORS allowlist ───────────────────────────────────────────────────────────
+// Set ALLOWED_ORIGINS in .env (comma-separated) to override the defaults below.
+const DEFAULT_ORIGINS = [
+  'https://webphoto-lidl.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+];
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : DEFAULT_ORIGINS;
+
+// ─── Validation helpers ───────────────────────────────────────────────────────
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function isStrongPassword(pw) {
+  return typeof pw === 'string' && pw.length >= 8 && /[a-zA-Z]/.test(pw) && /\d/.test(pw);
+}
+
+// ─── Security response headers ─────────────────────────────────────────────────
+function setSecurityHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self' https:",
+    "worker-src 'self' blob:",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "object-src 'none'"
+  ].join('; '));
+}
+
+// ─── Simple in-memory IP rate limiter ──────────────────────────────────────────
+const rateBuckets = new Map(); // key → { count, resetAt }
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, b] of rateBuckets) { if (b.resetAt <= now) rateBuckets.delete(k); }
+}, 5 * 60 * 1000).unref();
+
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) return String(xff).split(',')[0].trim();
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function rateLimit(key, max, windowMs) {
+  const now = Date.now();
+  let b = rateBuckets.get(key);
+  if (!b || b.resetAt <= now) { b = { count: 0, resetAt: now + windowMs }; rateBuckets.set(key, b); }
+  b.count++;
+  return { allowed: b.count <= max, retryAfter: Math.max(1, Math.ceil((b.resetAt - now) / 1000)) };
+}
+
+// Returns true and writes a 429 response when the limit is exceeded.
+function enforceRateLimit(req, res, route, max, windowMs) {
+  const { allowed, retryAfter } = rateLimit(`${route}:${clientIp(req)}`, max, windowMs);
+  if (!allowed) {
+    res.writeHead(429, { 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) });
+    res.end(JSON.stringify({ ok: false, message: `Too many requests. Try again in ${retryAfter}s.` }));
+    return true;
+  }
+  return false;
+}
+
 
 // ─── MongoDB connection ───────────────────────────────────────────────────────
 if (process.env.MONGODB_URI) {
@@ -110,6 +179,15 @@ const otpSchema = new mongoose.Schema({
 });
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
 const OtpRecord = mongoose.models.OtpRecord || mongoose.model('OtpRecord', otpSchema);
+
+// ─── Password reset OTP schema (temporary records) ───────────────────────────
+const passwordResetSchema = new mongoose.Schema({
+  email:     { type: String, required: true, unique: true },
+  otp:       { type: String, required: true },
+  expiresAt: { type: Date,   required: true }
+});
+passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // MongoDB TTL auto-delete
+const PasswordResetRecord = mongoose.models.PasswordResetRecord || mongoose.model('PasswordResetRecord', passwordResetSchema);
 
 // ─── Upload record (for Cloudflare Images auto-cleanup) ─────────────────────
 const uploadRecordSchema = new mongoose.Schema({
@@ -212,6 +290,20 @@ function serveStatic(res, filePath) {
   });
 }
 
+// ─── Static serving allowlist ──────────────────────────────────────────────────
+// Only serve known web asset types, and never expose server-side source files,
+// dotfiles (.env, .brevo-keepalive), logs, configs or secrets.
+const BLOCKED_STATIC_FILES = new Set([
+  'server.js', 'seed.js', 'add-dev-account.js',
+]);
+function isStaticAllowed(filePath) {
+  const base = path.basename(filePath).toLowerCase();
+  if (base.startsWith('.')) return false;       // dotfiles (.env, .brevo-keepalive)
+  if (!MIME[path.extname(base)]) return false;  // only known web asset types (.json/.txt/.ps1/.bat/.md → blocked)
+  if (BLOCKED_STATIC_FILES.has(base)) return false;
+  return true;
+}
+
 // ─── JSON body parser helper ─────────────────────────────────────────────────
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -226,16 +318,23 @@ function readJsonBody(req) {
 }
 
 // ─── Append login attempt to login_log.txt ───────────────────────────────────
+// Usernames are stored as a short irreversible hash so the plaintext log never
+// exposes account identifiers if the file is leaked.
+function maskUser(username) {
+  if (!username) return 'unknown';
+  return crypto.createHash('sha256').update(String(username)).digest('hex').slice(0, 12);
+}
 function appendLoginLog(username, success) {
   const timestamp = new Date().toISOString();
   const status    = success ? 'SUCCESS' : 'FAILED';
-  const line = `[${timestamp}] ${status} | user=${username}\n`;
+  const line = `[${timestamp}] ${status} | user=${maskUser(username)}\n`;
   fs.appendFile(LOGIN_LOG, line, () => {});
 }
 
 // ─── In-memory fallback stores (used when MongoDB is not connected) ─────────
 const memOtp   = new Map(); // email → { username, password, otp, expiresAt }
 const memUsers = new Map(); // username → { username, password, email }
+const memReset = new Map(); // email → { otp, expiresAt }
 
 // ─── Send OTP email ───────────────────────────────────────────────────────────
 // Priority order: Brevo → Resend → SendGrid → Gmail SMTP (local fallback)
@@ -473,9 +572,15 @@ const server = http.createServer((req, res) => {
   const isInProject = filePath.startsWith(__dirname + path.sep) || filePath === __dirname;
 
   // ── CORS preflight ─────────────────────────────────────────────────────────
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
+  res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  setSecurityHeaders(res);
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
     res.end();
@@ -484,6 +589,8 @@ const server = http.createServer((req, res) => {
 
   // ── POST /login ────────────────────────────────────────────────────────────
   if (req.method === 'POST' && rawUrl === '/login') {
+    // Throttle by IP to slow credential-stuffing / brute force
+    if (enforceRateLimit(req, res, 'login', 10, 5 * 60 * 1000)) return;
     readJsonBody(req)
       .then(async body => {
         const username = String(body.username || '').trim();
@@ -540,13 +647,13 @@ const server = http.createServer((req, res) => {
           if (devUser) {
             success = await bcrypt.compare(password, devUser.password);
           } else {
-            console.warn('[login] No DB — using hardcoded fallback');
-            success = (username === '123456' && password === '123456');
+            console.warn('[login] No DB connection and no matching dev account');
+            success = false;
           }
         }
 
         appendLoginLog(username, success);
-        console.log(`[login] user=${username} → ${success ? 'SUCCESS' : 'FAILED'}`);
+        console.log(`[login] user=${maskUser(username)} → ${success ? 'SUCCESS' : 'FAILED'}`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(
@@ -564,6 +671,8 @@ const server = http.createServer((req, res) => {
 
   // ── POST /register/send-otp ──────────────────────────────────────────────
   if (req.method === 'POST' && rawUrl === '/register/send-otp') {
+    // Throttle OTP requests per IP to prevent email spam / enumeration
+    if (enforceRateLimit(req, res, 'send-otp', 5, 10 * 60 * 1000)) return;
     readJsonBody(req)
       .then(async body => {
         const username = String(body.username || '').trim();
@@ -575,8 +684,10 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ ok: false, message: msg }));
         };
 
-if (!username || !password || !email) return fail(400, 'Please fill in all fields');
-  if (!/^[^\s@]+@gmail\.com$/i.test(email)) return fail(400, 'Please enter a valid Gmail address');
+        if (!username || !password || !email) return fail(400, 'Please fill in all fields');
+        if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) return fail(400, 'Username must be 3–30 characters using letters, numbers or underscores');
+        if (!isStrongPassword(password)) return fail(400, 'Password must be at least 8 characters and include both letters and numbers');
+        if (!EMAIL_RE.test(email)) return fail(400, 'Please enter a valid email address');
 
         const dbReady = mongoose.connection.readyState === 1;
 
@@ -633,6 +744,8 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
 
   // ── POST /register/verify ────────────────────────────────────────────────
   if (req.method === 'POST' && rawUrl === '/register/verify') {
+    // Throttle OTP verification per IP to prevent code brute-forcing
+    if (enforceRateLimit(req, res, 'register-verify', 15, 10 * 60 * 1000)) return;
     readJsonBody(req)
       .then(async body => {
         const email = String(body.email || '').trim().toLowerCase();
@@ -679,6 +792,133 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
       })
       .catch(err => {
         console.error('[register/verify]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'Server error. Please try again later.' }));
+      });
+    return;
+  }
+
+  // ── POST /password-reset/send-otp ────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/password-reset/send-otp') {
+    // Throttle reset requests per IP to prevent email spam / enumeration
+    if (enforceRateLimit(req, res, 'reset-send-otp', 5, 10 * 60 * 1000)) return;
+    readJsonBody(req)
+      .then(async body => {
+        const email = String(body.email || '').trim().toLowerCase();
+
+        if (!EMAIL_RE.test(email)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: 'Please enter a valid email address' }));
+          return;
+        }
+
+        const dbReady = mongoose.connection.readyState === 1;
+
+        // Only send a code if an account with this email actually exists, but
+        // always return a generic success response to avoid email enumeration.
+        let userExists;
+        if (dbReady) {
+          userExists = !!(await User.findOne({ email }).lean());
+        } else {
+          userExists = [...memUsers.values()].some(u => u.email === email);
+        }
+
+        if (userExists) {
+          const otp       = String(crypto.randomInt(100000, 1000000));
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+          if (dbReady) {
+            await PasswordResetRecord.findOneAndUpdate(
+              { email }, { otp, expiresAt }, { upsert: true, new: true }
+            );
+          } else {
+            memReset.set(email, { otp, expiresAt });
+          }
+
+          try {
+            await sendOtpEmail(email, otp, {
+              subject: 'SNAPBRIFY — Password Reset Code',
+              html: `<p>Your SNAPBRIFY password reset code is:</p><h2 style="letter-spacing:0.3em">${otp}</h2><p>This code is valid for 10 minutes. If you did not request a password reset, you can safely ignore this email.</p>`,
+              text: `Your SNAPBRIFY password reset code is: ${otp}. Valid for 10 minutes. If you did not request this, ignore this email.`
+            });
+            writeLastSent();
+          } catch (mailErr) {
+            if (mailErr.message === 'NO_MAIL_SERVICE') {
+              res.writeHead(503, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ ok: false, message: 'Email service not configured. Contact support.' }));
+              return;
+            }
+            throw mailErr;
+          }
+          console.log(`[password-reset] OTP sent to ${email} (${dbReady ? 'DB' : 'memory'})`);
+        } else {
+          console.log(`[password-reset] No account for ${email} — generic response returned`);
+        }
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: 'If an account exists for this email, a reset code has been sent.' }));
+      })
+      .catch(err => {
+        console.error('[password-reset/send-otp]', err.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'Server error. Please try again later.' }));
+      });
+    return;
+  }
+
+  // ── POST /password-reset/verify ──────────────────────────────────────────
+  if (req.method === 'POST' && rawUrl === '/password-reset/verify') {
+    // Throttle verification per IP to prevent code brute-forcing
+    if (enforceRateLimit(req, res, 'reset-verify', 15, 10 * 60 * 1000)) return;
+    readJsonBody(req)
+      .then(async body => {
+        const email       = String(body.email       || '').trim().toLowerCase();
+        const otp         = String(body.otp         || '').trim();
+        const newPassword = String(body.newPassword || '');
+
+        const fail = (code, msg) => {
+          res.writeHead(code, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: msg }));
+        };
+
+        if (!email || !otp) return fail(400, 'Please provide email and verification code');
+        if (!isStrongPassword(newPassword)) return fail(400, 'Password must be at least 8 characters and include both letters and numbers');
+
+        const dbReady = mongoose.connection.readyState === 1;
+        const record  = dbReady
+          ? await PasswordResetRecord.findOne({ email }).lean()
+          : memReset.get(email);
+
+        if (!record) return fail(404, 'Reset request not found. Please resend.');
+        if (new Date() > record.expiresAt) {
+          if (dbReady) await PasswordResetRecord.deleteOne({ email }); else memReset.delete(email);
+          return fail(410, 'Code expired. Please resend.');
+        }
+        if (record.otp !== otp) return fail(401, 'Invalid verification code.');
+
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        if (dbReady) {
+          const user = await User.findOne({ email });
+          if (!user) return fail(404, 'Account no longer exists.');
+          await User.updateOne({ _id: user._id }, {
+            $set:   { password: hashedPassword, passwordChangedAt: new Date(), loginAttempts: 0 },
+            $unset: { lockUntil: '' }
+          });
+          await PasswordResetRecord.deleteOne({ email });
+        } else {
+          const entry = [...memUsers.values()].find(u => u.email === email);
+          if (!entry) return fail(404, 'Account no longer exists.');
+          entry.password = hashedPassword;
+          memReset.delete(email);
+        }
+
+        console.log(`[password-reset] Password updated for ${email} (${dbReady ? 'DB' : 'memory'})`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, message: 'Password reset successful. You can now log in.' }));
+      })
+      .catch(err => {
+        console.error('[password-reset/verify]', err.message);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: 'Server error. Please try again later.' }));
       });
@@ -766,6 +1006,11 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
         if (!email || !name || !maps || typeof maps !== 'object') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ ok: false, message: 'Missing required fields' }));
+          return;
+        }
+        if (!EMAIL_RE.test(email)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: 'Invalid email address' }));
           return;
         }
 
@@ -926,6 +1171,12 @@ ${zipButton}
       res.end('Forbidden');
       return;
     }
+    // Block source files, configs, logs, secrets and dotfiles
+    if (!isStaticAllowed(filePath)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
 
     serveStatic(res, filePath);
     return;
@@ -968,10 +1219,17 @@ function writeLastSent() {
 async function checkBrevoKeepalive() {
   if (!process.env.BREVO_API_KEY || !KEEPALIVE_TO) return;
 
-  const last     = readLastSent();
-  const daysSince = last ? (Date.now() - last.getTime()) / 86400000 : Infinity;
+  const last      = readLastSent();
+  const daysSince = last ? (Date.now() - last.getTime()) / 86400000 : null;
 
-  if (daysSince >= KEEPALIVE_DAYS) {
+  if (!last) {
+    // No timestamp file — fresh deploy on an ephemeral host (e.g. Render).
+    // Initialise the clock from now so the real N-day countdown begins here.
+    // Do NOT send a keepalive email; the API key is clearly still active.
+    writeLastSent();
+    console.log(`[keepalive] No timestamp found — initialised. Keepalive will send after ${KEEPALIVE_DAYS} days.`);
+  } else if (daysSince >= KEEPALIVE_DAYS) {
+    // Last email was sent more than KEEPALIVE_DAYS ago — send a heartbeat.
     try {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method:  'POST',
@@ -993,7 +1251,7 @@ async function checkBrevoKeepalive() {
       console.warn('[keepalive] Error:', e.message);
     }
   } else {
-    console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK`);
+    console.log(`[keepalive] Last email: ${Math.floor(daysSince)}d ago — OK (next in ~${KEEPALIVE_DAYS - Math.floor(daysSince)}d)`);
   }
 
   // Re-check every 24 hours
