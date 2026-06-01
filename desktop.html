@@ -16,6 +16,7 @@
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -35,13 +36,18 @@
             "on-surface-variant":           "#A1A1AA",
             "outline":                      "#52525B",
             "outline-variant":              "#3F3F46",
+            "primary":                      "#E8C854",
+            "primary-fixed":                "#F5E080",
+            "primary-container":            "#C9A630",
+            "on-primary":                   "#18181B",
             "secondary":                    "#E8C854",
             "on-secondary":                 "#18181B",
             "error":                        "#ffb4ab",
           },
           fontFamily: {
-            "headline":  ["Cinzel", "serif"],
-            "body":      ["Cormorant Garamond", "serif"],
+            "headline":    ["Cinzel", "serif"],
+            "headline-lg": ["Cinzel", "serif"],
+            "body":        ["Cormorant Garamond", "serif"],
           },
           fontSize: {
             "headline-lg":  ["26px", { lineHeight: "1.2", letterSpacing: "0.05em", fontWeight: "600" }],
@@ -68,7 +74,7 @@
     }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
     /* Custom range slider */
-    input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+    input[type=range] { appearance: none; -webkit-appearance: none; width: 100%; background: transparent; }
     input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #3F3F46; border-radius: 1px; cursor: pointer; }
     input[type=range]::-webkit-slider-thumb {
       -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%;
@@ -92,6 +98,8 @@
       border-radius: 50%; animation: _spin 0.6s linear infinite; vertical-align: -2px;
     }
     @keyframes _spin { to { transform: rotate(360deg); } }
+    .lang-select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding-right: 2.2rem; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.7rem center; background-size: 0.75rem; }
+    .lang-select::-ms-expand { display: none; }
     /* Full-screen confirmation dialog */
     dialog#previewModal {
       position: fixed; inset: 0; max-width: 100vw; max-height: 100vh;
@@ -105,44 +113,13 @@
       font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
     }
   </style>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
 </head>
 
 <body class="h-screen w-screen overflow-hidden flex flex-col bg-background text-on-surface selection:bg-secondary/20 selection:text-secondary">
 
-  <!-- ── Top Navigation ── -->
-  <nav class="fixed top-0 left-0 w-full h-20 flex items-center justify-between px-10 bg-background/80 backdrop-blur-xl border-b border-white/5 z-50">
-    <div class="flex items-center gap-10">
-      <span class="font-headline text-headline-md tracking-[0.25em] text-on-surface uppercase">SNAPBRIFY</span>
-      <a class="text-secondary text-label-sm tracking-widest uppercase relative after:absolute after:-bottom-2 after:left-0 after:w-full after:h-px after:bg-secondary">Editor</a>
-    </div>
-    <div class="flex items-center gap-6">
-      <span id="navUsername" class="text-label-sm text-on-surface-variant tracking-widest uppercase hidden"></span>
-      <button id="btnLogout" class="text-label-sm text-on-surface-variant hover:text-error tracking-widest uppercase transition-colors hidden">Log Out</button>
-      <div class="w-px h-5 bg-white/10"></div>
-      <a href="./mobile.html" class="text-label-sm text-on-surface-variant hover:text-on-surface tracking-widest uppercase transition-colors">Mobile</a>
-    </div>
-  </nav>
-
-  <script>
-    (function () {
-      const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-      if (raw) {
-        try {
-          const user = JSON.parse(raw);
-          const el = document.getElementById('navUsername');
-          el.textContent = user.name || user.id;
-          el.classList.remove('hidden');
-          document.getElementById('btnLogout').classList.remove('hidden');
-        } catch (e) {}
-      }
-      document.getElementById('btnLogout').addEventListener('click', () => {
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k); sessionStorage.removeItem(k);
-        });
-        window.location.replace('./login.html');
-      });
-    })();
-  </script>
+  <!-- navbar injected by js/navbar.js -->
 
   <!-- ── Main Workspace ── -->
   <main class="flex-1 flex flex-col pt-20 h-screen overflow-hidden bg-background relative">
@@ -153,15 +130,15 @@
       <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vmin] h-[60vmin] max-w-[600px] max-h-[600px] rounded-full bg-secondary/5 blur-[140px] pointer-events-none"></div>
       <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-[560px] px-8">
         <div class="text-center">
-          <p class="text-label-sm text-on-surface-variant tracking-widest uppercase mb-5">Material Editor &middot; PBR Channel Generator</p>
-          <h1 class="font-headline text-headline-lg text-on-surface tracking-widest uppercase mb-3">Upload Source Image</h1>
-          <p class="text-body-md text-on-surface-variant">Drop a texture to generate Base Color, Roughness, AO, Height, Metallic and Normal maps</p>
+          <p class="text-label-sm text-on-surface-variant tracking-widest uppercase mb-5" data-i18n="editor_subtitle">Material Editor · PBR Channel Generator</p>
+          <h1 class="font-headline text-headline-lg text-on-surface tracking-widest uppercase mb-3" data-i18n="editor_upload_title">Upload Source Image</h1>
+          <p class="text-body-md text-on-surface-variant" data-i18n="editor_drop_desc">Drop a texture to generate Base Color, Roughness, AO, Height, Metallic and Normal maps</p>
         </div>
         <div id="fsDropZone" class="drop-zone w-full rounded-xl py-16 px-8 flex flex-col items-center justify-center text-center cursor-pointer group transition-all"
              onclick="document.getElementById('fileInput').click()">
           <span class="material-symbols-outlined text-on-surface-variant/40 group-hover:text-secondary/60 mb-5 transition-colors duration-300" style="font-size:64px">upload_file</span>
-          <p class="font-headline text-headline-md text-on-surface tracking-wider mb-2">Drop image here</p>
-          <p class="text-body-md text-on-surface-variant">or <span class="text-secondary">browse files</span></p>
+          <p class="font-headline text-headline-md text-on-surface tracking-wider mb-2" data-i18n="editor_drop_hint">Drop image here</p>
+          <p class="text-body-md text-on-surface-variant" data-i18n-html="editor_browse_or">or <span class="text-secondary">browse files</span></p>
           <p class="text-label-sm text-on-surface-variant opacity-40 mt-3">JPG &middot; PNG &middot; TIFF &middot; Max 50 MB</p>
         </div>
       </div>
@@ -202,7 +179,7 @@
             <p class="text-label-sm text-on-surface-variant opacity-60">Supports JPG, PNG, TIFF · Max 50 MB</p>
             <input type="file" accept="image/*,.tif,.tiff" id="fileInput" class="hidden" />
             <button onclick="document.getElementById('fileInput').click()"
-              class="mt-5 px-5 py-2 border border-secondary/30 rounded text-secondary text-label-sm tracking-widest hover:bg-secondary/10 transition-colors">
+              class="mt-5 px-5 py-2 border border-secondary/30 rounded text-secondary text-label-sm tracking-widest hover:bg-secondary/10 transition-colors" data-i18n="editor_browse_btn">
               BROWSE FILES
             </button>
           </div>
@@ -316,8 +293,8 @@
             <div id="previewEmpty" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
               <p class="text-label-sm text-on-surface-variant/20">NO PREVIEW</p>
             </div>
-            <div id="previewSection" style="display:none" class="w-full h-full flex items-center justify-center">
-              <canvas id="previewCanvas" class="max-w-full max-h-full object-contain"></canvas>
+            <div id="previewSection" style="display:none" class="absolute inset-0 flex items-center justify-center overflow-hidden">
+              <canvas id="previewCanvas"></canvas>
             </div>
           </div>
         </div>
@@ -344,7 +321,7 @@
       <div class="flex items-center gap-5">
         <button id="btnUpload"
           class="px-8 py-3 rounded bg-secondary text-on-secondary font-headline text-label-sm tracking-widest uppercase hover:opacity-90 transition-all active:scale-95 flex items-center gap-2 font-semibold">
-          <span>Generate Channels</span>
+          <span data-i18n="editor_generate_btn">Generate Channels</span>
           <span class="material-symbols-outlined" style="font-size:15px">arrow_forward</span>
         </button>
       </div>
@@ -358,8 +335,8 @@
 
       <!-- Header -->
       <header class="w-full text-left mb-14">
-        <h1 class="font-headline text-headline-lg text-on-surface mb-3 uppercase tracking-widest">Confirm Channel Maps</h1>
-        <p class="text-body-md text-on-surface-variant max-w-xl">Review each channel before uploading to Cloudflare</p>
+        <h1 class="font-headline text-headline-lg text-on-surface mb-3 uppercase tracking-widest" data-i18n="editor_confirm_title">Confirm Channel Maps</h1>
+        <p class="text-body-md text-on-surface-variant max-w-xl" data-i18n="editor_confirm_desc">Review each channel before uploading to Cloudflare</p>
       </header>
 
       <!-- Channel Grid -->
@@ -426,12 +403,12 @@
         </label>
         <div class="flex items-center gap-4 w-full md:w-auto justify-end">
           <button id="btnPreviewModalClose"
-            class="text-body-md text-on-surface-variant hover:text-on-surface py-3 px-6 tracking-widest uppercase transition-colors focus:outline-none">
+            class="text-body-md text-on-surface-variant hover:text-on-surface py-3 px-6 tracking-widest uppercase transition-colors focus:outline-none" data-i18n="editor_cancel">
             Cancel
           </button>
           <button id="btnPreviewModalConfirm"
             class="px-8 py-3 rounded bg-secondary text-on-secondary font-headline text-label-sm tracking-widest uppercase hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-2 font-semibold focus:outline-none">
-            <span>Confirm Upload</span>
+            <span data-i18n="editor_confirm_upload">Confirm Upload</span>
             <span class="material-symbols-outlined" style="font-size:15px">cloud_upload</span>
           </button>
         </div>
@@ -471,16 +448,16 @@
         <span class="material-symbols-outlined text-secondary" style="font-size:44px;font-variation-settings:'FILL' 1,'wght' 300,'GRAD' 0,'opsz' 48">check_circle</span>
       </div>
       <div>
-        <h2 class="font-headline text-headline-lg text-on-surface tracking-widest uppercase mb-3">Upload Successful</h2>
-        <p class="text-body-md text-on-surface-variant">All 6 channel maps have been generated and saved to Cloudflare.</p>
+        <h2 class="font-headline text-headline-lg text-on-surface tracking-widest uppercase mb-3" data-i18n="editor_success_title">Upload Successful</h2>
+        <p class="text-body-md text-on-surface-variant" data-i18n="editor_success_desc">All 6 channel maps have been generated and saved to Cloudflare.</p>
       </div>
       <div class="flex items-center gap-4 mt-2">
         <a href="./index.html"
-           class="px-7 py-3 border border-outline-variant/40 rounded text-on-surface-variant text-label-sm tracking-widest uppercase hover:border-outline hover:text-on-surface transition-all duration-200">
+           class="px-7 py-3 border border-outline-variant/40 rounded text-on-surface-variant text-label-sm tracking-widest uppercase hover:border-outline hover:text-on-surface transition-all duration-200" data-i18n="editor_back_home">
           Back to Homepage
         </a>
         <button id="btnCreateAnother"
-                class="px-7 py-3 bg-secondary text-on-secondary rounded font-headline text-label-sm tracking-widest uppercase hover:opacity-90 active:scale-[0.98] transition-all duration-200">
+                class="px-7 py-3 bg-secondary text-on-secondary rounded font-headline text-label-sm tracking-widest uppercase hover:opacity-90 active:scale-[0.98] transition-all duration-200" data-i18n="editor_new_material">
           Create Another
         </button>
       </div>
@@ -489,6 +466,30 @@
 
   <script src="https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js"></script>
   <script type="module" src="./js/app-desktop.js"></script>
+
+  <!-- ── Upload Progress Overlay ── -->
+  <div id="uploadProgressOverlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center" style="pointer-events:all">
+    <div class="absolute inset-0 bg-background/97 backdrop-blur-2xl"></div>
+    <div class="absolute inset-0 pointer-events-none opacity-[0.015] bg-[radial-gradient(#e5e2e1_1px,transparent_1px)] [background-size:24px_24px]"></div>
+    <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vmin] h-[50vmin] max-w-[500px] max-h-[500px] rounded-full bg-secondary/5 blur-[120px] pointer-events-none"></div>
+    <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-md px-8 text-center">
+      <div class="flex flex-col items-center gap-3">
+        <p class="font-headline text-label-sm text-on-surface-variant tracking-widest uppercase" data-i18n="editor_upload_cloud">Uploading to Cloud</p>
+        <p id="uploadProgressLabel" class="font-headline text-headline-md text-secondary tracking-widest uppercase">Preparing…</p>
+      </div>
+      <div class="w-full flex flex-col gap-3">
+        <div class="relative w-full rounded-full overflow-hidden" style="height:2px;background:rgba(82,82,91,0.3)">
+          <div id="uploadProgressBar"
+               class="absolute left-0 top-0 h-full rounded-full bg-secondary"
+               style="width:0%;transition:width 0.45s cubic-bezier(0.4,0,0.2,1)"></div>
+        </div>
+        <div class="flex justify-between">
+          <span class="font-label-xs text-label-xs text-on-surface-variant/40 tracking-widest uppercase">Channel Maps</span>
+          <span id="uploadProgressCount" class="font-mono text-on-surface-variant/40" style="font-size:11px">0 / 6</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- ── Recent Projects Panel ── -->
   <script>

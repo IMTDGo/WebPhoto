@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;0,6..96,700;1,6..96,400&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;0,6..96,700;1,6..96,400&family=BIZ+UDPMincho:wght@400;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
   <script id="tailwind-config">
     tailwind.config = {
@@ -56,38 +56,123 @@
     }
   </script>
   <style>
+    @font-face {
+      font-family: 'Mantou Sans';
+      src: url('https://raw.githubusercontent.com/mant0u0/MantouSans/main/Font/MantouSans-Regular.ttf') format('truetype');
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'GenRyuTW';
+      src: local('GenRyuMin TW'),
+           local('GenRyuMin2 TW'),
+           url('https://raw.githubusercontent.com/ButTaiwan/genryu-font/master/otf/TW/GenRyuMin2TW-R.otf') format('opentype');
+      font-display: swap;
+    }
     html { scroll-behavior: smooth; }
     body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+    html:lang(zh-Hant) body,
+    html:lang(zh-TW) body,
+    html:lang(zh) body {
+      font-family: 'GenRyuTW', 'Mantou Sans', 'BIZ UDPMincho', 'Noto Serif TC', 'Microsoft JhengHei', serif;
+    }
+
+    #global-nav .nav-shell {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      column-gap: clamp(10px, 2vw, 28px);
+      position: relative;
+    }
+    #desktopCenterNav {
+      display: flex;
+      align-items: center;
+      justify-self: center;
+      gap: clamp(10px, 2.2vw, 32px);
+      min-width: 0;
+    }
+    #desktopCenterNav > a {
+      font-size: clamp(10px, 0.82vw, 12px);
+      white-space: nowrap;
+    }
+    #desktopAuthControls {
+      display: flex;
+      align-items: center;
+      justify-self: end;
+      gap: clamp(8px, 1.6vw, 16px);
+      min-width: fit-content;
+    }
+    .lang-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-right: 2.2rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      background-size: 0.75rem;
+    }
+    .lang-select::-ms-expand { display: none; }
+
+    @media (max-width: 1200px) {
+      #desktopCenterNav {
+        gap: clamp(8px, 1.3vw, 14px);
+      }
+      #desktopAuthControls {
+        gap: clamp(8px, 1vw, 12px);
+      }
+    }
+    @media (max-width: 1024px) {
+      #desktopCenterNav,
+      #desktopAuthControls {
+        display: none !important;
+      }
+      #mobileMenuBtn {
+        display: inline-flex !important;
+        justify-self: end;
+      }
+    }
+    @media (min-width: 1025px) {
+      #mobileMenuBtn,
+      #mobileMenuPanel,
+      #mobileMenuBackdrop {
+        display: none !important;
+      }
+    }
+
     .perspective-container { perspective: 1000px; }
     .preserve-3d { transform-style: preserve-3d; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
     #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-    .zh { font-family: 'Noto Serif TC', serif !important; }
   </style>
+  <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
   <script>
+    // Canonical URL: redirect /index.html → /
+    if (window.location.pathname.endsWith('/index.html')) {
+      window.location.replace(
+        window.location.pathname.slice(0, -10) +
+        window.location.search + window.location.hash
+      );
+    }
     // Detect if user is already logged in (used later by JS, no auto-redirect)
     window._wpIsLoggedIn = !!(sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
     function _wpGoToApp() {
       const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
       window.location.href = isMobile ? './mobile.html' : './desktop.html';
     }
-    // 10-minute inactivity auto-logout
-    if (window._wpIsLoggedIn) {
-      var _wpIdleTimer;
-      function _wpResetIdle() {
-        clearTimeout(_wpIdleTimer);
-        _wpIdleTimer = setTimeout(function() {
-          ['wp_auth','wp_token','wp_sessionId','wp_user'].forEach(function(k) {
-            localStorage.removeItem(k); sessionStorage.removeItem(k);
-          });
-          window.location.reload();
-        }, 10 * 60 * 1000);
-      }
-      ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(function(ev) {
-        document.addEventListener(ev, _wpResetIdle, { passive: true });
-      });
-      _wpResetIdle();
-    }
+
+    // Some mobile browsers may restore cached pages with fixed headers not repainted.
+    // Force nav visibility and a tiny repaint on every pageshow.
+    window.addEventListener('pageshow', function () {
+      const nav = document.getElementById('global-nav');
+      if (!nav) return;
+      nav.style.display = '';
+      nav.style.visibility = 'visible';
+      nav.style.opacity = '1';
+      nav.style.transform = 'translateZ(0)';
+      void nav.offsetHeight;
+    });
   </script>
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
@@ -95,41 +180,8 @@
   <!-- Animated Background Canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
-  <!-- Top Navigation -->
-  <nav class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-on-surface/10 flex justify-between items-center h-20 px-margin-mobile md:px-margin-page transition-all duration-300" id="global-nav">
-    <div class="font-headline-lg text-headline-lg tracking-tighter text-primary cursor-default select-none">
-      SNAPBRIFY
-    </div>
-    <div class="flex items-center gap-4">
-      <!-- Logged-out state -->
-      <a href="./signup.html" id="navSignUp" class="hidden sm:block font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest">
-        Sign Up
-      </a>
-      <a href="./login.html?ref=app" id="navLogin" class="bg-primary text-on-primary font-label-sm text-label-sm px-6 py-2.5 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-        Login
-      </a>
-      <!-- Logged-in state (hidden by default, shown via JS) -->
-      <div id="navUserGroup" class="hidden items-center gap-3">
-        <!-- User identity pill -->
-        <div class="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-full px-3 py-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
-          <span class="material-symbols-outlined text-primary/80" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 20">person</span>
-          <span id="navUsername" class="font-label-sm text-label-sm text-primary uppercase tracking-widest max-w-[120px] truncate"></span>
-        </div>
-        <button id="btnNavOpenApp"
-          class="bg-primary text-on-primary font-label-sm text-label-sm px-5 py-2 rounded-full hover:bg-primary-container hover:shadow-[0_4px_12px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-95">
-          Start Creating
-        </button>
-        <button id="btnNavLogout"
-          class="font-label-sm text-label-sm text-on-surface-variant/50 hover:text-error/80 transition-colors duration-250 uppercase tracking-widest text-[10px] px-1">
-          Log Out
-        </button>
-      </div>
-    </div>
-  </nav>
-
   <!-- Main Content -->
-  <main class="flex-grow pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
+  <main class="flex-grow pt-28 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
 
     <!-- Ambient Background Glow -->
     <div class="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
@@ -138,19 +190,19 @@
     <section class="z-10 flex flex-col items-center text-center max-w-4xl mt-12 mb-16 relative">
       <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-8 bg-surface-container/60 backdrop-blur">
         <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-        <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Material Texture Intelligence</span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="hero_badge">Material Texture Intelligence</span>
       </div>
-      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight">
+      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight" data-i18n-html="hero_title_html">
         Transform Reality<br />into Texture
       </h1>
-      <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6">
+      <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6" data-i18n="hero_desc">
         The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.
       </p>
       <div class="flex flex-col sm:flex-row items-center gap-4 mt-10">
-        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]">
+        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]" data-i18n="start_creating">
           Start Creating
         </button>
-        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out">
+        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out" data-i18n="create_account">
           Create Account
         </a>
       </div>
@@ -189,23 +241,23 @@
     <section class="z-10 flex flex-wrap justify-center gap-3 mt-12">
       <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
         <span class="material-symbols-outlined text-primary text-base">photo_camera</span>
-        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Mobile Capture</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_mobile_cap">Mobile Capture</span>
       </div>
       <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
         <span class="material-symbols-outlined text-primary text-base">hdr_on</span>
-        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">HDR Merge</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_hdr">HDR Merge</span>
       </div>
       <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
         <span class="material-symbols-outlined text-primary text-base">wb_auto</span>
-        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Auto White Balance</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_awb">Auto White Balance</span>
       </div>
       <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
         <span class="material-symbols-outlined text-primary text-base">layers</span>
-        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">PBR Channel Maps</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_pbr_maps">PBR Channel Maps</span>
       </div>
       <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
         <span class="material-symbols-outlined text-primary text-base">view_in_ar</span>
-        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Seamless Tiling</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_seamless">Seamless Tiling</span>
       </div>
     </section>
   </main>
@@ -215,7 +267,7 @@
     <div class="font-headline-lg text-headline-lg text-primary select-none">SNAPBRIFY</div>
 
     <div class="flex flex-col items-center gap-1">
-      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60">Created By</p>
+      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60" data-i18n="created_by">Created By</p>
       <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
         class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
         <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
@@ -226,52 +278,23 @@
     </div>
 
     <div class="flex gap-6">
-      <a href="./login.html?ref=app"  class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Login</a>
-      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100">Sign Up</a>
+      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100" data-i18n="sign_up">Sign Up</a>
     </div>
   </footer>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // ── Auth-aware UI ──
-      const isLoggedIn = window._wpIsLoggedIn;
+      // ── i18n system is now in js/i18n.js (auto-initialized) ──
+      // ── Auth + nav is now in js/navbar.js ──
 
-      // "Start Creating" button: go to app if logged in, else login page
-      document.getElementById('btnGetStarted').addEventListener('click', () => {
-        if (isLoggedIn) _wpGoToApp();
-        else window.location.href = './login.html?ref=app';
-      });
-
-      // ── Real logout helper ──
-      function doLogout() {
-        ['wp_auth', 'wp_token', 'wp_sessionId', 'wp_user'].forEach(k => {
-          localStorage.removeItem(k);
-          sessionStorage.removeItem(k);
+      // "Start Creating" hero button (index-page-specific)
+      const btnGetStarted = document.getElementById('btnGetStarted');
+      if (btnGetStarted) {
+        btnGetStarted.addEventListener('click', () => {
+          const loggedIn = !!(window._wpIsLoggedIn || sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
+          if (loggedIn) { if (typeof _wpGoToApp === 'function') _wpGoToApp(); }
+          else window.location.href = './login.html?ref=app';
         });
-        window.location.reload();
-      }
-
-      // Navbar + footer: show correct state based on login
-      if (isLoggedIn) {
-        document.getElementById('navSignUp').classList.add('hidden');
-        document.getElementById('navLogin').classList.add('hidden');
-        document.getElementById('heroSignUp')?.classList.add('hidden');
-        document.getElementById('footerSignUp')?.classList.add('hidden');
-
-        const userGroup = document.getElementById('navUserGroup');
-        userGroup.classList.remove('hidden');
-        userGroup.classList.add('flex');
-
-        try {
-          const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
-          if (raw) {
-            const u = JSON.parse(raw);
-            document.getElementById('navUsername').textContent = u.name || u.id || '';
-          }
-        } catch (e) {}
-
-        document.getElementById('btnNavOpenApp').addEventListener('click', _wpGoToApp);
-        document.getElementById('btnNavLogout').addEventListener('click', doLogout);
       }
 
       // ── Animated background canvas ──

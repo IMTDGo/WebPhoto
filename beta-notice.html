@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beta Testing Notice | SNAPBRIFY</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-low":     "#18181B",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "error":                     "#ffb4ab",
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
+          fontFamily: {
+            "headline-xl": ["Cinzel", "serif"],
+            "headline-lg": ["Cinzel", "serif"],
+            "body-lg":     ["Cormorant Garamond", "serif"],
+            "body-md":     ["Cormorant Garamond", "serif"],
+            "label-sm":    ["Cormorant Garamond", "serif"],
+            "label-xs":    ["Cormorant Garamond", "serif"],
+          },
+          fontSize: {
+            "headline-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-lg": ["28px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm":    ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs":    ["10px", { lineHeight: "1.0", letterSpacing: "0.1em",  fontWeight: "600" }],
+            "body-lg":     ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md":     ["15px", { lineHeight: "1.6", fontWeight: "400" }],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-family: 'Cormorant Garamond', serif; background: #09090B; color: #F4F4F5; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+
+    /* Glassmorphism card */
+    .glass-panel {
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(232, 200, 84, 0.1);
+    }
+
+    /* Gold shimmer top bar */
+    .gold-shimmer {
+      background: linear-gradient(90deg, rgba(232,200,84,0) 0%, rgba(232,200,84,0.3) 50%, rgba(232,200,84,0) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 3s infinite linear;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Custom scrollbar */
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E8C854; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F5E080; }
+
+    /* Section header border */
+    .section-heading { border-left: 2px solid rgba(232,200,84,0.5); padding-left: 1rem; }
+
+    /* Highlight card */
+    .highlight-card {
+      background: rgba(232,200,84,0.04);
+      border: 1px solid rgba(232,200,84,0.15);
+    }
+    .highlight-card:hover {
+      background: rgba(232,200,84,0.07);
+      border-color: rgba(232,200,84,0.3);
+      transition: all 0.25s ease;
+    }
+  </style>
+</head>
+<body class="overflow-x-hidden min-h-screen flex flex-col">
+
+  <!-- Ambient background blobs -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] bg-primary/5 rounded-full blur-[120px]"></div>
+    <div class="absolute -bottom-[10%] -right-[5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[100px]"></div>
+  </div>
+
+  <!-- Navigation injected by js/navbar.js -->
+
+  <!-- Main content -->
+  <main class="relative flex-grow flex items-start justify-center pt-36 pb-32 px-margin-mobile md:px-margin-page z-10">
+    <div class="w-full max-w-4xl">
+
+      <!-- Page header -->
+      <div class="mb-12 text-center">
+        <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-6 bg-surface-container/60 backdrop-blur">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="beta_badge">Open Beta — Build 1.0</span>
+        </div>
+        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-4" data-i18n="beta_title">Beta Testing Notice</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto" data-i18n="beta_desc">
+          Please read the following information before using SNAPBRIFY. This document outlines what the platform does, how your data is handled, and the current limitations of the beta environment.
+        </p>
+      </div>
+
+      <!-- Glass card -->
+      <div class="glass-panel rounded-xl shadow-2xl relative overflow-hidden">
+        <!-- Animated gold top line -->
+        <div class="absolute top-0 left-0 w-full h-[2px] gold-shimmer"></div>
+
+        <div class="p-8 md:p-12">
+
+          <!-- Scrollable text area -->
+          <div class="relative bg-surface-container-lowest/50 rounded-lg border border-outline-variant/10 mb-10">
+            <div class="p-6 md:p-8 space-y-10">
+
+              <!-- 01 -->
+              <section>
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s1_title">01. What is SNAPBRIFY?</h3>
+                <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed" data-i18n="beta_s1_p">
+                  SNAPBRIFY is a browser-based PBR (Physically Based Rendering) texture generation tool. Upload any photograph and the engine automatically derives a complete set of material maps — Base Color, Roughness, Ambient Occlusion, Height, Metallic, and Normal — ready to use in any 3D application, game engine, or design pipeline. No software installation is required; everything runs in your browser.
+                </p>
+              </section>
+
+              <!-- 02 -->
+              <section>
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s2_title">02. Beta Status</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4" data-i18n="beta_s2_p">
+                  The platform is currently in open beta. You may encounter unexpected behaviour, performance inconsistencies, or temporary downtime as we continue development. We appreciate your patience and welcome any feedback sent through the Contact page.
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                  <div class="highlight-card rounded-lg p-4">
+                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_version">Version</span>
+                    <span class="font-body-md text-on-surface text-sm">Open Beta 1.0</span>
+                  </div>
+                  <div class="highlight-card rounded-lg p-4">
+                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_platform">Platform</span>
+                    <span class="font-body-md text-on-surface text-sm">Web — Desktop &amp; Mobile</span>
+                  </div>
+                  <div class="highlight-card rounded-lg p-4">
+                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_status">Status</span>
+                    <span class="font-body-md text-on-surface text-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block"></span><span data-i18n="beta_info_live">Live</span></span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 03 -->
+              <section>
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s3_title">03. Privacy &amp; Data Collection</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s3_p">
+                  We are committed to keeping this tool lightweight and non-intrusive. During the beta period:
+                </p>
+                <ul class="space-y-4">
+                  <li class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-primary mt-0.5" style="font-size:18px;font-variation-settings:'FILL' 1">shield</span>
+                    <div>
+                      <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv1_title">No user data is collected.</span>
+                      <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv1_desc">We do not collect, sell, or share personal data. Your email address is used only to deliver your download link and is not stored beyond that session.</span>
+                    </div>
+                  </li>
+                  <li class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-primary mt-0.5" style="font-size:18px;font-variation-settings:'FILL' 1">cloud_off</span>
+                    <div>
+                      <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv2_title">Uploaded images are temporary.</span>
+                      <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv2_desc">All uploaded files and generated texture sets are automatically deleted from our servers 24 hours after the project is created. Do not rely on SNAPBRIFY as a permanent storage solution.</span>
+                    </div>
+                  </li>
+                </ul>
+              </section>
+
+              <!-- 04 -->
+              <section>
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s4_title">04. Current Limits &amp; Fair Use</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s4_p">
+                  To ensure fair access for all users during the beta period, the following limits are in effect:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">photo_size_select_large</span>
+                    <div>
+                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim1_label">Max Image Size</span>
+                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim1_val">2 MB per upload</span>
+                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim1_desc">Images larger than 2 MB will be automatically compressed before processing.</p>
+                    </div>
+                  </div>
+                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">schedule</span>
+                    <div>
+                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim2_label">Project Retention</span>
+                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim2_val">24 hours</span>
+                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim2_desc">All projects and generated files are permanently deleted 24 hours after creation.</p>
+                    </div>
+                  </div>
+                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">person</span>
+                    <div>
+                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim3_label">Per-Account Daily Quota</span>
+                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim3_val">3 uploads per account</span>
+                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim3_desc">Each account may submit up to 3 texture generation jobs per day.</p>
+                    </div>
+                  </div>
+                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">groups</span>
+                    <div>
+                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim4_label">Global Daily Capacity</span>
+                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim4_val">200 accounts per day</span>
+                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim4_desc">A maximum of 200 unique accounts may upload per day across the entire platform. Once the cap is reached, uploads are paused until the daily reset.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 05 -->
+              <section>
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s5_title">05. Daily Reset</h3>
+                <div class="flex items-start gap-4 bg-primary/5 border border-primary/20 rounded-lg p-5">
+                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:24px;font-variation-settings:'FILL' 1">alarm</span>
+                  <div>
+                    <p class="font-body-md text-on-surface font-semibold mb-1" data-i18n="beta_reset_p1">All quotas reset daily at 23:59 Taiwan Standard Time (UTC+8).</p>
+                    <p class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_reset_p2">This includes both the per-account upload count and the platform-wide 200-account capacity. If uploads are unavailable, please check back after the daily reset.</p>
+                  </div>
+                </div>
+              </section>
+
+              <!-- 06 -->
+              <section class="pb-4">
+                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s6_title">06. Disclaimer</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed italic" data-i18n="beta_disclaimer">
+                  SNAPBRIFY is provided as-is during the beta period. We do not guarantee continuous availability, accuracy of generated materials, or preservation of uploaded files beyond the stated 24-hour window. By using the platform, you acknowledge these limitations and agree not to use it for storing irreplaceable assets.
+                </p>
+              </section>
+
+            </div>
+          </div>
+
+          <!-- Footer action row -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-2 text-on-surface-variant">
+              <span class="material-symbols-outlined text-primary" style="font-size:18px;font-variation-settings:'FILL' 1">info</span>
+              <span class="font-label-sm text-label-sm uppercase tracking-widest" data-i18n="beta_last_updated">Last updated — May 2026</span>
+            </div>
+            <div class="flex items-center gap-4">
+              <a href="./contact.html" class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors duration-250" data-i18n="beta_send_feedback">
+                Send Feedback
+              </a>
+              <a href="./?from=beta" class="group relative px-8 py-3 bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-[0.15em] rounded overflow-hidden transition-all duration-300 hover:bg-primary-container active:scale-95" data-i18n="beta_back_home">
+                Back to Home
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Decorative corner labels -->
+      <div class="flex justify-between mt-6 px-1 select-none pointer-events-none">
+        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-widest">Open Beta 1.0</span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-widest">SNAPBRIFY © 2026</span>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full px-margin-page py-8 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-white/5 mt-auto z-10 relative">
+    <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
+    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
+    <div class="flex gap-gutter">
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html" data-i18n="footer_contact">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
+    </div>
+  </footer>
+
+  <script>
+    // ── Nav auth state ────────────────────────────────────────────────────────
+    const _raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const _user = (() => { try { return _raw ? JSON.parse(_raw) : null; } catch { return null; } })();
+    (function () {
+      const navSignUp   = document.getElementById('navSignUp');
+      const navLogin     = document.getElementById('navLogin');
+      const navUserGroup = document.getElementById('navUserGroup');
+      if (_user) {
+        document.getElementById('navUsername').textContent = _user.name || _user.id;
+        if (navSignUp) navSignUp.style.display = 'none';
+        navLogin.style.display = 'none';
+        navUserGroup.classList.remove('hidden');
+        navUserGroup.classList.add('flex');
+      }
+      document.getElementById('btnNavOpenApp').addEventListener('click', () => {
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+        window.location.href = isMobile ? './mobile.html' : './desktop.html';
+      });
+      document.getElementById('btnNavLogout').addEventListener('click', () => {
+        window._wpDoLogout('./login.html?ref=app');
+      });
+    })();
+
+    // Parallax card tilt on mouse move
+    const card = document.querySelector('.glass-panel');
+    document.addEventListener('mousemove', (e) => {
+      const x = e.clientX / window.innerWidth - 0.5;
+      const y = e.clientY / window.innerHeight - 0.5;
+      card.style.transform = `perspective(1200px) rotateX(${y * 1.5}deg) rotateY(${x * 1.5}deg)`;
+    });
+    document.addEventListener('mouseleave', () => {
+      card.style.transform = '';
+    });
+  </script>
+</body>
+</html>

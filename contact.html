@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact Us | SNAPBRIFY</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-low":     "#18181B",
+            "surface-container-lowest":  "#0d0e12",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "secondary-container":       "#27272A",
+            "error":                     "#ffb4ab",
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
+          fontFamily: {
+            "headline-xl": ["Cinzel", "serif"],
+            "headline-lg": ["Cinzel", "serif"],
+            "body-lg":     ["Cormorant Garamond", "serif"],
+            "body-md":     ["Cormorant Garamond", "serif"],
+            "label-sm":    ["Cormorant Garamond", "serif"],
+            "label-xs":    ["Cormorant Garamond", "serif"],
+          },
+          fontSize: {
+            "headline-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-lg": ["28px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm":    ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs":    ["10px", { lineHeight: "1.0", letterSpacing: "0.1em",  fontWeight: "600" }],
+            "body-lg":     ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md":     ["15px", { lineHeight: "1.6", fontWeight: "400" }],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-family: 'Cormorant Garamond', serif; background: #09090B; color: #F4F4F5; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+    .glass-panel {
+      background: rgba(24,24,27,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(232,200,84,0.1);
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .glass-panel:hover { border-color: rgba(232,200,84,0.2); background: rgba(24,24,27,0.75); }
+    input, select, textarea {
+      background: rgba(255,255,255,0.04) !important;
+      border: none !important;
+      border-bottom: 1px solid rgba(232,200,84,0.2) !important;
+      transition: all 0.25s ease-out !important;
+      color: #F4F4F5 !important;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-bottom-color: #E8C854 !important;
+      outline: none !important;
+      box-shadow: none !important;
+      background: rgba(255,255,255,0.07) !important;
+    }
+    input::placeholder, textarea::placeholder { color: #52525B !important; }
+    select option { background: #1F1F22; color: #F4F4F5; }
+    .studio-dot {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(232,200,84,0.05) 0%, rgba(9,9,11,0) 70%);
+      z-index: -1;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface overflow-x-hidden min-h-screen flex flex-col">
+
+  <!-- Top Navigation injected by js/navbar.js -->
+
+  <!-- Main -->
+  <main class="flex-grow pt-32 pb-margin-page px-margin-mobile md:px-margin-page relative">
+    <div class="studio-dot top-20 -left-20"></div>
+    <div class="studio-dot bottom-20 -right-20"></div>
+
+    <div class="max-w-5xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-20 space-y-4">
+        <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-4 bg-surface-container/60 backdrop-blur">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="contact_badge">Get in Touch</span>
+        </div>
+        <h1 class="font-headline-xl text-headline-xl text-on-surface" data-i18n="contact_title">Contact Us</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto" data-i18n="contact_desc">Have a question or need support? Our team is here to help you create better textures.</p>
+      </div>
+
+      <!-- Content Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-12">
+
+        <!-- Contact Form -->
+        <div class="md:col-span-7 glass-panel p-container-padding rounded-xl">
+          <form class="space-y-stack-gap" id="contactForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-stack-gap">
+              <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="contact_name_label">Name</label>
+                <input class="py-3 px-1 text-on-surface" placeholder="Your Name" type="text" required data-i18n-placeholder="ph_your_name" />
+              </div>
+              <div class="flex flex-col gap-2">
+                <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="contact_email_label">Email</label>
+                <input class="py-3 px-1 text-on-surface" placeholder="you@example.com" type="email" required />
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="contact_subject_label">Subject</label>
+              <select class="py-3 px-1 text-on-surface cursor-pointer appearance-none">
+                <option data-i18n="contact_opt_support">Technical Support</option>
+                <option data-i18n="contact_opt_billing">Account &amp; Billing</option>
+                <option data-i18n="contact_opt_feature">Feature Request</option>
+                <option data-i18n="contact_opt_partner">Partnership</option>
+                <option data-i18n="contact_opt_other">Other</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-2">
+              <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="contact_message_label">Message</label>
+              <textarea class="py-3 px-1 text-on-surface resize-none" placeholder="Tell us about your issue or question..." rows="5" required data-i18n-placeholder="ph_message"></textarea>
+            </div>
+            <div class="pt-4">
+              <button class="w-full md:w-auto bg-primary text-on-primary px-10 py-4 rounded-full font-label-sm flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.98] transition-all duration-250" type="submit" id="submitBtn">
+                <span data-i18n="contact_send_btn">Send Message</span>
+                <span class="material-symbols-outlined" style="font-size:16px">send</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Info Sidebar -->
+        <div class="md:col-span-5 flex flex-col gap-8">
+          <div class="glass-panel p-container-padding rounded-xl space-y-6">
+            <div class="space-y-2">
+              <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest" data-i18n="contact_support_label">Support</span>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface">SNAPBRIFY</h3>
+              <p class="font-body-md text-on-surface-variant" data-i18n-html="contact_platform_tagline_html">PBR Material Generation Platform<br/>AI-powered texture intelligence</p>
+            </div>
+            <div class="pt-4 border-t border-white/5 space-y-4">
+              <div class="flex items-center gap-4 group">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-250 flex-shrink-0">
+                  <span class="material-symbols-outlined" style="font-size:18px">mail</span>
+                </div>
+                <div>
+                  <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="contact_email_label">Email</p>
+                  <p class="font-body-md text-on-surface">support@snapbrify.com</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 group">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-250 flex-shrink-0">
+                  <span class="material-symbols-outlined" style="font-size:18px">schedule</span>
+                </div>
+                <div>
+                  <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="contact_response_time">Response Time</p>
+                  <p class="font-body-md text-on-surface" data-i18n="contact_response_val">Usually within 24 hours</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-4 group">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-all duration-250 flex-shrink-0">
+                  <span class="material-symbols-outlined" style="font-size:18px">code</span>
+                </div>
+                <div>
+                  <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">Instagram</p>
+                  <p class="font-body-md text-on-surface">instagram.com/z_jay_0723</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Feature tags -->
+          <div class="glass-panel p-container-padding rounded-xl">
+            <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mb-4" data-i18n="contact_what_support">What we support</p>
+            <div class="flex flex-wrap gap-2">
+              <span class="bg-primary/10 border border-primary/20 text-primary rounded-full px-3 py-1 font-label-xs text-label-xs uppercase tracking-widest" data-i18n="contact_tag_pbr">PBR Generation</span>
+              <span class="bg-primary/10 border border-primary/20 text-primary rounded-full px-3 py-1 font-label-xs text-label-xs uppercase tracking-widest" data-i18n="chip_seamless">Seamless Tiling</span>
+              <span class="bg-primary/10 border border-primary/20 text-primary rounded-full px-3 py-1 font-label-xs text-label-xs uppercase tracking-widest" data-i18n="contact_tag_hdr">HDR Capture</span>
+              <span class="bg-primary/10 border border-primary/20 text-primary rounded-full px-3 py-1 font-label-xs text-label-xs uppercase tracking-widest" data-i18n="contact_tag_billing">Account &amp; Billing</span>
+              <span class="bg-primary/10 border border-primary/20 text-primary rounded-full px-3 py-1 font-label-xs text-label-xs uppercase tracking-widest" data-i18n="contact_tag_r2">Cloudflare R2</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full px-margin-page py-8 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-white/5 mt-auto">
+    <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
+    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
+    <div class="flex gap-gutter">
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html" data-i18n="footer_contact">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
+    </div>
+  </footer>
+
+  <script>
+    // Nav auth state
+    (function () {
+      const raw = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+      const navSignUp = document.getElementById('navSignUp');
+      const navLogin = document.getElementById('navLogin');
+      const navUserGroup = document.getElementById('navUserGroup');
+      if (raw) {
+        try {
+          const user = JSON.parse(raw);
+          document.getElementById('navUsername').textContent = user.name || user.id;
+          if (navSignUp) navSignUp.style.display = 'none';
+          navLogin.style.display = 'none';
+          navUserGroup.classList.remove('hidden');
+          navUserGroup.classList.add('flex');
+        } catch (e) {}
+      }
+      const logoutBtn = document.getElementById('btnNavLogout');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          window._wpDoLogout('./login.html?ref=app');
+        });
+      }
+    })();
+
+    // Form submission
+    const form = document.getElementById('contactForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = 'Sending...';
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      setTimeout(() => {
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:16px">check_circle</span> Sent!';
+        btn.style.backgroundColor = '#22c55e';
+        btn.style.color = '#fff';
+        setTimeout(() => {
+          btn.innerHTML = originalHTML;
+          btn.style.backgroundColor = '';
+          btn.style.color = '';
+          btn.style.opacity = '1';
+          btn.disabled = false;
+          form.reset();
+        }, 3000);
+      }, 1200);
+    });
+
+    // Parallax dots
+    window.addEventListener('scroll', () => {
+      const dots = document.querySelectorAll('.studio-dot');
+      const scroll = window.pageYOffset;
+      dots.forEach((dot, i) => { dot.style.transform = `translateY(${scroll * (i + 1) * 0.08}px)`; });
+    });
+  </script>
+</body>
+</html>

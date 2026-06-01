@@ -277,11 +277,28 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   if (!generatedMaps) return;
   previewModal.close();
 
+  const uploadOverlay = document.getElementById('uploadProgressOverlay');
+  const uploadLabel   = document.getElementById('uploadProgressLabel');
+  const uploadBar     = document.getElementById('uploadProgressBar');
+  const uploadCount   = document.getElementById('uploadProgressCount');
+
+  // Show blocking overlay
+  if (uploadOverlay) {
+    uploadBar.style.width = '0%';
+    uploadLabel.textContent = 'Preparing\u2026';
+    uploadCount.textContent = '0 / 6';
+    uploadOverlay.classList.remove('hidden');
+  }
+
   btnUpload.disabled = true;
   const origHTML = btnUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnUpload.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:_spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Uploading... (${done}/${total})`;
+    if (uploadOverlay) {
+      uploadBar.style.width = `${Math.round((done / total) * 100)}%`;
+      uploadLabel.textContent = done < total ? `Channel ${done} / ${total}` : 'Finalizing\u2026';
+      uploadCount.textContent = `${done} / ${total}`;
+    }
   };
 
   try {
@@ -330,7 +347,7 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
           await fetch(`${apiBase}/send-upload-report`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: user.email, name, maps })
+            body:    JSON.stringify({ email: user.email, name, maps, folder: name, username: user.id || user.name || '' })
           });
           showToast('Material links sent to ' + user.email, 'info');
         }
@@ -346,6 +363,7 @@ btnPreviewModalConfirm.addEventListener('click', async () => {
   } catch (err) {
     showToast('Upload failed: ' + err.message, 'error');
   } finally {
+    if (uploadOverlay) uploadOverlay.classList.add('hidden');
     btnUpload.disabled = false;
     btnUpload.innerHTML = origHTML;
   }

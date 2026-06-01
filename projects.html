@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html class="dark" lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project History | SNAPBRIFY</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPMincho:wght@400;700&family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <script src="./js/auth.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/navbar.js"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background":                "#09090B",
+            "surface":                   "#18181B",
+            "surface-container":         "#1F1F22",
+            "surface-container-low":     "#18181B",
+            "surface-container-high":    "#27272A",
+            "surface-container-highest": "#27272A",
+            "surface-container-lowest":  "#0d0e12",
+            "on-surface":                "#F4F4F5",
+            "on-surface-variant":        "#A1A1AA",
+            "on-tertiary-fixed-variant": "#A1A1AA",
+            "outline":                   "#52525B",
+            "outline-variant":           "#3F3F46",
+            "primary":                   "#E8C854",
+            "primary-container":         "#C9A630",
+            "primary-fixed":             "#F5E080",
+            "on-primary":                "#18181B",
+            "error":                     "#ffb4ab",
+          },
+          borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          spacing: { "margin-page": "64px", "container-padding": "32px", "gutter": "24px", "margin-mobile": "24px", "unit": "8px", "stack-gap": "16px" },
+          fontFamily: {
+            "headline-xl": ["Cinzel", "serif"],
+            "headline-lg": ["Cinzel", "serif"],
+            "body-lg":     ["Cormorant Garamond", "serif"],
+            "body-md":     ["Cormorant Garamond", "serif"],
+            "label-sm":    ["Cormorant Garamond", "serif"],
+            "label-xs":    ["Cormorant Garamond", "serif"],
+          },
+          fontSize: {
+            "headline-xl": ["40px", { lineHeight: "1.1", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-lg": ["28px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm":    ["12px", { lineHeight: "1.0", letterSpacing: "0.08em", fontWeight: "500" }],
+            "label-xs":    ["10px", { lineHeight: "1.0", letterSpacing: "0.1em",  fontWeight: "600" }],
+            "body-lg":     ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md":     ["15px", { lineHeight: "1.6", fontWeight: "400" }],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-family: 'Cormorant Garamond', serif; background: #09090B; color: #F4F4F5; }
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+    .project-row {
+      transition: all 0.3s ease-out;
+      border-bottom: 1px solid rgba(63,63,70,0.4);
+    }
+    .project-row:hover {
+      background: rgba(232,200,84,0.03);
+      border-bottom-color: rgba(232,200,84,0.2);
+    }
+    /* Search expand */
+    #searchWrap { transition: width 0.25s ease-out; width: 256px; }
+    #searchWrap:focus-within { width: 320px; }
+    /* Skeleton shimmer */
+    @keyframes shimmer {
+      0%   { background-position: -600px 0; }
+      100% { background-position: 600px 0; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, #27272A 25%, #3F3F46 50%, #27272A 75%);
+      background-size: 600px 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+    }
+    .lang-select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      padding-right: 2.2rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23A1A1AA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      background-size: 0.75rem;
+    }
+    .lang-select::-ms-expand { display: none; }
+    html:lang(zh-Hant) body,
+    html:lang(zh-TW) body,
+    html:lang(zh) body {
+      font-family: 'GenRyuMin2 TW', 'Mantou Sans', 'BIZ UDPMincho', 'Noto Serif TC', serif;
+    }
+  </style>
+</head>
+<body class="overflow-x-hidden min-h-screen flex flex-col">
+
+  <!-- Top Navigation injected by js/navbar.js -->
+
+  <!-- Main -->
+  <main class="flex-grow pt-32 pb-24 px-margin-mobile md:px-margin-page min-h-screen">
+
+    <!-- Hero -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+      <div>
+        <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-4 bg-surface-container/60 backdrop-blur">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="projects_badge">Material Archive</span>
+        </div>
+        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-2" data-i18n="projects_title">Project History</h1>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl" data-i18n="projects_desc">All your uploaded PBR material sets. Download ZIPs or revisit individual channels.</p>
+      </div>
+      <div class="flex items-center gap-4">
+        <div id="searchWrap" class="relative group">
+          <input id="searchInput" class="bg-surface-container border-b border-outline-variant focus:border-primary outline-none py-3 pl-4 pr-10 w-full font-body-md text-on-surface transition-all duration-250 text-sm" placeholder="Search projects..." type="text" data-i18n-placeholder="ph_search_projects" />
+          <span class="material-symbols-outlined absolute right-3 top-3 text-on-surface-variant group-focus-within:text-primary text-[18px]">search</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="flex flex-wrap items-center gap-4 mb-8">
+      <div class="flex items-center gap-2 px-4 py-2 border border-outline-variant rounded-full text-on-surface-variant cursor-pointer hover:border-primary transition-colors select-none">
+        <span class="font-label-sm text-label-sm" data-i18n="projects_filter_date">Date: Newest First</span>
+        <span class="material-symbols-outlined" style="font-size:16px">keyboard_arrow_down</span>
+      </div>
+      <div class="ml-auto font-label-sm text-label-sm text-on-surface-variant opacity-60" id="projectCount">Loading…</div>
+    </div>
+
+    <!-- Project Table -->
+    <div class="w-full overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-outline-variant/30">
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium w-24" data-i18n="projects_th_thumb">Thumb</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium" data-i18n="projects_th_name">Project Name</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden sm:table-cell" data-i18n="projects_th_channels">Channels</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium hidden md:table-cell" data-i18n="projects_th_uploaded">Uploaded</th>
+            <th class="py-6 px-4 font-label-sm text-label-sm uppercase tracking-[0.15em] text-on-surface-variant font-medium text-right" data-i18n="projects_th_actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="projectTableBody" class="divide-y divide-outline-variant/10">
+          <!-- Skeleton rows shown while loading -->
+          <tr class="project-row" id="skeletonRow1">
+            <td class="py-5 px-4"><div class="skeleton w-16 h-16"></div></td>
+            <td class="py-5 px-4"><div class="skeleton h-5 w-48"></div></td>
+            <td class="py-5 px-4 hidden sm:table-cell"><div class="skeleton h-4 w-20"></div></td>
+            <td class="py-5 px-4 hidden md:table-cell"><div class="skeleton h-4 w-24"></div></td>
+            <td class="py-5 px-4"><div class="skeleton h-5 w-16 ml-auto"></div></td>
+          </tr>
+          <tr class="project-row" id="skeletonRow2">
+            <td class="py-5 px-4"><div class="skeleton w-16 h-16"></div></td>
+            <td class="py-5 px-4"><div class="skeleton h-5 w-36"></div></td>
+            <td class="py-5 px-4 hidden sm:table-cell"><div class="skeleton h-4 w-20"></div></td>
+            <td class="py-5 px-4 hidden md:table-cell"><div class="skeleton h-4 w-24"></div></td>
+            <td class="py-5 px-4"><div class="skeleton h-5 w-16 ml-auto"></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state (hidden by default) -->
+    <div id="emptyState" class="hidden flex-col items-center justify-center py-32 gap-6 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant/20" style="font-size:72px">folder_open</span>
+      <div>
+        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px" data-i18n="projects_empty_title">No projects yet</p>
+        <p class="font-body-md text-on-surface-variant/60 mt-2" data-i18n="projects_empty_desc">Upload your first texture set to see it here.</p>
+      </div>
+      <button onclick="window._wpGoToApp()" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250" data-i18n="start_creating">
+        Start Creating
+      </button>
+    </div>
+
+    <!-- Login required state (hidden by default) -->
+    <div id="loginRequired" class="hidden flex-col items-center justify-center py-32 gap-6 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant/20" style="font-size:72px">lock</span>
+      <div>
+        <p class="font-headline-lg text-on-surface-variant" style="font-size:20px" data-i18n="projects_login_title">Sign in to view your projects</p>
+        <p class="font-body-md text-on-surface-variant/60 mt-2" data-i18n="projects_login_desc">Your upload history is tied to your account.</p>
+      </div>
+      <a href="./login.html?ref=projects" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250" data-i18n="login">
+        Login
+      </a>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="w-full px-margin-page py-8 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-white/5 mt-auto">
+    <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
+    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
+    <div class="flex gap-gutter">
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html" data-i18n="footer_contact">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
+    </div>
+  </footer>
+
+  <script>
+    // ── Nav auth state ────────────────────────────────────────────────────────
+    const _raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
+    const _user = (() => { try { return _raw ? JSON.parse(_raw) : null; } catch { return null; } })();
+
+    (function () {
+      const navSignUp   = document.getElementById('navSignUp');
+      const navLogin     = document.getElementById('navLogin');
+      const navUserGroup = document.getElementById('navUserGroup');
+      if (_user) {
+        document.getElementById('navUsername').textContent = _user.name || _user.id;
+        if (navSignUp) navSignUp.style.display = 'none';
+        navLogin.style.display = 'none';
+        navUserGroup.classList.remove('hidden');
+        navUserGroup.classList.add('flex');
+      }
+      document.getElementById('btnNavOpenApp').addEventListener('click', () => {
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+        window.location.href = isMobile ? './mobile.html' : './desktop.html';
+      });
+      document.getElementById('btnNavLogout').addEventListener('click', () => {
+        window._wpDoLogout('./login.html?ref=app');
+      });
+    })();
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function getApiBase() {
+      return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? `${location.protocol}//${location.host}`
+        : 'https://webphoto-lidl.onrender.com';
+    }
+
+    function formatDate(iso) {
+      try {
+        return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      } catch { return iso; }
+    }
+
+    const CHANNEL_KEYS = ['basecolor','roughness','ao','height','metallic','normal'];
+
+    // Derive a display name from the folder slug
+    function displayName(folder) {
+      return folder.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Build a thumbnail URL: prefer basecolor from maps, else R2 bucket URL pattern
+    function thumbUrl(record) {
+      if (record.thumbUrl) return record.thumbUrl;
+      // Try to guess basecolor key from publicIds
+      const bcKey = (record.publicIds || []).find(k => k.includes('_basecolor'));
+      if (bcKey) {
+        const base = (typeof R2_BUCKET_URL !== 'undefined') ? R2_BUCKET_URL : '';
+        if (base) return `${base}/${bcKey}`;
+      }
+      return null;
+    }
+
+    // ── Render a project row ──────────────────────────────────────────────────
+    function renderRow(record) {
+      const folder  = record.folderName || 'Untitled';
+      const name    = displayName(folder);
+      const date    = formatDate(record.uploadedAt);
+      const ids     = record.publicIds || [];
+      const zipId   = ids.find(k => k.endsWith('_textures.zip'));
+      const imgIds  = ids.filter(k => !k.endsWith('.zip'));
+      const channelCount = imgIds.length;
+      const thumb   = record.thumbUrl || null;
+
+      const tr = document.createElement('tr');
+      tr.className = 'project-row group cursor-pointer';
+      tr.innerHTML = `
+        <td class="py-5 px-4">
+          <div class="w-16 h-16 overflow-hidden bg-surface-container-high flex items-center justify-center flex-shrink-0">
+            ${thumb
+              ? `<img src="${thumb}" alt="${name}" class="w-full h-full object-cover grayscale opacity-75 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" onerror="this.parentElement.innerHTML='<span class=\'material-symbols-outlined text-on-surface-variant/30\' style=\'font-size:28px\'>texture</span>'" />`
+              : `<span class="material-symbols-outlined text-on-surface-variant/30" style="font-size:28px">texture</span>`
+            }
+          </div>
+        </td>
+        <td class="py-5 px-4">
+          <span class="font-headline-lg text-[18px] text-on-surface group-hover:text-primary transition-colors duration-250">${name}</span>
+          <p class="font-body-md text-on-surface-variant/50 text-xs mt-0.5">${folder}</p>
+        </td>
+        <td class="py-5 px-4 hidden sm:table-cell">
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest">${channelCount} / 6 channels</span>
+        </td>
+        <td class="py-5 px-4 hidden md:table-cell">
+          <span class="font-body-md text-on-surface-variant text-sm">${date}</span>
+        </td>
+        <td class="py-5 px-4 text-right">
+          <div class="flex justify-end items-center gap-4 text-on-surface-variant">
+            ${zipId && record.bucketUrl
+              ? `<a href="${record.bucketUrl}/${zipId}" title="Download ZIP" target="_blank" rel="noopener"
+                   class="material-symbols-outlined hover:text-primary transition-colors duration-250" style="font-size:20px;text-decoration:none">download</a>`
+              : `<span class="material-symbols-outlined opacity-25 cursor-not-allowed" style="font-size:20px" title="ZIP not available">download</span>`
+            }
+            <button onclick="openDetail(${JSON.stringify(JSON.stringify(record))})"
+              class="material-symbols-outlined hover:text-primary transition-colors duration-250" style="font-size:20px" title="View channels">open_in_new</button>
+          </div>
+        </td>`;
+      return tr;
+    }
+
+    // ── Detail modal ──────────────────────────────────────────────────────────
+    function openDetail(recordJson) {
+      const record = JSON.parse(recordJson);
+      const folder = record.folderName || 'Untitled';
+      const name   = displayName(folder);
+      const ids    = record.publicIds || [];
+      const base   = record.bucketUrl || getApiBase();
+
+      const channelLinks = CHANNEL_KEYS
+        .map(ch => {
+          const key = ids.find(k => k.includes(`_${ch}`));
+          if (!key) return '';
+          const url = key.startsWith('http') ? key : `${base}/${key}`;
+          return `<a href="${url}" target="_blank" rel="noopener"
+            class="flex items-center gap-3 px-4 py-3 bg-surface-container-high rounded-lg hover:bg-primary/10 hover:border-primary/20 border border-outline-variant/20 transition-all duration-200 group">
+            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors" style="font-size:18px">image</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary uppercase tracking-widest transition-colors">${ch}</span>
+          </a>`;
+        }).filter(Boolean).join('');
+
+      document.getElementById('modalTitle').textContent = name;
+      document.getElementById('modalChannels').innerHTML = channelLinks || '<p class="text-on-surface-variant/50 font-body-md">No channel links available.</p>';
+      document.getElementById('detailModal').classList.remove('hidden');
+      document.getElementById('detailModal').classList.add('flex');
+    }
+
+    // ── Load projects from API ────────────────────────────────────────────────
+    async function loadProjects() {
+      const tbody = document.getElementById('projectTableBody');
+      const empty = document.getElementById('emptyState');
+      const loginReq = document.getElementById('loginRequired');
+      const countEl = document.getElementById('projectCount');
+
+      if (!_user) {
+        // Not logged in
+        tbody.innerHTML = '';
+        loginReq.classList.remove('hidden');
+        loginReq.classList.add('flex');
+        countEl.textContent = '';
+        return;
+      }
+
+      try {
+        const username = _user.id || _user.name || '';
+        const resp = await fetch(`${getApiBase()}/projects?username=${encodeURIComponent(username)}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        const records = Array.isArray(data.projects) ? data.projects : [];
+
+        tbody.innerHTML = '';
+
+        if (!records.length) {
+          empty.classList.remove('hidden');
+          empty.classList.add('flex');
+          countEl.textContent = '0 Projects';
+          return;
+        }
+
+        countEl.textContent = `${records.length} Project${records.length !== 1 ? 's' : ''}`;
+        records.forEach(r => tbody.appendChild(renderRow(r)));
+
+      } catch (err) {
+        // API not yet available — show placeholder notice
+        tbody.innerHTML = `
+          <tr><td colspan="5" class="py-16 text-center">
+            <div class="inline-flex flex-col items-center gap-3">
+              <span class="material-symbols-outlined text-primary/40" style="font-size:40px">cloud_off</span>
+              <p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Project history API coming soon</p>
+              <p class="font-body-md text-on-surface-variant/50 text-sm max-w-xs">Your past uploads will appear here once the <code class="text-primary/70">/projects</code> endpoint is deployed.</p>
+            </div>
+          </td></tr>`;
+        countEl.textContent = '';
+      }
+    }
+
+    // ── Search filter ─────────────────────────────────────────────────────────
+    document.getElementById('searchInput').addEventListener('input', function () {
+      const q = this.value.toLowerCase();
+      document.querySelectorAll('#projectTableBody tr.project-row').forEach(row => {
+        const text = row.querySelector('td:nth-child(2)')?.textContent.toLowerCase() || '';
+        row.style.display = text.includes(q) ? '' : 'none';
+      });
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadProjects();
+  </script>
+
+  <!-- Detail Modal -->
+  <div id="detailModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+    <div class="bg-surface border border-outline-variant/30 rounded-xl w-full max-w-md p-8 relative shadow-2xl">
+      <button onclick="document.getElementById('detailModal').classList.add('hidden');document.getElementById('detailModal').classList.remove('flex');"
+        class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface transition-colors">
+        <span class="material-symbols-outlined" style="font-size:22px">close</span>
+      </button>
+      <p class="font-label-xs text-label-xs text-primary uppercase tracking-widest mb-2" data-i18n="projects_ch_maps">Channel Maps</p>
+      <h2 id="modalTitle" class="font-headline-lg text-headline-lg text-on-surface mb-6" style="font-size:22px"></h2>
+      <div id="modalChannels" class="grid grid-cols-2 gap-3"></div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -37,7 +37,6 @@ const uploadSheetBackdrop = document.getElementById('uploadSheetBackdrop');
 const uploadNameInput = document.getElementById('uploadName');
 const btnConfirmUpload = document.getElementById('btnConfirmUpload');
 const btnCancelUpload  = document.getElementById('btnCancelUpload');
-const uploadResolution = document.getElementById('uploadResolution');
 const btnAspectLock    = document.getElementById('btnAspectLock');
 const lockIconClosed   = document.getElementById('lockIconClosed');
 const lockIconOpen     = document.getElementById('lockIconOpen');
@@ -199,7 +198,7 @@ function _syncPreviewTransform() {
   const bounds = _getPanBounds();
   previewPanX = Math.max(-bounds.x, Math.min(bounds.x, previewPanX));
   previewPanY = Math.max(-bounds.y, Math.min(bounds.y, previewPanY));
-  previewCanvas.style.transform = `translate(${previewPanX}px, ${previewPanY}px) scale(${previewScale})`;
+  previewCanvas.style.transform = `translate(calc(-50% + ${previewPanX}px), calc(-50% + ${previewPanY}px)) scale(${previewScale})`;
 }
 
 function _resetPreviewTransform() {
@@ -951,7 +950,7 @@ btnShowUpload.addEventListener('click', async () => {
   genOverlayLabel.textContent = 'Generating channels...';
   genOverlay.classList.remove('hidden');
   try {
-    const outSize = 99999; // use native crop size, never downscale
+    const outSize = Infinity;  // upload at actual crop resolution — no downscaling
     const params  = seamlessEnabled ? { ...seamlessParams } : null;
     generatedMaps = await generateChannels(currentCrop, params, outSize);
     paintPreviewThumbnails(generatedMaps);
@@ -980,11 +979,28 @@ btnConfirmUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('Please select a crop area first', 'warning'); return; }
 
   if (!generatedMaps) { showToast('Please preview channels first', 'warning'); return; }
+
+  const uploadOverlay = document.getElementById('uploadProgressOverlay');
+  const uploadLabel   = document.getElementById('uploadProgressLabel');
+  const uploadBar     = document.getElementById('uploadProgressBar');
+  const uploadCount   = document.getElementById('uploadProgressCount');
+
+  if (uploadOverlay) {
+    uploadBar.style.width = '0%';
+    uploadLabel.textContent = 'Preparing\u2026';
+    uploadCount.textContent = '0 / 6';
+    uploadOverlay.classList.remove('hidden');
+  }
+
   btnConfirmUpload.disabled = true;
   const origHTML = btnConfirmUpload.innerHTML;
 
   const onProgress = (done, total) => {
-    btnConfirmUpload.innerHTML = `<span style="display:inline-block;width:14px;height:14px;border:2px solid #18181B;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:4px"></span> Uploading... (${done}/${total})`;
+    if (uploadOverlay) {
+      uploadBar.style.width = `${Math.round((done / total) * 100)}%`;
+      uploadLabel.textContent = done < total ? `Channel ${done} / ${total}` : 'Finalizing\u2026';
+      uploadCount.textContent = `${done} / ${total}`;
+    }
   };
 
   try {
@@ -1037,7 +1053,7 @@ btnConfirmUpload.addEventListener('click', async () => {
           await fetch(`${apiBase}/send-upload-report`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ email: toEmail, name, maps })
+            body:    JSON.stringify({ email: toEmail, name, maps, folder: name, username: (user?.id || user?.name || '') })
           });
           showToast('Material links sent to ' + toEmail, 'info');
         } else {
@@ -1053,6 +1069,7 @@ btnConfirmUpload.addEventListener('click', async () => {
   } catch (err) {
     showToast('Upload failed: ' + err.message, 'error');
   } finally {
+    if (uploadOverlay) uploadOverlay.classList.add('hidden');
     btnConfirmUpload.disabled = false;
     btnConfirmUpload.innerHTML = origHTML;
   }
