@@ -161,7 +161,7 @@
 
           <!-- Email -->
           <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Email" data-i18n="signup_email_label">Gmail Address</label>
+            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Email" data-i18n="signup_email_label">Email Address</label>
             <div class="relative">
               <input id="s1Email" name="email" type="email" autocomplete="email" required
                 class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 pr-8 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
@@ -295,16 +295,16 @@
         showAlert('alertBox1', 'error', 'Username must be 3–30 characters using letters, numbers or underscores');
         return;
       }
-      if (password.length < 8) {
-        showAlert('alertBox1', 'error', 'Password must be at least 8 characters');
+      if (password.length < 8 || !/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+        showAlert('alertBox1', 'error', 'Password must be at least 8 characters and include both letters and numbers');
         return;
       }
       if (password !== confirm) {
         showAlert('alertBox1', 'error', 'Passwords do not match');
         return;
       }
-      if (!/^[^\s@]+@gmail\.com$/i.test(email)) {
-        showAlert('alertBox1', 'error', 'Please enter a valid Gmail address');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showAlert('alertBox1', 'error', 'Please enter a valid email address');
         return;
       }
 

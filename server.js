@@ -39,10 +39,6 @@ function _getS3Client() {
   });
 }
 
-// ─── Keepalive state (in-memory for ephemeral environments) ──────────────────
-let lastBrevoSentAt   = Date.now();
-let lastSystemUseAt   = Date.now();
-
 // ─── In-memory ZIP store (TTL 24 h) ──────────────────────────────────────────
 const zipStore = new Map(); // id → { name, buffer, createdAt }
 setInterval(() => {
@@ -564,8 +560,7 @@ const server = http.createServer((req, res) => {
           if (devUser) {
             success = await bcrypt.compare(password, devUser.password);
           } else {
-            // No fallback to hardcoded credentials — require proper setup
-            console.error(`[login] Unknown user "${username}" and no auth backend available`);
+            console.warn(`[login] No DB connection and no matching dev account for "${username}"`);
             success = false;
           }
         }
@@ -1098,26 +1093,36 @@ setInterval(runR2Cleanup, 24 * 60 * 60 * 1000).unref();
 // 1) Track last system activity in a file.
 // 2) Assume API expires after BREVO_API_EXPIRY_DAYS (default 90).
 // 3) Send keepalive at (expiryDays - 1) since last activity.
-// Use MongoDB or memory for keepalive timestamps (no filesystem writes in ephemeral env)
-const KEEPALIVE_STATE_KEY = 'webphoto_keepalive_state';
+const KEEPALIVE_FILE = path.join(__dirname, '.brevo-keepalive');
+const LAST_USE_FILE  = path.join(__dirname, '.system-last-use');
 const BREVO_API_EXPIRY_DAYS = Math.max(2, Number(process.env.BREVO_API_EXPIRY_DAYS || 90));
 const KEEPALIVE_DAYS = BREVO_API_EXPIRY_DAYS - 1;
 const KEEPALIVE_TO   = process.env.BREVO_KEEPALIVE_TO || process.env.BREVO_FROM;
 
 function readLastSent() {
-  return new Date(lastBrevoSentAt);
+  try {
+    if (fs.existsSync(KEEPALIVE_FILE)) {
+      return new Date(fs.readFileSync(KEEPALIVE_FILE, 'utf8').trim());
+    }
+  } catch {}
+  return null;
 }
 
 function writeLastSent() {
-  lastBrevoSentAt = Date.now();
+  try { fs.writeFileSync(KEEPALIVE_FILE, new Date().toISOString()); } catch {}
 }
 
 function readLastSystemUse() {
-  return new Date(lastSystemUseAt);
+  try {
+    if (fs.existsSync(LAST_USE_FILE)) {
+      return new Date(fs.readFileSync(LAST_USE_FILE, 'utf8').trim());
+    }
+  } catch {}
+  return null;
 }
 
 function writeLastSystemUse() {
-  lastSystemUseAt = Date.now();
+  try { fs.writeFileSync(LAST_USE_FILE, new Date().toISOString()); } catch {}
 }
 
 async function checkBrevoKeepalive() {
