@@ -20,3 +20,6 @@ dev-accounts.json
 #本機的Node.js不用推上去，用Render的
 node/
 login_log.txt
+
+# Cloudflare tunnel binary (large, platform-specific)
+cloudflared.exe
