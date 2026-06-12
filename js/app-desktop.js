@@ -242,8 +242,8 @@ btnUpload.addEventListener('click', async () => {
   if (!currentCrop) { showToast('Please select an image first', 'warning'); return; }
   const name = uploadNameInput.value.trim();
   if (!name) { showToast('Please enter a folder name', 'warning'); return; }
-  // Use full crop resolution — no downscaling
-  const outSize = Infinity;
+  // Standard 2048px output (longest edge) — large crops are downscaled, small ones never upscaled
+  const outSize = 2048;
   const params  = seamlessEnabled ? { ...seamlessParams } : null;
 
   btnUpload.disabled = true;

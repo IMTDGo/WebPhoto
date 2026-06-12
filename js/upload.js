@@ -7,7 +7,7 @@
  *   2. uploadAllMaps(name, canvasMap, onProgress)
  *      → uploads all canvases in PARALLEL to backend, then backend forwards to Cloudflare Images
  *
- * Logical file structure (all maps are JPEG, recursively compressed ≤ 3 MB):
+ * Logical file structure (all maps are 2048px JPEG, recursively compressed ≤ 2 MB):
  *   {name}/{name}_basecolor.jpg
  *   {name}/{name}_roughness.jpg
  *   {name}/{name}_ao.jpg
@@ -24,7 +24,8 @@ import {
   canvasFromData,
 } from './textureGenerator.js';
 
-const MAX_UPLOAD_BYTES = 3 * 1024 * 1024; // every JPG must end up ≤ 3 MB (server hard limit)
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024; // every JPG must end up ≤ 2 MB (server hard limit)
+export const OUTPUT_SIZE = 2048;          // standard output resolution (longest edge, never upscaled)
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -74,7 +75,7 @@ async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
   // Last resort: lowest-quality JPEG of the smallest canvas
   const fallback = await _encodeBlob(work, 'image/jpeg', 0.45);
   if (fallback.size > maxBytes) {
-    throw new Error('Unable to compress image under 3MB');
+    throw new Error('Unable to compress image under 2MB');
   }
   return { blob: fallback, mime: 'image/jpeg', ext: 'jpg' };
 }
@@ -125,11 +126,11 @@ function _generateMainThread(imageData, w, h, baseCanvas) {
  *
  * @param {{ img, x, y, size }} crop
  * @param {object|null}  params   — seamless params; null to skip seamless
- * @param {number}       outSize  — output resolution (default 512)
+ * @param {number}       outSize  — output resolution (default 2048)
  * @returns {Promise<{ basecolor, roughness, ao, height, metallic, normal }>}
  *          each value is an HTMLCanvasElement
  */
-export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024, aspectLocked = true) {
+export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = OUTPUT_SIZE, aspectLocked = true) {
   const srcCanvas = extractCrop(crop.img, crop.x, crop.y, crop.w, crop.h);
   const cropW = srcCanvas.width;
   const cropH = srcCanvas.height;

@@ -950,7 +950,7 @@ btnShowUpload.addEventListener('click', async () => {
   genOverlayLabel.textContent = 'Generating channels...';
   genOverlay.classList.remove('hidden');
   try {
-    const outSize = Infinity;  // upload at actual crop resolution — no downscaling
+    const outSize = 2048;  // standard 2048px output (longest edge) — never upscaled
     const params  = seamlessEnabled ? { ...seamlessParams } : null;
     generatedMaps = await generateChannels(currentCrop, params, outSize);
     paintPreviewThumbnails(generatedMaps);

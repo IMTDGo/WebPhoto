@@ -184,7 +184,7 @@ const fileFilter = (_req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 3 * 1024 * 1024 } // 3 MB max per image
+  limits: { fileSize: 2 * 1024 * 1024 } // 2 MB max per image
 }).fields([
   { name: 'image', maxCount: 1 },
   { name: 'name',  maxCount: 1 }
@@ -193,7 +193,7 @@ const upload = multer({
 const uploadMapParser = multer({
   storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 3 * 1024 * 1024 } // 3 MB max per image
+  limits: { fileSize: 2 * 1024 * 1024 } // 2 MB max per image (frontend compresses to fit)
 }).single('file');
 
 // ─── Static file helper ───────────────────────────────────────────────────────
