@@ -459,13 +459,54 @@
 
   <!-- Upload progress overlay -->
   <div id="uploadProgressOverlay" class="hidden fixed inset-0 flex flex-col items-center justify-center" style="z-index:70;background:rgba(9,9,11,0.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)">
-    <div style="width:48px;height:48px;border:2px solid #3F3F46;border-top-color:#E8C854;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:24px"></div>
-    <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A1A1AA;margin-bottom:8px" data-i18n="mobile_upload_cloud">Uploading to Cloud</p>
-    <p id="uploadProgressLabel" style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#E8C854;margin-bottom:24px">Preparing…</p>
-    <div style="width:220px;height:2px;background:#27272A;border-radius:1px;overflow:hidden;position:relative">
-      <div id="uploadProgressBar" style="position:absolute;left:0;top:0;height:100%;background:linear-gradient(90deg,#C9A630,#E8C854);box-shadow:0 0 8px rgba(232,200,84,0.6);border-radius:1px;transition:width 0.45s cubic-bezier(0.4,0,0.2,1);width:0%"></div>
+    <style>
+      @keyframes mUpRingSpin { to { transform: rotate(360deg); } }
+      @keyframes mUpIconPulse { 0%, 100% { opacity: 0.55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes mUpBarSheen { 0% { transform: translateX(-110%); } 100% { transform: translateX(300px); } }
+      .m-up-ring { position: relative; width: 84px; height: 84px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+      .m-up-ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(63,63,70,0.6); }
+      .m-up-ring::after {
+        content: ''; position: absolute; inset: -1px; border-radius: 50%;
+        border: 2px solid transparent;
+        border-top-color: #E8C854; border-right-color: rgba(232,200,84,0.35);
+        animation: mUpRingSpin 1.1s linear infinite;
+        filter: drop-shadow(0 0 8px rgba(232,200,84,0.45));
+      }
+      .m-up-track {
+        position: relative; width: 240px; height: 5px; border-radius: 9999px;
+        background: rgba(63,63,70,0.35); overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      }
+      .m-up-fill {
+        position: absolute; left: 0; top: 0; height: 100%; border-radius: 9999px;
+        background: linear-gradient(90deg, #C9A630, #E8C854 60%, #F5E080);
+        box-shadow: 0 0 14px rgba(232,200,84,0.55);
+        transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .m-up-fill::after {
+        content: ''; position: absolute; top: 0; bottom: 0; width: 70px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+        animation: mUpBarSheen 1.6s ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .m-up-ring::after { animation: none; }
+        .m-up-fill::after { display: none; }
+      }
+    </style>
+    <div style="background:rgba(31,31,34,0.5);border:1px solid rgba(63,63,70,0.4);border-radius:16px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:40px 36px;display:flex;flex-direction:column;align-items:center;box-shadow:0 32px 80px rgba(0,0,0,0.6);max-width:88vw">
+      <div class="m-up-ring" style="margin-bottom:24px">
+        <span class="material-symbols-outlined" style="font-size:30px;color:#E8C854;animation:mUpIconPulse 2.2s ease-in-out infinite">texture</span>
+      </div>
+      <p style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#A1A1AA;margin-bottom:8px" data-i18n="mobile_upload_cloud">Uploading to Cloud</p>
+      <p id="uploadProgressLabel" style="font-family:'Cinzel',serif;font-size:14px;letter-spacing:0.08em;text-transform:uppercase;color:#E8C854;margin-bottom:24px">Preparing…</p>
+      <div class="m-up-track">
+        <div id="uploadProgressBar" class="m-up-fill" style="width:0%"></div>
+      </div>
+      <p id="uploadProgressCount" style="font-family:monospace;font-size:12px;color:rgba(232,200,84,0.7);margin-top:10px;letter-spacing:0.08em;font-variant-numeric:tabular-nums">0 / 6</p>
+      <div style="height:1px;width:160px;background:linear-gradient(90deg,transparent,rgba(232,200,84,0.3),transparent);margin:22px 0 14px"></div>
+      <p style="font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(161,161,170,0.35)" data-i18n="editor_upload_keep_open">Keep this tab open while we finish</p>
     </div>
-    <p id="uploadProgressCount" style="font-family:monospace;font-size:11px;color:#52525B;margin-top:8px;letter-spacing:0.08em">0 / 6</p>
   </div>
 
   <!-- Upload sheet backdrop -->

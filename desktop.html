@@ -684,24 +684,69 @@
 
   <!-- ── Upload Progress Overlay ── -->
   <div id="uploadProgressOverlay" class="hidden fixed inset-0 z-[60] flex items-center justify-center" style="pointer-events:all">
+    <style>
+      @keyframes upRingSpin { to { transform: rotate(360deg); } }
+      @keyframes upIconPulse { 0%, 100% { opacity: 0.55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes upBarSheen { 0% { transform: translateX(-100%); } 100% { transform: translateX(420px); } }
+      .up-ring { position: relative; width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+      .up-ring::before { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(63,63,70,0.6); }
+      .up-ring::after {
+        content: ''; position: absolute; inset: -1px; border-radius: 50%;
+        border: 2px solid transparent;
+        border-top-color: #E8C854; border-right-color: rgba(232,200,84,0.35);
+        animation: upRingSpin 1.1s linear infinite;
+        filter: drop-shadow(0 0 8px rgba(232,200,84,0.45));
+      }
+      .up-bar-track {
+        position: relative; width: 100%; height: 5px; border-radius: 9999px;
+        background: rgba(63,63,70,0.35); overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+      }
+      .up-bar-fill {
+        position: absolute; left: 0; top: 0; height: 100%; border-radius: 9999px;
+        background: linear-gradient(90deg, #C9A630, #E8C854 60%, #F5E080);
+        box-shadow: 0 0 14px rgba(232,200,84,0.55);
+        transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      .up-bar-fill::after {
+        content: ''; position: absolute; top: 0; bottom: 0; width: 90px;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent);
+        animation: upBarSheen 1.6s ease-in-out infinite;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .up-ring::after { animation: none; }
+        .up-bar-fill::after { display: none; }
+      }
+    </style>
     <div class="absolute inset-0 bg-background/97 backdrop-blur-2xl"></div>
     <div class="absolute inset-0 pointer-events-none studio-grid"></div>
     <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[50vmin] h-[50vmin] max-w-[500px] max-h-[500px] rounded-full bg-primary/5 blur-[100px] pointer-events-none animate-glow-pulse"></div>
-    <div class="relative z-10 flex flex-col items-center gap-8 w-full max-w-md px-8 text-center">
-      <div class="flex flex-col items-center gap-3">
-        <p class="eyebrow" data-i18n="editor_upload_cloud">Uploading to Cloud</p>
-        <p id="uploadProgressLabel" class="font-headline text-headline-md text-primary tracking-widest uppercase">Preparing…</p>
-      </div>
-      <div class="w-full flex flex-col gap-3">
-        <div class="relative w-full rounded-full overflow-hidden" style="height:2px;background:rgba(82,82,91,0.3)">
-          <div id="uploadProgressBar"
-               class="absolute left-0 top-0 h-full rounded-full bg-primary shadow-[0_0_12px_rgba(232,200,84,0.6)]"
-               style="width:0%;transition:width 0.45s cubic-bezier(0.4,0,0.2,1)"></div>
+
+    <div class="relative z-10 w-full max-w-md px-6">
+      <div class="bg-surface-container/50 border border-outline-variant/30 rounded-xl backdrop-blur-xl px-10 py-12 flex flex-col items-center gap-8 text-center shadow-[0_32px_80px_rgba(0,0,0,0.6)]">
+        <!-- Spinning gold ring with pulsing texture mark -->
+        <div class="up-ring">
+          <span class="material-symbols-outlined text-primary" style="font-size:34px;animation:upIconPulse 2.2s ease-in-out infinite">texture</span>
         </div>
-        <div class="flex justify-between">
-          <span class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/40" data-i18n="editor_channel_maps">Channel Maps</span>
-          <span id="uploadProgressCount" class="font-mono text-on-surface-variant/40" style="font-size:11px">0 / 6</span>
+
+        <div class="flex flex-col items-center gap-3">
+          <p class="eyebrow" data-i18n="editor_upload_cloud">Uploading to Cloud</p>
+          <p id="uploadProgressLabel" class="font-headline text-headline-md text-primary tracking-widest uppercase">Preparing…</p>
         </div>
+
+        <div class="w-full flex flex-col gap-3">
+          <div class="up-bar-track">
+            <div id="uploadProgressBar" class="up-bar-fill" style="width:0%"></div>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/40" data-i18n="editor_channel_maps">Channel Maps</span>
+            <span id="uploadProgressCount" class="font-mono text-primary/70 tabular-nums" style="font-size:12px">0 / 6</span>
+          </div>
+        </div>
+
+        <div class="h-px w-2/3 bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+        <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant/35" data-i18n="editor_upload_keep_open">Keep this tab open while we finish</p>
       </div>
     </div>
   </div>

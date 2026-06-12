@@ -126,7 +126,11 @@ const uploadRecordSchema = new mongoose.Schema({
   username:   { type: String },
   folderName: { type: String },
   publicIds:  [{ type: String }],
-  uploadedAt: { type: Date, default: Date.now, index: true }
+  uploadedAt: { type: Date, default: Date.now, index: true },
+  // User-deleted projects keep their record (flagged) so the daily quota
+  // they consumed is NOT refunded — only the R2 objects are removed.
+  deleted:    { type: Boolean, default: false },
+  deletedAt:  { type: Date }
 });
 const UploadRecord = mongoose.models.UploadRecord || mongoose.model('UploadRecord', uploadRecordSchema);
 
@@ -534,7 +538,8 @@ async function runR2Cleanup() {
 
   let deleted = 0;
   for (const record of records) {
-    for (const objectKey of (record.publicIds || [])) {
+    // User-deleted projects already had their objects removed
+    for (const objectKey of (record.deleted ? [] : (record.publicIds || []))) {
       try {
         const res = await r2DeleteObject(objectKey);
         console.log(`[cleanup] ${objectKey} → ${res}`);
@@ -1040,10 +1045,10 @@ ${zipButton}
       return;
     }
     const recordsPromise = (mongoose.connection.readyState === 1)
-      ? UploadRecord.find({ username }).sort({ uploadedAt: -1 }).lean()
+      ? UploadRecord.find({ username, deleted: { $ne: true } }).sort({ uploadedAt: -1 }).lean()
       : Promise.resolve(
           memUploadRecords
-            .filter(r => r.username === username)
+            .filter(r => r.username === username && !r.deleted)
             .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
         );
 
@@ -1087,6 +1092,63 @@ ${zipButton}
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: false, message: err.message }));
       });
+    return;
+  }
+
+  // ── POST /projects/delete ────────────────────────────────────────────────
+  // Removes the project's files from R2 immediately, but keeps the upload
+  // record flagged as deleted so today's consumed quota is NOT refunded.
+  if (req.method === 'POST' && rawUrl === '/projects/delete') {
+    readJsonBody(req).then(async body => {
+      const username   = String(body.username   || '').trim();
+      const folderName = String(body.folderName || '').trim().toLowerCase();
+      if (!username || !folderName) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, message: 'username and folderName required' }));
+        return;
+      }
+
+      const matchesFolder = r => String(r.folderName || '').trim().toLowerCase() === folderName;
+      let keys = [];
+
+      if (mongoose.connection.readyState === 1) {
+        const records = await UploadRecord.find({ username, deleted: { $ne: true } }).lean();
+        const match = records.filter(matchesFolder);
+        if (!match.length) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: 'Project not found' }));
+          return;
+        }
+        keys = [...new Set(match.flatMap(r => r.publicIds || []))];
+        await UploadRecord.updateMany(
+          { _id: { $in: match.map(r => r._id) } },
+          { $set: { deleted: true, deletedAt: new Date() } }
+        );
+      } else {
+        const match = memUploadRecords.filter(r => r.username === username && !r.deleted && matchesFolder(r));
+        if (!match.length) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: false, message: 'Project not found' }));
+          return;
+        }
+        keys = [...new Set(match.flatMap(r => r.publicIds || []))];
+        match.forEach(r => { r.deleted = true; r.deletedAt = new Date(); });
+      }
+
+      let removed = 0;
+      if (isR2Configured()) {
+        for (const k of keys) {
+          try { await r2DeleteObject(k); removed++; }
+          catch (e) { console.warn(`[projects/delete] ${k}:`, e.message); }
+        }
+      }
+      console.log(`[projects/delete] "${folderName}" (${username}) → ${removed}/${keys.length} object(s) removed, quota kept`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, removedObjects: removed }));
+    }).catch(err => {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: false, message: err.message }));
+    });
     return;
   }
 

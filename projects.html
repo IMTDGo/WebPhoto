@@ -100,6 +100,51 @@
     html:lang(zh) body {
       font-family: 'GenRyuMin2 TW', 'Mantou Sans', 'BIZ UDPMincho', 'Noto Serif TC', serif;
     }
+
+    /* ── Channel strip viewer (diagonal split, like a material flipbook) ── */
+    .strip-wrap {
+      display: flex;
+      height: min(52vh, 460px);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0d0e12;
+    }
+    .strip {
+      position: relative;
+      flex: 1 1 0;
+      min-width: 0;
+      cursor: zoom-in;
+      overflow: hidden;
+      clip-path: polygon(28px 0, 100% 0, calc(100% - 28px) 100%, 0 100%);
+      transition: flex 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .strip:first-child { clip-path: polygon(0 0, 100% 0, calc(100% - 28px) 100%, 0 100%); }
+    .strip:last-child  { clip-path: polygon(28px 0, 100% 0, 100% 100%, 0 100%); }
+    .strip + .strip { margin-left: -26px; }
+    .strip-bg {
+      position: absolute; inset: -6%;
+      background-size: cover; background-position: center;
+      filter: saturate(0.92) brightness(0.94);
+      transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1), filter 0.4s ease;
+    }
+    .strip:hover { flex: 3 1 0; }
+    .strip:hover .strip-bg { transform: scale(1.07); filter: saturate(1) brightness(1.02); }
+    .strip-label {
+      position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+      padding: 4px 12px; border-radius: 9999px; white-space: nowrap;
+      background: rgba(9,9,11,0.72); border: 1px solid rgba(232,200,84,0.25);
+      color: #E8C854; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      opacity: 0.65; transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    .strip:hover .strip-label { opacity: 1; }
+    .strip-broken {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #1F1F22, #121317); color: rgba(161,161,170,0.35);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .strip, .strip-bg { transition: none; }
+    }
   </style>
 </head>
 <body class="overflow-x-hidden min-h-screen flex flex-col">
@@ -133,6 +178,16 @@
         <span class="font-label-sm text-label-sm" data-i18n="projects_filter_date">Date: Newest First</span>
         <span class="material-symbols-outlined" style="font-size:16px">keyboard_arrow_down</span>
       </div>
+
+      <!-- Daily quota -->
+      <div id="quotaPanel" class="hidden items-center gap-3 px-4 py-2 border border-outline-variant/60 rounded-full select-none">
+        <span class="material-symbols-outlined text-primary" style="font-size:16px">data_usage</span>
+        <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="projects_quota_label">Today's Quota</span>
+        <div class="flex items-center gap-1.5" id="quotaDots"></div>
+        <span id="quotaText" class="font-mono text-[12px] text-primary tabular-nums">– / –</span>
+      </div>
+      <span id="quotaExhausted" class="hidden font-label-sm text-label-sm text-error/90 uppercase tracking-widest" data-i18n="projects_quota_exhausted">Daily quota used up — resets at 23:59</span>
+
       <div class="ml-auto font-label-sm text-label-sm text-on-surface-variant opacity-60" id="projectCount">Loading…</div>
     </div>
 
@@ -175,9 +230,10 @@
         <p class="font-headline-lg text-on-surface-variant" style="font-size:20px" data-i18n="projects_empty_title">No projects yet</p>
         <p class="font-body-md text-on-surface-variant/60 mt-2" data-i18n="projects_empty_desc">Upload your first texture set to see it here.</p>
       </div>
-      <button onclick="window._wpGoToApp()" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250" data-i18n="start_creating">
+      <button id="btnEmptyStart" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-3 rounded-full hover:bg-primary-container active:scale-95 transition-all duration-250 disabled:opacity-30 disabled:cursor-not-allowed disabled:active:scale-100" data-i18n="start_creating">
         Start Creating
       </button>
+      <p id="emptyQuotaNote" class="hidden font-label-sm text-label-sm text-error/90 uppercase tracking-widest" data-i18n="projects_quota_exhausted">Daily quota used up — resets at 23:59</p>
     </div>
 
     <!-- Login required state (hidden by default) -->
@@ -216,6 +272,77 @@
       return (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
         ? `${location.protocol}//${location.host}`
         : 'https://webphoto-lidl.onrender.com';
+    }
+
+    function goToApp() {
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+      window.location.href = isMobile ? './mobile.html' : './desktop.html';
+    }
+
+    // ── Daily quota ───────────────────────────────────────────────────────────
+    let quotaExhausted = false;
+    async function loadQuota() {
+      if (!_user) return;
+      try {
+        const resp = await fetch(`${getApiBase()}/upload-quota/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: _user.id || _user.name || '' })
+        });
+        const data = await resp.json().catch(() => null);
+        if (!data) return;
+
+        const used  = data.userUploadsToday ?? (data.ok ? 0 : data.dailyPerUserLimit ?? 3);
+        const limit = data.dailyPerUserLimit ?? 3;
+        quotaExhausted = !data.ok || used >= limit;
+
+        const panel = document.getElementById('quotaPanel');
+        const dots  = document.getElementById('quotaDots');
+        const text  = document.getElementById('quotaText');
+        panel.classList.remove('hidden');
+        panel.classList.add('flex');
+        text.textContent = `${Math.min(used, limit)} / ${limit}`;
+        dots.innerHTML = Array.from({ length: limit }, (_, i) =>
+          `<span class="w-2 h-2 rounded-full ${i < used ? 'bg-primary shadow-[0_0_6px_rgba(232,200,84,0.6)]' : 'bg-outline-variant/60'}"></span>`
+        ).join('');
+
+        document.getElementById('quotaExhausted').classList.toggle('hidden', !quotaExhausted);
+        const startBtn = document.getElementById('btnEmptyStart');
+        if (startBtn) startBtn.disabled = quotaExhausted;
+        document.getElementById('emptyQuotaNote')?.classList.toggle('hidden', !quotaExhausted);
+      } catch { /* quota display is best-effort */ }
+    }
+
+    // ── Delete project (quota is NOT refunded) ────────────────────────────────
+    async function deleteProject(record, tr) {
+      const folder = record.folderName || '';
+      const lang = (localStorage.getItem('wp_lang_pref') || 'en');
+      const msg = lang === 'zh'
+        ? `確定刪除「${folder}」？\n雲端檔案將立即移除，且今日已消耗的額度不會退還。`
+        : `Delete "${folder}"?\nCloud files are removed immediately and today's consumed quota is NOT refunded.`;
+      if (!window.confirm(msg)) return;
+
+      try {
+        const resp = await fetch(`${getApiBase()}/projects/delete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: _user.id || _user.name || '', folderName: folder })
+        });
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok || !data?.ok) throw new Error(data?.message || `HTTP ${resp.status}`);
+
+        tr.remove();
+        const rows = document.querySelectorAll('#projectTableBody tr.project-row').length;
+        document.getElementById('projectCount').textContent = `${rows} Project${rows !== 1 ? 's' : ''}`;
+        if (!rows) {
+          const empty = document.getElementById('emptyState');
+          empty.classList.remove('hidden');
+          empty.classList.add('flex');
+        }
+        loadQuota(); // stays consumed — refresh just re-reads the server truth
+      } catch (err) {
+        alert((localStorage.getItem('wp_lang_pref') === 'zh' ? '刪除失敗：' : 'Delete failed: ') + err.message);
+      }
     }
 
     function formatDate(iso) {
@@ -275,6 +402,7 @@
               : `<span class="material-symbols-outlined opacity-25 cursor-not-allowed" style="font-size:20px" title="ZIP not available">download</span>`
             }
             <button class="material-symbols-outlined hover:text-primary transition-colors duration-250" style="font-size:20px" title="View channels" data-action="detail">open_in_new</button>
+            <button class="material-symbols-outlined hover:text-error transition-colors duration-250 opacity-60 hover:opacity-100" style="font-size:20px" title="Delete project" data-action="delete">delete</button>
           </div>
         </td>`;
 
@@ -288,35 +416,79 @@
         e.stopPropagation();
         openDetail(record);
       });
+      tr.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteProject(record, tr);
+      });
       tr.querySelector('[data-action="zip"]')?.addEventListener('click', (e) => e.stopPropagation());
       tr.addEventListener('click', () => openDetail(record));
       return tr;
     }
 
-    // ── Detail modal ──────────────────────────────────────────────────────────
+    // ── Detail modal: diagonal channel strips (hover to expand, click for full view) ──
     function openDetail(record) {
       const folder = record.folderName || 'Untitled';
       const name   = displayName(folder);
       const ids    = record.publicIds || [];
       const base   = record.bucketUrl || getApiBase();
 
-      const channelLinks = CHANNEL_KEYS
+      const channels = CHANNEL_KEYS
         .map(ch => {
-          const key = ids.find(k => k.includes(`_${ch}`));
-          if (!key) return '';
-          const url = key.startsWith('http') ? key : `${base}/${key}`;
-          return `<a href="${url}" target="_blank" rel="noopener"
-            class="flex items-center gap-3 px-4 py-3 bg-surface-container-high rounded-lg hover:bg-primary/10 hover:border-primary/20 border border-outline-variant/20 transition-all duration-200 group">
-            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary transition-colors" style="font-size:18px">image</span>
-            <span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary uppercase tracking-widest transition-colors">${ch}</span>
-          </a>`;
-        }).filter(Boolean).join('');
+          const key = ids.find(k => !k.endsWith('.zip') && k.includes(`_${ch}`));
+          if (!key) return null;
+          return { ch, url: key.startsWith('http') ? key : `${base}/${key}` };
+        })
+        .filter(Boolean);
+
+      const wrap = document.getElementById('stripViewer');
+      wrap.innerHTML = '';
+      if (!channels.length) {
+        wrap.innerHTML = '<p class="text-on-surface-variant/50 font-body-md m-auto" data-i18n="projects_no_channels">No channel maps available.</p>';
+      }
+      channels.forEach(({ ch, url }) => {
+        const strip = document.createElement('div');
+        strip.className = 'strip';
+        strip.innerHTML = `
+          <div class="strip-bg" style="background-image:url('${escapeHtml(url)}')"></div>
+          <span class="strip-label">${escapeHtml(ch)}</span>`;
+        // Detect broken images so the strip shows a quiet placeholder instead of nothing
+        const probe = new Image();
+        probe.onerror = () => {
+          strip.querySelector('.strip-bg').remove();
+          strip.insertAdjacentHTML('afterbegin',
+            '<div class="strip-broken"><span class="material-symbols-outlined" style="font-size:32px">texture</span></div>');
+        };
+        probe.src = url;
+        strip.addEventListener('click', () => openLightbox(url, `${folder}_${ch}`));
+        wrap.appendChild(strip);
+      });
 
       document.getElementById('modalTitle').textContent = name;
-      document.getElementById('modalChannels').innerHTML = channelLinks || '<p class="text-on-surface-variant/50 font-body-md">No channel links available.</p>';
       document.getElementById('detailModal').classList.remove('hidden');
       document.getElementById('detailModal').classList.add('flex');
     }
+
+    // ── Full-size lightbox ────────────────────────────────────────────────────
+    function openLightbox(url, caption) {
+      const lb = document.getElementById('lightbox');
+      document.getElementById('lightboxImg').src = url;
+      document.getElementById('lightboxCaption').textContent = caption;
+      lb.classList.remove('hidden');
+      lb.classList.add('flex');
+    }
+    function closeLightbox() {
+      const lb = document.getElementById('lightbox');
+      lb.classList.add('hidden');
+      lb.classList.remove('flex');
+      document.getElementById('lightboxImg').src = '';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      closeLightbox();
+      const dm = document.getElementById('detailModal');
+      dm.classList.add('hidden');
+      dm.classList.remove('flex');
+    });
 
     // ── Load projects from API ────────────────────────────────────────────────
     async function loadProjects() {
@@ -324,6 +496,10 @@
       const empty = document.getElementById('emptyState');
       const loginReq = document.getElementById('loginRequired');
       const countEl = document.getElementById('projectCount');
+
+      // Reset transient states so repeated loads render cleanly
+      empty.classList.add('hidden');
+      empty.classList.remove('flex');
 
       if (!_user) {
         // Not logged in
@@ -377,19 +553,35 @@
     });
 
     // ── Init ──────────────────────────────────────────────────────────────────
+    document.getElementById('btnEmptyStart').addEventListener('click', () => {
+      if (!quotaExhausted) goToApp();
+    });
     loadProjects();
+    loadQuota();
   </script>
 
-  <!-- Detail Modal -->
-  <div id="detailModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-    <div class="bg-surface border border-outline-variant/30 rounded-xl w-full max-w-md p-8 relative shadow-2xl">
+  <!-- Detail Modal — diagonal channel strips -->
+  <div id="detailModal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/80 backdrop-blur-md px-4">
+    <div class="bg-surface border border-outline-variant/30 rounded-xl w-full max-w-5xl p-6 md:p-8 relative shadow-2xl">
       <button onclick="document.getElementById('detailModal').classList.add('hidden');document.getElementById('detailModal').classList.remove('flex');"
-        class="absolute top-4 right-4 text-on-surface-variant hover:text-on-surface transition-colors">
+        class="absolute top-4 right-4 z-10 text-on-surface-variant hover:text-on-surface transition-colors">
         <span class="material-symbols-outlined" style="font-size:22px">close</span>
       </button>
       <p class="font-label-xs text-label-xs text-primary uppercase tracking-widest mb-2" data-i18n="projects_ch_maps">Channel Maps</p>
-      <h2 id="modalTitle" class="font-headline-lg text-headline-lg text-on-surface mb-6" style="font-size:22px"></h2>
-      <div id="modalChannels" class="grid grid-cols-2 gap-3"></div>
+      <h2 id="modalTitle" class="font-headline-lg text-headline-lg text-on-surface mb-5" style="font-size:22px"></h2>
+      <div id="stripViewer" class="strip-wrap"></div>
+      <p class="font-label-xs text-label-xs text-on-surface-variant/50 uppercase tracking-widest text-center mt-4" data-i18n="projects_strip_hint">Hover a channel to expand · click to view full size</p>
+    </div>
+  </div>
+
+  <!-- Full-size lightbox -->
+  <div id="lightbox" class="hidden fixed inset-0 z-[70] items-center justify-center bg-black/92 backdrop-blur-lg px-4 py-8 cursor-zoom-out" onclick="closeLightbox()">
+    <div class="flex flex-col items-center gap-4 max-w-full max-h-full">
+      <img id="lightboxImg" class="max-w-full max-h-[82vh] rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.8)] border border-outline-variant/30" alt="" />
+      <div class="flex items-center gap-2 bg-surface-container/80 border border-outline-variant/40 rounded-full px-5 py-2 backdrop-blur">
+        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+        <code id="lightboxCaption" class="text-[12px] text-primary/90 tracking-wide"></code>
+      </div>
     </div>
   </div>
 

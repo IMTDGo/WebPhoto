@@ -377,7 +377,13 @@ const I18N_SYSTEM = (() => {
       editor_crop_size: 'Crop Size',
       editor_export_as: 'Export As',
       editor_email_links: 'Email material links when upload is complete',
-      editor_channel_maps: 'Channel Maps'
+      editor_channel_maps: 'Channel Maps',
+      editor_upload_keep_open: 'Keep this tab open while we finish',
+      // projects.html — quota / delete / strip viewer
+      projects_quota_label: "Today's Quota",
+      projects_quota_exhausted: 'Daily quota used up — resets at 23:59',
+      projects_strip_hint: 'Hover a channel to expand · click to view full size',
+      projects_no_channels: 'No channel maps available.'
     },
     zh: {
       meta_title: 'SNAPBRIFY — 將真實轉化為材質',
@@ -748,7 +754,13 @@ const I18N_SYSTEM = (() => {
       editor_crop_size: '裁切尺寸',
       editor_export_as: '匯出名稱',
       editor_email_links: '上傳完成後以 Email 寄送材質連結',
-      editor_channel_maps: '通道圖'
+      editor_channel_maps: '通道圖',
+      editor_upload_keep_open: '完成前請保持此分頁開啟',
+      // projects.html — quota / delete / strip viewer
+      projects_quota_label: '今日額度',
+      projects_quota_exhausted: '今日額度已用完——23:59 重置',
+      projects_strip_hint: '游標移至通道上放大 · 點擊查看完整貼圖',
+      projects_no_channels: '沒有可顯示的通道貼圖。'
     }
   };
 
