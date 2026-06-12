@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -63,7 +63,7 @@
     body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; font-family: 'Cormorant Garamond', serif; background: #09090B; color: #F4F4F5; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
 
-    /* Glassmorphism card */
+    /* Glassmorphism card (tilt script targets first .glass-panel) */
     .glass-panel {
       background: rgba(20, 20, 20, 0.6);
       backdrop-filter: blur(20px);
@@ -88,18 +88,69 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #E8C854; border-radius: 10px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F5E080; }
 
-    /* Section header border */
-    .section-heading { border-left: 2px solid rgba(232,200,84,0.5); padding-left: 1rem; }
+    /* Gold hairline divider */
+    .gold-hairline { height: 1px; background: linear-gradient(to right, transparent, rgba(232,200,84,0.4), transparent); }
+
+    /* Chapter timeline */
+    .chapter { position: relative; padding-left: 3rem; }
+    .chapter::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 1.75rem;
+      bottom: -2.5rem;
+      width: 1px;
+      background: linear-gradient(to bottom, rgba(232,200,84,0.4), rgba(232,200,84,0.08));
+    }
+    .chapter:last-child::before { display: none; }
+    .chapter-node {
+      position: absolute;
+      left: 0;
+      top: 0.35rem;
+      width: 17px;
+      height: 17px;
+      border-radius: 9999px;
+      border: 1px solid rgba(232,200,84,0.5);
+      background: #09090B;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chapter-node::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 9999px;
+      background: #E8C854;
+    }
 
     /* Highlight card */
     .highlight-card {
       background: rgba(232,200,84,0.04);
       border: 1px solid rgba(232,200,84,0.15);
+      transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
     }
     .highlight-card:hover {
       background: rgba(232,200,84,0.07);
       border-color: rgba(232,200,84,0.3);
-      transition: all 0.25s ease;
+      transform: translateY(-4px);
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.9s cubic-bezier(0.22,1,0.36,1), transform 0.9s cubic-bezier(0.22,1,0.36,1);
+      transition-delay: var(--rd, 0ms);
+    }
+    .reveal.is-visible { opacity: 1; transform: translateY(0); }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .gold-shimmer { animation: none; }
+      .highlight-card:hover { transform: none; }
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
   </style>
 </head>
@@ -118,12 +169,13 @@
     <div class="w-full max-w-4xl">
 
       <!-- Page header -->
-      <div class="mb-12 text-center">
+      <div class="mb-14 text-center reveal">
         <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-6 bg-surface-container/60 backdrop-blur">
           <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="beta_badge">Open Beta — Build 1.0</span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-[0.2em]" data-i18n="beta_badge">Open Beta — Build 1.0</span>
         </div>
-        <h1 class="font-headline-xl text-headline-xl text-on-surface mb-4" data-i18n="beta_title">Beta Testing Notice</h1>
+        <h1 class="font-headline-xl text-headline-xl text-on-surface uppercase mb-6" data-i18n="beta_title">Beta Testing Notice</h1>
+        <div class="gold-hairline w-48 mx-auto mb-6"></div>
         <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto" data-i18n="beta_desc">
           Please read the following information before using SNAPBRIFY. This document outlines what the platform does, how your data is handled, and the current limitations of the beta environment.
         </p>
@@ -136,140 +188,150 @@
 
         <div class="p-8 md:p-12">
 
-          <!-- Scrollable text area -->
-          <div class="relative bg-surface-container-lowest/50 rounded-lg border border-outline-variant/10 mb-10">
-            <div class="p-6 md:p-8 space-y-10">
+          <!-- Chapter timeline -->
+          <div class="space-y-10 mb-12">
 
-              <!-- 01 -->
-              <section>
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s1_title">01. What is SNAPBRIFY?</h3>
-                <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed" data-i18n="beta_s1_p">
-                  SNAPBRIFY is a browser-based PBR (Physically Based Rendering) texture generation tool. Upload any photograph and the engine automatically derives a complete set of material maps — Base Color, Roughness, Ambient Occlusion, Height, Metallic, and Normal — ready to use in any 3D application, game engine, or design pipeline. No software installation is required; everything runs in your browser.
-                </p>
-              </section>
+            <!-- 01 -->
+            <section class="chapter reveal">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s1_title">01. What is SNAPBRIFY?</h3>
+              <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed" data-i18n="beta_s1_p">
+                SNAPBRIFY is a browser-based PBR (Physically Based Rendering) texture generation tool. Upload any photograph and the engine automatically derives a complete set of material maps — Base Color, Roughness, Ambient Occlusion, Height, Metallic, and Normal — ready to use in any 3D application, game engine, or design pipeline. No software installation is required; everything runs in your browser.
+              </p>
+            </section>
 
-              <!-- 02 -->
-              <section>
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s2_title">02. Beta Status</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4" data-i18n="beta_s2_p">
-                  The platform is currently in open beta. You may encounter unexpected behaviour, performance inconsistencies, or temporary downtime as we continue development. We appreciate your patience and welcome any feedback sent through the Contact page.
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-                  <div class="highlight-card rounded-lg p-4">
-                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_version">Version</span>
-                    <span class="font-body-md text-on-surface text-sm">Open Beta 1.0</span>
-                  </div>
-                  <div class="highlight-card rounded-lg p-4">
-                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_platform">Platform</span>
-                    <span class="font-body-md text-on-surface text-sm">Web — Desktop &amp; Mobile</span>
-                  </div>
-                  <div class="highlight-card rounded-lg p-4">
-                    <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-widest" data-i18n="beta_info_status">Status</span>
-                    <span class="font-body-md text-on-surface text-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block"></span><span data-i18n="beta_info_live">Live</span></span>
-                  </div>
+            <!-- 02 -->
+            <section class="chapter reveal" style="--rd:80ms">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s2_title">02. Beta Status</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-4" data-i18n="beta_s2_p">
+                The platform is currently in open beta. You may encounter unexpected behaviour, performance inconsistencies, or temporary downtime as we continue development. We appreciate your patience and welcome any feedback sent through the Contact page.
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+                <div class="highlight-card rounded-lg p-4">
+                  <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-[0.2em]" data-i18n="beta_info_version">Version</span>
+                  <span class="font-body-md text-on-surface text-sm">Open Beta 1.0</span>
                 </div>
-              </section>
-
-              <!-- 03 -->
-              <section>
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s3_title">03. Privacy &amp; Data Collection</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s3_p">
-                  We are committed to keeping this tool lightweight and non-intrusive. During the beta period:
-                </p>
-                <ul class="space-y-4">
-                  <li class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-primary mt-0.5" style="font-size:18px;font-variation-settings:'FILL' 1">shield</span>
-                    <div>
-                      <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv1_title">No user data is collected.</span>
-                      <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv1_desc">We do not collect, sell, or share personal data. Your email address is used only to deliver your download link and is not stored beyond that session.</span>
-                    </div>
-                  </li>
-                  <li class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-primary mt-0.5" style="font-size:18px;font-variation-settings:'FILL' 1">cloud_off</span>
-                    <div>
-                      <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv2_title">Uploaded images are temporary.</span>
-                      <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv2_desc">All uploaded files and generated texture sets are automatically deleted from our servers 24 hours after the project is created. Do not rely on SNAPBRIFY as a permanent storage solution.</span>
-                    </div>
-                  </li>
-                </ul>
-              </section>
-
-              <!-- 04 -->
-              <section>
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s4_title">04. Current Limits &amp; Fair Use</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s4_p">
-                  To ensure fair access for all users during the beta period, the following limits are in effect:
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
-                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">photo_size_select_large</span>
-                    <div>
-                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim1_label">Max Image Size</span>
-                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim1_val">2 MB per upload</span>
-                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim1_desc">Images larger than 2 MB will be automatically compressed before processing.</p>
-                    </div>
-                  </div>
-                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
-                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">schedule</span>
-                    <div>
-                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim2_label">Project Retention</span>
-                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim2_val">24 hours</span>
-                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim2_desc">All projects and generated files are permanently deleted 24 hours after creation.</p>
-                    </div>
-                  </div>
-                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
-                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">person</span>
-                    <div>
-                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim3_label">Per-Account Daily Quota</span>
-                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim3_val">3 uploads per account</span>
-                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim3_desc">Each account may submit up to 3 texture generation jobs per day.</p>
-                    </div>
-                  </div>
-                  <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
-                    <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">groups</span>
-                    <div>
-                      <span class="font-label-xs text-label-xs text-primary uppercase tracking-widest block mb-1" data-i18n="beta_lim4_label">Global Daily Capacity</span>
-                      <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim4_val">200 accounts per day</span>
-                      <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim4_desc">A maximum of 200 unique accounts may upload per day across the entire platform. Once the cap is reached, uploads are paused until the daily reset.</p>
-                    </div>
-                  </div>
+                <div class="highlight-card rounded-lg p-4">
+                  <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-[0.2em]" data-i18n="beta_info_platform">Platform</span>
+                  <span class="font-body-md text-on-surface text-sm">Web — Desktop &amp; Mobile</span>
                 </div>
-              </section>
+                <div class="highlight-card rounded-lg p-4">
+                  <span class="font-label-xs text-label-xs text-primary block mb-2 uppercase tracking-[0.2em]" data-i18n="beta_info_status">Status</span>
+                  <span class="font-body-md text-on-surface text-sm flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse inline-block"></span><span data-i18n="beta_info_live">Live</span></span>
+                </div>
+              </div>
+            </section>
 
-              <!-- 05 -->
-              <section>
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s5_title">05. Daily Reset</h3>
-                <div class="flex items-start gap-4 bg-primary/5 border border-primary/20 rounded-lg p-5">
-                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:24px;font-variation-settings:'FILL' 1">alarm</span>
+            <!-- 03 -->
+            <section class="chapter reveal" style="--rd:80ms">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s3_title">03. Privacy &amp; Data Collection</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s3_p">
+                We are committed to keeping this tool lightweight and non-intrusive. During the beta period:
+              </p>
+              <ul class="space-y-4">
+                <li class="flex items-start gap-4">
+                  <span class="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1">shield</span>
+                  </span>
                   <div>
-                    <p class="font-body-md text-on-surface font-semibold mb-1" data-i18n="beta_reset_p1">All quotas reset daily at 23:59 Taiwan Standard Time (UTC+8).</p>
-                    <p class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_reset_p2">This includes both the per-account upload count and the platform-wide 200-account capacity. If uploads are unavailable, please check back after the daily reset.</p>
+                    <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv1_title">No user data is collected.</span>
+                    <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv1_desc">We do not collect, sell, or share personal data. Your email address is used only to deliver your download link and is not stored beyond that session.</span>
+                  </div>
+                </li>
+                <li class="flex items-start gap-4">
+                  <span class="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-primary" style="font-size:16px;font-variation-settings:'FILL' 1">cloud_off</span>
+                  </span>
+                  <div>
+                    <span class="font-body-md text-on-surface font-semibold block" data-i18n="beta_priv2_title">Uploaded images are temporary.</span>
+                    <span class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_priv2_desc">All uploaded files and generated texture sets are automatically deleted from our servers 48 hours after the project is created. Do not rely on SNAPBRIFY as a permanent storage solution.</span>
+                  </div>
+                </li>
+              </ul>
+            </section>
+
+            <!-- 04 -->
+            <section class="chapter reveal" style="--rd:80ms">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s4_title">04. Current Limits &amp; Fair Use</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed mb-5" data-i18n="beta_s4_p">
+                To ensure fair access for all users during the beta period, the following limits are in effect:
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">photo_size_select_large</span>
+                  <div>
+                    <span class="font-label-xs text-label-xs text-primary uppercase tracking-[0.2em] block mb-1" data-i18n="beta_lim1_label">Max Image Size</span>
+                    <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim1_val">2 MB per upload</span>
+                    <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim1_desc">Images larger than 2 MB will be automatically compressed before processing.</p>
                   </div>
                 </div>
-              </section>
+                <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">schedule</span>
+                  <div>
+                    <span class="font-label-xs text-label-xs text-primary uppercase tracking-[0.2em] block mb-1" data-i18n="beta_lim2_label">Project Retention</span>
+                    <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim2_val">48 hours</span>
+                    <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim2_desc">All projects and generated files are permanently deleted 48 hours after creation.</p>
+                  </div>
+                </div>
+                <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">person</span>
+                  <div>
+                    <span class="font-label-xs text-label-xs text-primary uppercase tracking-[0.2em] block mb-1" data-i18n="beta_lim3_label">Per-Account Daily Quota</span>
+                    <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim3_val">3 uploads per account</span>
+                    <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim3_desc">Each account may submit up to 3 texture generation jobs per day.</p>
+                  </div>
+                </div>
+                <div class="highlight-card rounded-lg p-5 flex gap-4 items-start">
+                  <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:22px">groups</span>
+                  <div>
+                    <span class="font-label-xs text-label-xs text-primary uppercase tracking-[0.2em] block mb-1" data-i18n="beta_lim4_label">Global Daily Capacity</span>
+                    <span class="font-body-md text-on-surface font-semibold" data-i18n="beta_lim4_val">200 accounts per day</span>
+                    <p class="font-body-md text-on-surface-variant text-xs mt-1" data-i18n="beta_lim4_desc">A maximum of 200 unique accounts may upload per day across the entire platform. Once the cap is reached, uploads are paused until the daily reset.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
 
-              <!-- 06 -->
-              <section class="pb-4">
-                <h3 class="font-headline-lg text-[20px] text-primary mb-4 section-heading" data-i18n="beta_s6_title">06. Disclaimer</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed italic" data-i18n="beta_disclaimer">
-                  SNAPBRIFY is provided as-is during the beta period. We do not guarantee continuous availability, accuracy of generated materials, or preservation of uploaded files beyond the stated 24-hour window. By using the platform, you acknowledge these limitations and agree not to use it for storing irreplaceable assets.
-                </p>
-              </section>
+            <!-- 05 -->
+            <section class="chapter reveal" style="--rd:80ms">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s5_title">05. Daily Reset</h3>
+              <div class="flex items-start gap-4 bg-primary/5 border border-primary/20 rounded-lg p-5">
+                <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style="font-size:24px;font-variation-settings:'FILL' 1">alarm</span>
+                <div>
+                  <p class="font-body-md text-on-surface font-semibold mb-1" data-i18n="beta_reset_p1">All quotas reset daily at 23:59 Taiwan Standard Time (UTC+8).</p>
+                  <p class="font-body-md text-on-surface-variant text-sm" data-i18n="beta_reset_p2">This includes both the per-account upload count and the platform-wide 200-account capacity. If uploads are unavailable, please check back after the daily reset.</p>
+                </div>
+              </div>
+            </section>
 
-            </div>
+            <!-- 06 -->
+            <section class="chapter reveal" style="--rd:80ms">
+              <span class="chapter-node" aria-hidden="true"></span>
+              <h3 class="font-headline-lg text-[20px] text-primary uppercase mb-4" data-i18n="beta_s6_title">06. Disclaimer</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant leading-relaxed italic" data-i18n="beta_disclaimer">
+                SNAPBRIFY is provided as-is during the beta period. We do not guarantee continuous availability, accuracy of generated materials, or preservation of uploaded files beyond the stated 48-hour window. By using the platform, you acknowledge these limitations and agree not to use it for storing irreplaceable assets.
+              </p>
+            </section>
+
           </div>
 
+          <div class="gold-hairline mb-8"></div>
+
           <!-- Footer action row -->
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-6 reveal" style="--rd:120ms">
             <div class="flex items-center gap-2 text-on-surface-variant">
               <span class="material-symbols-outlined text-primary" style="font-size:18px;font-variation-settings:'FILL' 1">info</span>
-              <span class="font-label-sm text-label-sm uppercase tracking-widest" data-i18n="beta_last_updated">Last updated — May 2026</span>
+              <span class="font-label-sm text-label-sm uppercase tracking-[0.2em]" data-i18n="beta_last_updated">Last updated — May 2026</span>
             </div>
             <div class="flex items-center gap-4">
-              <a href="./contact.html" class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors duration-250" data-i18n="beta_send_feedback">
+              <a href="./contact.html" class="font-label-sm text-label-sm uppercase tracking-[0.2em] text-on-surface-variant hover:text-primary transition-colors duration-250" data-i18n="beta_send_feedback">
                 Send Feedback
               </a>
-              <a href="./?from=beta" class="group relative px-8 py-3 bg-primary text-on-primary font-label-sm text-label-sm uppercase tracking-[0.15em] rounded overflow-hidden transition-all duration-300 hover:bg-primary-container active:scale-95" data-i18n="beta_back_home">
+              <a href="./?from=beta" class="bg-primary text-on-primary rounded-full px-8 py-4 text-[12px] uppercase tracking-widest hover:bg-primary-container active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(232,200,84,0.2)] hover:shadow-[0_12px_32px_rgba(232,200,84,0.35)]" data-i18n="beta_back_home">
                 Back to Home
               </a>
             </div>
@@ -280,25 +342,25 @@
 
       <!-- Decorative corner labels -->
       <div class="flex justify-between mt-6 px-1 select-none pointer-events-none">
-        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-widest">Open Beta 1.0</span>
-        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-widest">SNAPBRIFY © 2026</span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-[0.2em]">Open Beta 1.0</span>
+        <span class="font-label-xs text-label-xs text-on-surface-variant/20 uppercase tracking-[0.2em]">SNAPBRIFY 穢 2026</span>
       </div>
 
     </div>
   </main>
 
   <!-- Footer -->
-  <footer class="w-full px-margin-page py-8 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-white/5 mt-auto z-10 relative">
+  <footer class="w-full px-margin-page py-10 flex flex-col md:flex-row justify-between items-center gap-stack-gap bg-surface-container-lowest border-t border-primary/10 mt-auto z-10 relative">
     <div class="font-headline-lg text-headline-lg text-primary tracking-tighter select-none">SNAPBRIFY</div>
-    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">© 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
+    <p class="font-body-md text-on-tertiary-fixed-variant text-sm">穢 2026 SNAPBRIFY. PBR Material Generation Platform.</p>
     <div class="flex gap-gutter">
-      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./contact.html" data-i18n="footer_contact">Contact</a>
-      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-on-surface transition-colors duration-250 uppercase tracking-widest" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 uppercase tracking-[0.2em]" href="./contact.html" data-i18n="footer_contact">Contact</a>
+      <a class="font-label-xs text-label-xs text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 uppercase tracking-[0.2em]" href="./manage-plan.html" data-i18n="footer_manage_plan">Manage Plan</a>
     </div>
   </footer>
 
   <script>
-    // ── Nav auth state ────────────────────────────────────────────────────────
+    // ?? Nav auth state ????????????????????????????????????????????????????????
     const _raw  = sessionStorage.getItem('wp_user') || localStorage.getItem('wp_user');
     const _user = (() => { try { return _raw ? JSON.parse(_raw) : null; } catch { return null; } })();
     (function () {
@@ -331,6 +393,27 @@
     document.addEventListener('mouseleave', () => {
       card.style.transform = '';
     });
+  </script>
+
+  <script>
+    // Scroll reveal (IntersectionObserver)
+    (function () {
+      const els = document.querySelectorAll('.reveal');
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduced || !('IntersectionObserver' in window)) {
+        els.forEach((el) => el.classList.add('is-visible'));
+        return;
+      }
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      els.forEach((el) => io.observe(el));
+    })();
   </script>
 </body>
 </html>

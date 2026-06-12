@@ -46,6 +46,12 @@
             "label-xs": ["10px", { lineHeight: "1.0", letterSpacing: "0.1em", fontWeight: "600" }],
             "body-lg": ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
             "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }]
+          },
+          keyframes: {
+            "fade-up": { "0%": { opacity: "0", transform: "translateY(24px)" }, "100%": { opacity: "1", transform: "translateY(0)" } }
+          },
+          animation: {
+            "fade-up": "fade-up 0.9s cubic-bezier(0.22,1,0.36,1) forwards"
           }
         }
       }
@@ -56,8 +62,16 @@
     .studio-light-bg { background: radial-gradient(circle at 50% 0%, rgba(232,200,84,0.05) 0%, rgba(9,9,11,1) 70%); }
     .glass-card { box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,200,84,0.08); }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
-    .spinner { display:inline-block;width:14px;height:14px;border:2px solid #E8C854;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px; }
+    .spinner { display:inline-block;width:14px;height:14px;border:2px solid #18181B;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .anim-fade-up { opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.22,1,0.36,1) forwards; }
+    .anim-delay-1 { animation-delay: 0.12s; }
+    .anim-delay-2 { animation-delay: 0.28s; }
+    @media (prefers-reduced-motion: reduce) {
+      .anim-fade-up { animation: none; opacity: 1; transform: none; }
+      .animate-pulse { animation: none; }
+    }
     .alert-box {
       display: none;
       border-radius: 0 8px 8px 0;
@@ -97,28 +111,36 @@
   </style>
   <script src="./js/i18n.js"></script>
 </head>
-<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex items-center justify-center p-margin-mobile md:p-margin-page studio-light-bg overflow-hidden relative">
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex items-center justify-center px-margin-mobile py-16 md:px-margin-page studio-light-bg overflow-x-hidden relative selection:bg-primary selection:text-on-primary">
 
-  <!-- Decorative grid -->
-  <div class="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(#e5e2e1_1px,transparent_1px)] [background-size:24px_24px]"></div>
+  <!-- Fine gold grid -->
+  <div class="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(232,200,84,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(232,200,84,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
 
   <!-- Ambient glow -->
-  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden flex items-center justify-center">
-    <div class="absolute w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-primary/5 rounded-full blur-[100px] opacity-60 mix-blend-screen -translate-x-1/4 -translate-y-1/4"></div>
-    <div class="absolute w-[40vw] h-[40vw] max-w-[400px] max-h-[400px] bg-surface-bright/20 rounded-full blur-[120px] opacity-40 mix-blend-screen translate-x-1/3 translate-y-1/3"></div>
+  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div class="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[60vw] h-[60vw] max-w-[640px] max-h-[640px] bg-primary/5 rounded-full blur-[100px]"></div>
+    <div class="absolute -bottom-[25%] -right-[15%] w-[45vw] h-[45vw] max-w-[460px] max-h-[460px] bg-primary/5 rounded-full blur-[100px]"></div>
   </div>
 
-  <main class="w-full max-w-[440px] z-10 relative">
+  <main class="w-full max-w-md z-10 relative">
+
     <!-- Brand -->
-    <div class="text-center mb-8">
-      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">SNAPBRIFY</a>
+    <div class="text-center mb-10 anim-fade-up">
+      <a href="./index.html" class="font-headline-lg text-[24px] md:text-[30px] font-semibold uppercase tracking-[0.35em] pl-[0.35em] text-primary hover:text-primary-fixed transition-colors duration-300 inline-block">SNAPBRIFY</a>
+      <div class="mt-6 flex justify-center">
+        <span class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 bg-surface-container/60 backdrop-blur">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-[10px] uppercase tracking-[0.25em] text-primary" data-i18n="auth_eyebrow_login">Member Access</span>
+        </span>
+      </div>
     </div>
 
-    <!-- Glass Card -->
-    <div class="bg-surface-container/60 backdrop-blur-2xl border border-outline-variant/30 rounded-xl p-container-padding glass-card transition-all duration-500 hover:border-outline-variant/50 hover:bg-surface-container/80">
-      <header class="mb-10 text-center">
-        <h2 class="font-headline-xl text-headline-lg-mobile md:text-[36px] text-on-surface mb-2 tracking-tight" data-i18n="login_welcome">Welcome Back</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="login_desc">Sign in to access your workspace.</p>
+    <!-- Card -->
+    <div class="anim-fade-up anim-delay-1 bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur glass-card p-8 md:p-10 transition-all duration-300 hover:border-primary/30 hover:-translate-y-1">
+      <header class="mb-8 text-center">
+        <h2 class="font-headline-lg text-[22px] md:text-[26px] uppercase tracking-[0.08em] text-on-surface mb-4" data-i18n="login_welcome">Welcome Back</h2>
+        <div class="h-px w-2/3 mx-auto bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-4"></div>
+        <p class="font-body-md text-body-md italic text-on-surface-variant" data-i18n="login_desc">Sign in to access your workspace.</p>
       </header>
 
       <!-- Alert area -->
@@ -126,52 +148,53 @@
 
       <form id="loginForm" autocomplete="on" novalidate class="flex flex-col gap-gutter">
         <!-- Username -->
-        <div class="flex flex-col gap-unit">
-          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="username" data-i18n="login_account_label">Account</label>
-          <div class="relative group">
-            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors duration-250">person</span>
+        <div class="group flex flex-col gap-unit">
+          <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="username" data-i18n="login_account_label">Account</label>
+          <div class="relative">
             <input id="username" name="username" type="text" autocomplete="username" required
-              class="w-full bg-white/5 border border-transparent rounded-lg py-3 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:bg-white/10 focus:border-primary focus:ring-0 transition-all duration-250 ease-out outline-none"
+              class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
               placeholder="Username" />
+            <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">person</span>
           </div>
         </div>
 
         <!-- Password -->
-        <div class="flex flex-col gap-unit mb-2">
-          <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" for="password" data-i18n="login_password_label">Password</label>
-          <div class="relative group">
-            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant group-focus-within:text-primary transition-colors duration-250">lock</span>
+        <div class="group flex flex-col gap-unit">
+          <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="password" data-i18n="login_password_label">Password</label>
+          <div class="relative">
             <input id="password" name="password" type="password" autocomplete="current-password" required
-              class="w-full bg-white/5 border border-transparent rounded-lg py-3 pl-12 pr-4 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/50 focus:bg-white/10 focus:border-primary focus:ring-0 transition-all duration-250 ease-out outline-none"
+              class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
               placeholder="••••••••" />
+            <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">lock</span>
           </div>
         </div>
 
-        <!-- Remember me -->
-        <div class="flex items-center gap-3">
-          <input type="checkbox" id="rememberMe" name="rememberMe" checked
-            class="w-4 h-4 rounded border border-outline-variant/50 bg-surface-variant/30 accent-primary cursor-pointer" />
-          <label for="rememberMe" class="font-label-sm text-label-sm text-on-surface-variant cursor-pointer select-none">
-            <span data-i18n="login_remember">Remember Me</span> <span class="text-on-surface-variant/40" data-i18n="login_remember_hint">(Do not use on public computers)</span>
-          </label>
-        </div>
-
-        <!-- Forgot password -->
-        <div class="text-right -mt-2">
+        <!-- Remember me / Forgot password -->
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="rememberMe" name="rememberMe" checked
+              class="w-4 h-4 rounded border border-outline-variant/50 bg-surface-variant/30 accent-primary cursor-pointer" />
+            <label for="rememberMe" class="font-label-sm text-label-sm text-on-surface-variant cursor-pointer select-none hover:text-on-surface transition-colors duration-300">
+              <span data-i18n="login_remember">Remember Me</span> <span class="text-on-surface-variant/40 block sm:inline" data-i18n="login_remember_hint">(Do not use on public computers)</span>
+            </label>
+          </div>
           <a href="./reset-password.html"
-            class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 border-b border-transparent hover:border-primary">
+            class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant hover:text-primary transition-colors duration-300 border-b border-transparent hover:border-primary/60 pb-0.5" data-i18n="auth_forgot_password">
             Forgot password?
           </a>
         </div>
 
+        <!-- Divider -->
+        <div class="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent mt-2"></div>
+
         <!-- Actions -->
-        <div class="flex flex-col sm:flex-row gap-stack-gap mt-4 pt-4 border-t border-outline-variant/10">
+        <div class="flex flex-col sm:flex-row gap-stack-gap mt-2">
           <button type="submit" id="btnLogin"
-            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest bg-primary text-on-primary hover:bg-primary-container hover:shadow-[0_0_15px_rgba(242,202,80,0.3)] transition-all duration-250 ease-out active:scale-[0.98]" data-i18n="login_btn">
+            class="flex-1 bg-primary text-on-primary rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:bg-primary-container active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(232,200,84,0.2)] hover:shadow-[0_12px_32px_rgba(232,200,84,0.35)]" data-i18n="login_btn">
             Log In
           </button>
           <button type="button" id="btnCancel"
-            class="flex-1 py-3 px-6 rounded-lg font-label-sm text-label-sm uppercase tracking-widest border border-outline-variant/30 text-on-surface-variant bg-transparent hover:bg-surface-variant hover:text-on-surface hover:border-outline-variant transition-all duration-250 ease-out active:scale-[0.98]" data-i18n="editor_cancel">
+            class="flex-1 bg-transparent border border-outline-variant/40 text-on-surface-variant rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:text-on-surface hover:border-primary/40 hover:bg-surface-container-high/40 active:scale-95 transition-all duration-300" data-i18n="editor_cancel">
             Cancel
           </button>
         </div>
@@ -179,10 +202,11 @@
     </div>
 
     <!-- Sign up -->
-    <div class="mt-8 text-center">
+    <div class="mt-10 text-center anim-fade-up anim-delay-2">
+      <div class="h-px w-1/2 mx-auto bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-6"></div>
       <p class="font-body-md text-body-md text-on-surface-variant">
         <span data-i18n="login_no_account">Don't have an account?</span>
-        <a href="./signup.html" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary" data-i18n="sign_up">Sign Up</a>
+        <a href="./signup.html" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-300 border-b border-transparent hover:border-primary pb-0.5" data-i18n="sign_up">Sign Up</a>
       </p>
     </div>
   </main>
@@ -220,7 +244,7 @@
     }
     function hideAlert() { alertBox.style.display = 'none'; }
     function _sanitize(msg, fallback) {
-      return (!msg || /[\u4e00-\u9fff]/.test(msg)) ? fallback : msg;
+      return (!msg || /[一-鿿]/.test(msg)) ? fallback : msg;
     }
 
     form.addEventListener('submit', async (e) => {
@@ -244,7 +268,7 @@
         if (data.username) store.setItem('wp_user', JSON.stringify({ id: data.username, name: data.username, email: data.email || null }));
         if (data.token) store.setItem('wp_token', data.token);
         if (data.sessionId) store.setItem('wp_sessionId', data.sessionId);
-        showAlert('success', '\u2714 Login successful. Welcome back!');
+        showAlert('success', '✔ Login successful. Welcome back!');
         setTimeout(() => window.location.replace('./index.html'), 800);
       }
 
@@ -261,10 +285,10 @@
         clearTimeout(coldStartTimer);
         const data = await res.json();
         if (data.ok) { onLoginSuccess(data); }
-        else { showAlert('error', '\u2718 ' + _sanitize(data.message, 'Incorrect username or password.')); }
+        else { showAlert('error', '✘ ' + _sanitize(data.message, 'Incorrect username or password.')); }
       } catch (err) {
         clearTimeout(coldStartTimer);
-        showAlert('error', '\u2718 Connection failed. Please try again.');
+        showAlert('error', '✘ Connection failed. Please try again.');
       } finally {
         btnLogin.disabled = false;
         btnLogin.innerHTML = 'Log In';

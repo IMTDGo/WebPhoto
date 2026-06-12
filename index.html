@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SNAPBRIFY — Transform Reality into Texture</title>
+  <meta name="description" content="SNAPBRIFY turns any photographed surface into a complete, seamless PBR texture set — six channel maps generated right in your browser." />
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com" rel="preconnect" />
   <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
@@ -114,39 +115,156 @@
     .lang-select::-ms-expand { display: none; }
 
     @media (max-width: 1200px) {
-      #desktopCenterNav {
-        gap: clamp(8px, 1.3vw, 14px);
-      }
-      #desktopAuthControls {
-        gap: clamp(8px, 1vw, 12px);
-      }
+      #desktopCenterNav { gap: clamp(8px, 1.3vw, 14px); }
+      #desktopAuthControls { gap: clamp(8px, 1vw, 12px); }
     }
     @media (max-width: 1024px) {
       #desktopCenterNav,
-      #desktopAuthControls {
-        display: none !important;
-      }
-      #mobileMenuBtn {
-        display: inline-flex !important;
-        justify-self: end;
-      }
+      #desktopAuthControls { display: none !important; }
+      #mobileMenuBtn { display: inline-flex !important; justify-self: end; }
     }
     @media (min-width: 1025px) {
-      #mobileMenuBtn,
-      #mobileMenuPanel,
-      #mobileMenuBackdrop {
-        display: none !important;
-      }
+      #mobileMenuBtn, #mobileMenuPanel, #mobileMenuBackdrop { display: none !important; }
     }
 
     .perspective-container { perspective: 1000px; }
     .preserve-3d { transform-style: preserve-3d; }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
     #bg-canvas { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+    /* ── Scroll progress bar ── */
+    #scroll-progress {
+      position: fixed; top: 0; left: 0; height: 2px; width: 0;
+      background: linear-gradient(90deg, #C9A630, #E8C854, #F5E080);
+      z-index: 60; box-shadow: 0 0 12px rgba(232,200,84,0.6);
+      transition: width 80ms linear;
+    }
+
+    /* ── Scroll reveal ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+      transition-delay: var(--reveal-delay, 0ms);
+      will-change: opacity, transform;
+    }
+    .reveal.in { opacity: 1; transform: none; }
+
+    /* ── Thin gold rule ── */
+    .gold-rule { height: 1px; background: linear-gradient(90deg, transparent, rgba(232,200,84,0.45), transparent); }
+
+    /* ── Section eyebrow ── */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      border: 1px solid rgba(63,63,70,0.4); border-radius: 9999px;
+      padding: 0.375rem 1rem; background: rgba(31,31,34,0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    /* ── Step timeline ── */
+    .step-card { position: relative; }
+    .step-card::before {
+      content: attr(data-step);
+      position: absolute; top: -34px; left: 0;
+      font-family: 'Bodoni Moda', serif;
+      font-size: 72px; line-height: 1; font-weight: 400;
+      color: transparent;
+      -webkit-text-stroke: 1px rgba(232,200,84,0.25);
+      transition: color 0.5s ease, -webkit-text-stroke-color 0.5s ease;
+      pointer-events: none;
+    }
+    .step-card:hover::before { color: rgba(232,200,84,0.12); -webkit-text-stroke-color: rgba(232,200,84,0.55); }
+
+    /* ── Channel preview surfaces (pure CSS materials) ── */
+    .ch-surface { position: absolute; inset: 0; opacity: 0; transition: opacity 0.7s ease; }
+    .ch-surface.active { opacity: 1; }
+    .ch-basecolor { background:
+      radial-gradient(ellipse 120% 80% at 30% 20%, #3a2f1a 0%, transparent 50%),
+      radial-gradient(ellipse 100% 90% at 75% 70%, #2a2416 0%, transparent 55%),
+      linear-gradient(135deg, #241e10 0%, #322a16 35%, #1c1810 70%, #14110a 100%); }
+    .ch-roughness { background:
+      radial-gradient(ellipse 110% 70% at 35% 30%, #6b6b6b 0%, transparent 55%),
+      radial-gradient(ellipse 90% 80% at 70% 75%, #3d3d3d 0%, transparent 50%),
+      linear-gradient(135deg, #4a4a4a 0%, #5a5a5a 40%, #303030 75%, #262626 100%); }
+    .ch-ao { background:
+      radial-gradient(ellipse 80% 60% at 50% 45%, #e8e8e8 0%, #9a9a9a 35%, #4a4a4a 70%, #141414 100%); }
+    .ch-height { background:
+      repeating-radial-gradient(circle at 45% 50%, #1a1a1a 0px, #6a6a6a 42px, #1a1a1a 84px),
+      linear-gradient(135deg, #2a2a2a, #4a4a4a); background-blend-mode: overlay; }
+    .ch-metallic { background:
+      linear-gradient(115deg, #0c0c0e 0%, #1b1b20 30%, #4a4636 48%, #d8c168 50%, #4a4636 52%, #16161a 70%, #0a0a0c 100%); }
+    .ch-normal { background:
+      radial-gradient(ellipse 110% 80% at 30% 25%, #9a9aff 0%, transparent 50%),
+      radial-gradient(ellipse 100% 90% at 72% 70%, #5757d8 0%, transparent 55%),
+      linear-gradient(135deg, #6e6eea 0%, #8585f5 40%, #5252c8 75%, #4747b8 100%); }
+
+    .ch-item { border-left: 2px solid rgba(63,63,70,0.5); transition: border-color 0.4s ease, background 0.4s ease, padding-left 0.3s ease; }
+    .ch-item:hover, .ch-item.active { border-left-color: #E8C854; background: rgba(232,200,84,0.04); }
+    .ch-item.active { padding-left: 1.75rem; }
+
+    /* ── Feature card sheen ── */
+    .feature-card { position: relative; overflow: hidden; }
+    .feature-card::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(232,200,84,0.06) 50%, transparent 70%);
+      transform: translateX(-100%); transition: transform 0.9s ease; pointer-events: none;
+    }
+    .feature-card:hover::after { transform: translateX(100%); }
+
+    /* ── CTA gold frame ── */
+    .cta-frame {
+      position: relative; border-radius: 0.75rem;
+      background: linear-gradient(#121317, #121317) padding-box,
+                  linear-gradient(135deg, rgba(232,200,84,0.55), rgba(63,63,70,0.25) 40%, rgba(232,200,84,0.4)) border-box;
+      border: 1px solid transparent;
+    }
+
+    /* ── Back to top ── */
+    #btnBackTop { opacity: 0; pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(8px); }
+    #btnBackTop.show { opacity: 1; pointer-events: auto; transform: none; }
+
+    /* ── Scroll-down hint ── */
+    @keyframes scrollHint { 0%, 100% { transform: translateY(0); opacity: 0.5; } 50% { transform: translateY(8px); opacity: 1; } }
+    .scroll-hint { animation: scrollHint 2.2s ease-in-out infinite; }
+
+    /* ── Cursor spotlight (desktop pointers only) ── */
+    #cursor-spotlight {
+      position: fixed; inset: 0; z-index: 1; pointer-events: none;
+      background: radial-gradient(circle 480px at var(--spot-x, 50%) var(--spot-y, 30%),
+                  rgba(232,200,84,0.05), transparent 70%);
+      display: none;
+    }
+    @media (hover: hover) and (pointer: fine) { #cursor-spotlight { display: block; } }
+
+    /* ── Hero title gold shimmer ── */
+    @keyframes goldSheen { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+    .hero-shimmer {
+      background: linear-gradient(110deg, #F4F4F5 35%, #F5E080 47%, #E8C854 50%, #F5E080 53%, #F4F4F5 65%);
+      background-size: 220% auto;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: goldSheen 7s linear infinite;
+    }
+
+    /* ── Magnetic buttons ── */
+    .magnetic { transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1); will-change: transform; }
+
+    /* ── 3D tilt cards ── */
+    .tilt { transform-style: preserve-3d; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease, box-shadow 0.3s ease; will-change: transform; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .scroll-hint { animation: none; }
+      html { scroll-behavior: auto; }
+      .feature-card::after { display: none; }
+      #cursor-spotlight { display: none !important; }
+      .hero-shimmer { animation: none; background: none; -webkit-text-fill-color: currentColor; color: inherit; }
+      .magnetic, .tilt { transition: none; }
+    }
   </style>
-  <script src="./js/auth.js"></script>
-  <script src="./js/i18n.js"></script>
-  <script src="./js/navbar.js"></script>
+  <script src="./js/auth.js" defer></script>
+  <script src="./js/i18n.js" defer></script>
+  <script src="./js/navbar.js" defer></script>
   <script>
     // Canonical URL: redirect /index.html → /
     if (window.location.pathname.endsWith('/index.html')) {
@@ -177,130 +295,367 @@
 </head>
 <body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md selection:bg-primary/30 selection:text-primary-fixed">
 
+  <!-- Scroll progress -->
+  <div id="scroll-progress" aria-hidden="true"></div>
+
+  <!-- Cursor spotlight -->
+  <div id="cursor-spotlight" aria-hidden="true"></div>
+
   <!-- Animated Background Canvas -->
   <canvas id="bg-canvas" aria-hidden="true"></canvas>
 
   <!-- Main Content -->
-  <main class="flex-grow pt-28 md:pt-32 pb-24 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
+  <main class="flex-grow pt-28 md:pt-32 px-margin-mobile md:px-margin-page flex flex-col items-center relative overflow-hidden">
 
     <!-- Ambient Background Glow -->
-    <div class="absolute top-[20%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+    <div id="heroGlow" class="absolute top-[8%] left-1/2 -translate-x-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
-    <!-- Hero Section -->
+    <!-- ════════════════ HERO ════════════════ -->
     <section class="z-10 flex flex-col items-center text-center max-w-4xl mt-12 mb-16 relative">
-      <div class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 mb-8 bg-surface-container/60 backdrop-blur">
+      <div class="eyebrow mb-8">
         <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
         <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="hero_badge">Material Texture Intelligence</span>
       </div>
-      <h1 class="font-headline-xl text-headline-xl text-on-background tracking-tight drop-shadow-sm leading-tight" data-i18n-html="hero_title_html">
+      <h1 class="hero-shimmer font-headline-xl text-headline-xl md:text-[64px] tracking-tight drop-shadow-sm leading-tight" data-i18n-html="hero_title_html">
         Transform Reality<br />into Texture
       </h1>
       <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mt-6" data-i18n="hero_desc">
         The most sophisticated image-to-3D material generator for modern creators. Capture, refine, and deploy stunning PBR textures — straight from your phone.
       </p>
       <div class="flex flex-col sm:flex-row items-center gap-4 mt-10">
-        <button id="btnGetStarted" class="bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container transition-all duration-250 ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)]" data-i18n="start_creating">
+        <button id="btnGetStarted" class="magnetic bg-primary text-on-primary font-label-sm text-label-sm px-8 py-4 rounded-full hover:bg-primary-container ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.3)] uppercase tracking-widest" data-i18n="start_creating">
           Start Creating
         </button>
-        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-outline/60 hover:text-on-surface hover:bg-surface-container/50 transition-all duration-250 ease-out" data-i18n="create_account">
+        <a href="./signup.html" id="heroSignUp" class="border border-outline-variant/40 text-on-surface-variant font-label-sm text-label-sm px-8 py-4 rounded-full hover:border-primary/50 hover:text-primary hover:bg-surface-container/50 transition-all duration-250 ease-out uppercase tracking-widest" data-i18n="create_account">
           Create Account
         </a>
       </div>
+      <a href="#about" class="scroll-hint mt-14 text-on-surface-variant/40 hover:text-primary transition-colors" aria-label="Scroll down">
+        <span class="material-symbols-outlined" style="font-size:28px">keyboard_double_arrow_down</span>
+      </a>
     </section>
 
-    <!-- Interactive Material Canvas -->
-    <section class="z-10 w-full max-w-[1200px] perspective-container px-0 md:px-container-padding mt-4">
+    <!-- ════════════════ INTERACTIVE MATERIAL CANVAS ════════════════ -->
+    <section class="z-10 w-full max-w-[1200px] perspective-container px-0 md:px-container-padding mt-4 reveal">
       <div class="w-full aspect-[16/9] bg-surface-container-high border border-outline-variant/30 rounded-xl overflow-hidden relative shadow-[0_20px_60px_rgba(0,0,0,0.5)] preserve-3d transition-transform duration-300 ease-out group cursor-crosshair" id="material-canvas">
         <!-- Base Texture Layer -->
         <div class="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-out group-hover:scale-105"
           style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2416 30%, #1c1a10 60%, #0e0e0e 100%);">
-          <!-- Grid overlay for tool feel -->
           <div class="absolute inset-0 bg-[linear-gradient(rgba(242,202,80,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(242,202,80,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
-          <!-- Concentric highlight rings -->
           <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div class="w-64 h-64 rounded-full border border-primary/5 absolute"></div>
             <div class="w-96 h-96 rounded-full border border-primary/4 absolute"></div>
             <div class="w-[32rem] h-[32rem] rounded-full border border-primary/3 absolute"></div>
           </div>
         </div>
-        <!-- Glassmorphic Depth Overlay -->
         <div class="absolute inset-0 bg-gradient-to-br from-surface/40 via-transparent to-surface/80 mix-blend-overlay pointer-events-none"></div>
-        <!-- Dynamic Studio Light Layer -->
         <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none mix-blend-color-dodge" id="dynamic-light"
           style="background: radial-gradient(circle 600px at 50% 50%, rgba(242,202,80,0.15), transparent 80%);">
         </div>
-        <!-- Center label -->
         <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
           <span class="material-symbols-outlined text-primary/30 text-[64px]">texture</span>
-          <p class="font-label-xs text-label-xs text-on-surface-variant/30 uppercase tracking-widest">Move cursor to explore</p>
+          <p class="font-label-xs text-label-xs text-on-surface-variant/30 uppercase tracking-widest" data-i18n="home_canvas_hint">Move cursor to explore</p>
         </div>
       </div>
     </section>
 
-    <!-- Feature Chips -->
-    <section class="z-10 flex flex-wrap justify-center gap-3 mt-12">
-      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+    <!-- ════════════════ FEATURE CHIPS ════════════════ -->
+    <section class="z-10 flex flex-wrap justify-center gap-3 mt-12 reveal">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur hover:border-primary/40 transition-colors duration-300">
         <span class="material-symbols-outlined text-primary text-base">photo_camera</span>
         <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_mobile_cap">Mobile Capture</span>
       </div>
-      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur hover:border-primary/40 transition-colors duration-300">
         <span class="material-symbols-outlined text-primary text-base">hdr_on</span>
         <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_hdr">HDR Merge</span>
       </div>
-      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur hover:border-primary/40 transition-colors duration-300">
         <span class="material-symbols-outlined text-primary text-base">wb_auto</span>
         <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_awb">Auto White Balance</span>
       </div>
-      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur hover:border-primary/40 transition-colors duration-300">
         <span class="material-symbols-outlined text-primary text-base">layers</span>
         <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_pbr_maps">PBR Channel Maps</span>
       </div>
-      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur">
+      <div class="flex items-center gap-2 bg-surface-container/60 border border-outline-variant/30 rounded-full px-4 py-2 backdrop-blur hover:border-primary/40 transition-colors duration-300">
         <span class="material-symbols-outlined text-primary text-base">view_in_ar</span>
         <span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="chip_seamless">Seamless Tiling</span>
+      </div>
+    </section>
+
+    <!-- ════════════════ ABOUT — what this site does ════════════════ -->
+    <section id="about" class="z-10 w-full max-w-[1100px] mt-36 scroll-mt-28">
+      <div class="gold-rule mb-20 reveal"></div>
+      <div class="grid md:grid-cols-2 gap-12 md:gap-20 items-start">
+        <div class="reveal">
+          <div class="eyebrow mb-6">
+            <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+            <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="home_about_eyebrow">What is Snapbrify</span>
+          </div>
+          <h2 class="font-headline-lg text-headline-lg md:text-[40px] text-on-surface leading-tight" data-i18n-html="home_about_title_html">
+            From a Photograph<br/>to a Production&#8209;Ready Material
+          </h2>
+        </div>
+        <div class="flex flex-col gap-6 reveal" style="--reveal-delay:120ms">
+          <p class="font-body-lg text-body-lg text-on-surface-variant" data-i18n="home_about_body1">
+            SNAPBRIFY turns any surface you can photograph — wood, stone, fabric, leather, concrete — into a complete, seamless PBR texture set, ready for game engines and 3D software.
+          </p>
+          <p class="font-body-md text-body-md text-on-surface-variant/80" data-i18n="home_about_body2">
+            Everything happens directly in your browser. Capture with your phone, refine the crop, and the engine computes every channel map on your device — then delivers the finished set as a ZIP or straight to your inbox.
+          </p>
+        </div>
+      </div>
+
+      <!-- Stats strip -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-px bg-outline-variant/20 border border-outline-variant/20 rounded-xl overflow-hidden mt-20 reveal">
+        <div class="bg-surface-container-lowest/90 px-6 py-10 text-center group hover:bg-surface-container/80 transition-colors duration-500">
+          <p class="font-headline-xl text-[40px] text-primary tabular-nums"><span class="stat-num" data-target="6">0</span></p>
+          <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mt-3" data-i18n="home_stat_channels">Channel Maps</p>
+        </div>
+        <div class="bg-surface-container-lowest/90 px-6 py-10 text-center group hover:bg-surface-container/80 transition-colors duration-500">
+          <p class="font-headline-xl text-[40px] text-primary tabular-nums"><span class="stat-num" data-target="1024">0</span><span class="text-[20px] text-primary/60">px</span></p>
+          <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mt-3" data-i18n="home_stat_res">Max Output</p>
+        </div>
+        <div class="bg-surface-container-lowest/90 px-6 py-10 text-center group hover:bg-surface-container/80 transition-colors duration-500">
+          <p class="font-headline-xl text-[40px] text-primary tabular-nums"><span class="stat-num" data-target="48">0</span><span class="text-[20px] text-primary/60">h</span></p>
+          <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mt-3" data-i18n="home_stat_retention">Privacy Auto&#8209;Clean</p>
+        </div>
+        <div class="bg-surface-container-lowest/90 px-6 py-10 text-center group hover:bg-surface-container/80 transition-colors duration-500">
+          <p class="font-headline-xl text-[40px] text-primary tabular-nums"><span class="stat-num" data-target="100">0</span><span class="text-[20px] text-primary/60">%</span></p>
+          <p class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest mt-3" data-i18n="home_stat_browser">In&#8209;Browser Processing</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ HOW IT WORKS ════════════════ -->
+    <section id="process" class="z-10 w-full max-w-[1100px] mt-36 scroll-mt-28">
+      <div class="text-center mb-24 reveal">
+        <div class="eyebrow mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="home_how_eyebrow">The Process</span>
+        </div>
+        <h2 class="font-headline-lg text-headline-lg md:text-[40px] text-on-surface" data-i18n="home_how_title">Four Steps to a Finished Material</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-10 gap-y-20 pt-8">
+        <div class="step-card reveal" data-step="01">
+          <div class="w-12 h-12 rounded-full border border-primary/30 bg-surface-container/60 backdrop-blur flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-primary" style="font-size:22px">photo_camera</span>
+          </div>
+          <h3 class="font-headline-lg text-[19px] text-on-surface mb-3" data-i18n="home_step1_title">Capture</h3>
+          <p class="font-body-md text-[15px] text-on-surface-variant leading-relaxed" data-i18n="home_step1_desc">Shoot a surface with your phone or import from your gallery. HDR merge and auto white-balance keep colour faithful to reality.</p>
+        </div>
+        <div class="step-card reveal" data-step="02" style="--reveal-delay:100ms">
+          <div class="w-12 h-12 rounded-full border border-primary/30 bg-surface-container/60 backdrop-blur flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-primary" style="font-size:22px">crop</span>
+          </div>
+          <h3 class="font-headline-lg text-[19px] text-on-surface mb-3" data-i18n="home_step2_title">Refine</h3>
+          <p class="font-body-md text-[15px] text-on-surface-variant leading-relaxed" data-i18n="home_step2_desc">Frame the perfect crop, then let the seamless-tiling engine erase visible repeats so the texture wraps endlessly.</p>
+        </div>
+        <div class="step-card reveal" data-step="03" style="--reveal-delay:200ms">
+          <div class="w-12 h-12 rounded-full border border-primary/30 bg-surface-container/60 backdrop-blur flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-primary" style="font-size:22px">layers</span>
+          </div>
+          <h3 class="font-headline-lg text-[19px] text-on-surface mb-3" data-i18n="home_step3_title">Generate</h3>
+          <p class="font-body-md text-[15px] text-on-surface-variant leading-relaxed" data-i18n="home_step3_desc">The full PBR channel set is computed right on your device — Base Color, Roughness, Ambient Occlusion, Height and Normal.</p>
+        </div>
+        <div class="step-card reveal" data-step="04" style="--reveal-delay:300ms">
+          <div class="w-12 h-12 rounded-full border border-primary/30 bg-surface-container/60 backdrop-blur flex items-center justify-center mb-6">
+            <span class="material-symbols-outlined text-primary" style="font-size:22px">cloud_download</span>
+          </div>
+          <h3 class="font-headline-lg text-[19px] text-on-surface mb-3" data-i18n="home_step4_title">Deploy</h3>
+          <p class="font-body-md text-[15px] text-on-surface-variant leading-relaxed" data-i18n="home_step4_desc">Download the whole set as a ZIP, have it mailed to your inbox, and revisit any material in your project history.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ CHANNEL SHOWCASE ════════════════ -->
+    <section id="channels" class="z-10 w-full max-w-[1100px] mt-36 scroll-mt-28">
+      <div class="gold-rule mb-20 reveal"></div>
+      <div class="text-center mb-16 reveal">
+        <div class="eyebrow mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="home_channels_eyebrow">The Output</span>
+        </div>
+        <h2 class="font-headline-lg text-headline-lg md:text-[40px] text-on-surface" data-i18n="home_channels_title">One Photo. A Complete Material.</h2>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl mx-auto mt-4" data-i18n="home_channels_desc">Hover each channel to preview how a single capture becomes every map your renderer needs.</p>
+      </div>
+
+      <div class="grid md:grid-cols-[minmax(280px,380px)_1fr] gap-10 items-stretch">
+        <!-- Channel list -->
+        <div id="channelList" class="flex flex-col justify-center gap-1 reveal">
+          <button class="ch-item active text-left pl-6 pr-4 py-4 group" data-ch="basecolor">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_basecolor">Base Color</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_basecolor_desc">The true albedo of the surface, light-neutralised</span>
+          </button>
+          <button class="ch-item text-left pl-6 pr-4 py-4 group" data-ch="roughness">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_roughness">Roughness</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_roughness_desc">How sharply or softly the surface scatters light</span>
+          </button>
+          <button class="ch-item text-left pl-6 pr-4 py-4 group" data-ch="ao">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_ao">Ambient Occlusion</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_ao_desc">Soft contact shadows nestled in every crevice</span>
+          </button>
+          <button class="ch-item text-left pl-6 pr-4 py-4 group" data-ch="height">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_height">Height</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_height_desc">Displacement data for true surface relief</span>
+          </button>
+          <button class="ch-item text-left pl-6 pr-4 py-4 group" data-ch="metallic">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_metallic">Metallic</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_metallic_desc">Conductor vs. dielectric response, per pixel</span>
+          </button>
+          <button class="ch-item text-left pl-6 pr-4 py-4 group" data-ch="normal">
+            <span class="font-headline-lg text-[16px] text-on-surface group-hover:text-primary transition-colors block" data-i18n="home_ch_normal">Normal</span>
+            <span class="font-body-md text-[13px] text-on-surface-variant/70" data-i18n="home_ch_normal_desc">Micro-detail lighting without extra geometry</span>
+          </button>
+        </div>
+
+        <!-- Channel preview pane -->
+        <div class="reveal" style="--reveal-delay:150ms">
+          <div id="channelPreview" class="tilt relative w-full h-full min-h-[360px] md:min-h-[460px] rounded-xl overflow-hidden border border-outline-variant/30 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+            <div class="ch-surface ch-basecolor active" data-ch="basecolor"></div>
+            <div class="ch-surface ch-roughness" data-ch="roughness"></div>
+            <div class="ch-surface ch-ao" data-ch="ao"></div>
+            <div class="ch-surface ch-height" data-ch="height"></div>
+            <div class="ch-surface ch-metallic" data-ch="metallic"></div>
+            <div class="ch-surface ch-normal" data-ch="normal"></div>
+            <!-- fine grid + vignette -->
+            <div class="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.12)_1px,transparent_1px)] bg-[size:48px_48px] pointer-events-none"></div>
+            <div class="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent pointer-events-none"></div>
+            <!-- floating filename tag -->
+            <div class="absolute bottom-5 left-5 flex items-center gap-2 bg-background/70 border border-outline-variant/40 rounded-full px-4 py-2 backdrop-blur">
+              <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+              <code id="channelTag" class="text-[12px] text-primary/90 tracking-wide">material_basecolor.jpg</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ WHY SNAPBRIFY ════════════════ -->
+    <section id="why" class="z-10 w-full max-w-[1100px] mt-36 scroll-mt-28">
+      <div class="text-center mb-16 reveal">
+        <div class="eyebrow mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-label-xs text-on-surface-variant uppercase tracking-widest" data-i18n="home_why_eyebrow">Crafted for Creators</span>
+        </div>
+        <h2 class="font-headline-lg text-headline-lg md:text-[40px] text-on-surface" data-i18n="home_why_title">Everything Considered</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">view_in_ar</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f1_title">Seamless by Default</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f1_desc">Edge-blending erases visible seams, so every texture tiles infinitely across any UV layout.</p>
+        </div>
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal" style="--reveal-delay:80ms">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">hdr_on</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f2_title">HDR &amp; White Balance</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f2_desc">Multi-exposure merge and automatic white balance recover detail that single shots lose.</p>
+        </div>
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal" style="--reveal-delay:160ms">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">bolt</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f3_title">Zero Installation</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f3_desc">Runs entirely in the browser on Web Workers — your laptop and your phone are the whole pipeline.</p>
+        </div>
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">mail</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f4_title">Delivered to Your Inbox</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f4_desc">Finish on your phone, open on your workstation — every set can be mailed to you with a 48-hour ZIP link.</p>
+        </div>
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal" style="--reveal-delay:80ms">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">history</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f5_title">Project History</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f5_desc">Every upload is archived to your account — re-download channels or the full ZIP any time within the retention window.</p>
+        </div>
+        <div class="feature-card tilt bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur p-8 hover:border-primary/30 reveal" style="--reveal-delay:160ms">
+          <span class="material-symbols-outlined text-primary mb-5" style="font-size:28px">verified_user</span>
+          <h3 class="font-headline-lg text-[17px] text-on-surface mb-2" data-i18n="home_f6_title">Private by Design</h3>
+          <p class="font-body-md text-[14px] text-on-surface-variant leading-relaxed" data-i18n="home_f6_desc">Generated files auto-delete from the cloud after 48 hours. Your source photos never leave your device.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════ CTA ════════════════ -->
+    <section class="z-10 w-full max-w-[900px] mt-36 mb-32">
+      <div class="cta-frame px-8 md:px-16 py-16 md:py-20 text-center relative overflow-hidden reveal">
+        <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[420px] bg-primary/10 rounded-full blur-[90px] pointer-events-none"></div>
+        <p class="font-label-xs text-label-xs text-primary uppercase tracking-[0.25em] mb-5" data-i18n="home_cta_eyebrow">Free While in Beta</p>
+        <h2 class="font-headline-lg text-headline-lg md:text-[36px] text-on-surface mb-5" data-i18n="home_cta_title">Begin Your Material Library</h2>
+        <p class="font-body-lg text-body-lg text-on-surface-variant max-w-lg mx-auto mb-10" data-i18n="home_cta_desc">Three material sets a day, six channel maps each — all it takes is a photograph.</p>
+        <button id="btnCtaStart" class="magnetic bg-primary text-on-primary font-label-sm text-label-sm px-10 py-4 rounded-full hover:bg-primary-container ease-out active:scale-95 shadow-[0_8px_24px_rgba(242,202,80,0.2)] hover:shadow-[0_12px_32px_rgba(242,202,80,0.35)] uppercase tracking-widest" data-i18n="start_creating">
+          Start Creating
+        </button>
       </div>
     </section>
   </main>
 
   <!-- Footer -->
-  <footer class="w-full py-10 bg-surface-container-lowest border-t border-outline-variant/10 flex flex-col md:flex-row justify-between items-center px-margin-mobile md:px-margin-page gap-stack-gap z-10 relative">
-    <div class="font-headline-lg text-headline-lg text-primary select-none">SNAPBRIFY</div>
-
-    <div class="flex flex-col items-center gap-1">
-      <p class="font-label-xs text-label-xs text-on-tertiary-fixed-variant uppercase tracking-widest opacity-60" data-i18n="created_by">Created By</p>
-      <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
-        class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group">
-        <svg class="w-4 h-4 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-        </svg>
-        @z_jay_0723
-      </a>
-    </div>
-
-    <div class="flex gap-6">
-      <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-tertiary-fixed-variant hover:text-primary transition-colors duration-250 opacity-80 hover:opacity-100" data-i18n="sign_up">Sign Up</a>
+  <footer class="w-full pt-16 pb-10 bg-surface-container-lowest border-t border-outline-variant/10 px-margin-mobile md:px-margin-page z-10 relative">
+    <div class="max-w-[1100px] mx-auto">
+      <div class="flex flex-col md:flex-row justify-between gap-12 pb-12">
+        <div class="max-w-sm">
+          <div class="font-headline-lg text-headline-lg text-primary select-none mb-4">SNAPBRIFY</div>
+          <p class="font-body-md text-[14px] text-on-surface-variant/70 leading-relaxed" data-i18n="home_footer_tagline">Photograph reality. Generate seamless PBR materials in your browser. Deploy anywhere.</p>
+        </div>
+        <div class="flex gap-16 md:gap-24">
+          <div class="flex flex-col gap-3">
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50 uppercase tracking-widest mb-1" data-i18n="home_footer_explore">Explore</p>
+            <a href="./projects.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_projects">Projects</a>
+            <a href="./manage-plan.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_manage">Manage Plan</a>
+            <a href="./beta-notice.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_beta">Beta Notice</a>
+          </div>
+          <div class="flex flex-col gap-3">
+            <p class="font-label-xs text-label-xs text-on-surface-variant/50 uppercase tracking-widest mb-1" data-i18n="home_footer_connect">Connect</p>
+            <a href="./contact.html" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="nav_contact">Contact Us</a>
+            <a href="./signup.html" id="footerSignUp" class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 uppercase tracking-widest" data-i18n="sign_up">Sign Up</a>
+            <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer"
+              class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors duration-250 group uppercase tracking-widest">
+              <svg class="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              </svg>
+              @z_jay_0723
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="gold-rule"></div>
+      <div class="flex flex-col md:flex-row justify-between items-center gap-3 pt-8">
+        <p class="font-label-xs text-label-xs text-on-surface-variant/50 uppercase tracking-widest">© 2026 SNAPBRIFY · PBR Material Generation Platform</p>
+        <div class="flex items-center gap-2">
+          <p class="font-label-xs text-label-xs text-on-surface-variant/40 uppercase tracking-widest" data-i18n="created_by">Created By</p>
+          <a href="https://www.instagram.com/z_jay_0723/" target="_blank" rel="noopener noreferrer" class="font-label-xs text-label-xs text-primary/70 hover:text-primary transition-colors uppercase tracking-widest">@z_jay_0723</a>
+        </div>
+      </div>
     </div>
   </footer>
 
+  <!-- Back to top -->
+  <button id="btnBackTop" aria-label="Back to top"
+    class="fixed bottom-8 right-8 z-50 w-12 h-12 rounded-full bg-surface-container/80 border border-outline-variant/40 backdrop-blur text-on-surface-variant hover:text-primary hover:border-primary/50 flex items-center justify-center shadow-lg">
+    <span class="material-symbols-outlined" style="font-size:22px">arrow_upward</span>
+  </button>
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // ── i18n system is now in js/i18n.js (auto-initialized) ──
-      // ── Auth + nav is now in js/navbar.js ──
+      // ── i18n system is in js/i18n.js (auto-initialized) ──
+      // ── Auth + nav is in js/navbar.js ──
 
-      // "Start Creating" hero button (index-page-specific)
-      const btnGetStarted = document.getElementById('btnGetStarted');
-      if (btnGetStarted) {
-        btnGetStarted.addEventListener('click', () => {
-          const loggedIn = !!(window._wpIsLoggedIn || sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
-          if (loggedIn) { if (typeof _wpGoToApp === 'function') _wpGoToApp(); }
-          else window.location.href = './login.html?ref=app';
-        });
-      }
+      const goCreate = () => {
+        const loggedIn = !!(window._wpIsLoggedIn || sessionStorage.getItem('wp_auth') || localStorage.getItem('wp_auth'));
+        if (loggedIn) { if (typeof _wpGoToApp === 'function') _wpGoToApp(); }
+        else window.location.href = './login.html?ref=app';
+      };
+      document.getElementById('btnGetStarted')?.addEventListener('click', goCreate);
+      document.getElementById('btnCtaStart')?.addEventListener('click', goCreate);
 
-      // ── Animated background canvas ──
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+      // ── Animated background canvas: orbital rings + floating gold dust ──
       (function () {
         const bgC = document.getElementById('bg-canvas');
-        if (!bgC || !bgC.getContext) return;
+        if (!bgC || !bgC.getContext || reducedMotion) return;
         const ctx = bgC.getContext('2d');
         let W = 0, H = 0, mx = 0.5, my = 0.5, tmx = 0.5, tmy = 0.5;
 
@@ -324,6 +679,18 @@
           { r: 0.77, segs: 5, gap: 0.46, spd:  0.00003, ph: 0.79, a: 0.013, w: 0.5 },
           { r: 0.93, segs: 4, gap: 0.38, spd: -0.00002, ph: 2.36, a: 0.009, w: 0.5 },
         ];
+
+        // Floating gold dust — slow upward drift with sinusoidal sway
+        const DUST_COUNT = 70;
+        const dust = Array.from({ length: DUST_COUNT }, (_, i) => ({
+          x: (i * 0.137) % 1,                       // deterministic spread
+          y: (i * 0.149 + 0.07) % 1,
+          r: 0.6 + ((i * 7) % 10) / 10 * 1.6,       // 0.6–2.2 px
+          spd: 0.00012 + ((i * 13) % 10) / 10 * 0.00028,
+          sway: 0.5 + ((i * 17) % 10) / 10,
+          a: 0.04 + ((i * 23) % 10) / 10 * 0.10,    // 0.04–0.14 alpha
+          ph: (i * 0.61) % (Math.PI * 2),
+        }));
 
         let t = 0;
         function draw() {
@@ -361,11 +728,66 @@
             ctx.restore();
           });
 
+          // Gold dust layer (parallax: drifts slightly against the mouse)
+          const px = (mx - 0.5) * 24;
+          const py = (my - 0.5) * 16;
+          dust.forEach(p => {
+            p.y -= p.spd;                 // rise
+            if (p.y < -0.02) p.y = 1.02;  // recycle at bottom
+            const sx = (p.x + Math.sin(t * 0.004 * p.sway + p.ph) * 0.012) * W - px * p.sway;
+            const syy = p.y * H - py * p.sway;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(232,200,84,${p.a})`;
+            ctx.arc(sx, syy, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
           requestAnimationFrame(draw);
         }
 
         requestAnimationFrame(draw);
       })();
+
+      // ── Cursor spotlight ──
+      if (finePointer && !reducedMotion) {
+        const spot = document.getElementById('cursor-spotlight');
+        let spotTick = false;
+        document.addEventListener('mousemove', (e) => {
+          if (spotTick) return;
+          spotTick = true;
+          requestAnimationFrame(() => {
+            spot.style.setProperty('--spot-x', e.clientX + 'px');
+            spot.style.setProperty('--spot-y', e.clientY + 'px');
+            spotTick = false;
+          });
+        }, { passive: true });
+      }
+
+      // ── Magnetic buttons ──
+      if (finePointer && !reducedMotion) {
+        document.querySelectorAll('.magnetic').forEach(btn => {
+          btn.addEventListener('mousemove', (e) => {
+            const r = btn.getBoundingClientRect();
+            const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+            const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+            btn.style.transform = `translate(${dx * 5}px, ${dy * 4}px)`;
+          });
+          btn.addEventListener('mouseleave', () => { btn.style.transform = ''; });
+        });
+      }
+
+      // ── 3D tilt cards ──
+      if (finePointer && !reducedMotion) {
+        document.querySelectorAll('.tilt').forEach(card => {
+          card.addEventListener('mousemove', (e) => {
+            const r = card.getBoundingClientRect();
+            const dx = (e.clientX - r.left) / r.width - 0.5;
+            const dy = (e.clientY - r.top) / r.height - 0.5;
+            card.style.transform = `perspective(800px) rotateX(${dy * -5}deg) rotateY(${dx * 5}deg) translateY(-4px)`;
+          });
+          card.addEventListener('mouseleave', () => { card.style.transform = ''; });
+        });
+      }
 
       // ── Material canvas mouse interaction ──
       const canvas = document.getElementById('material-canvas');
@@ -389,17 +811,112 @@
         });
       }
 
-      // ── Navbar scroll effect ──
+      // ── Navbar scroll effect + progress bar + back-to-top + glow parallax ──
       const nav = document.getElementById('global-nav');
-      window.addEventListener('scroll', () => {
-        if (window.scrollY > 20) {
-          nav.classList.add('shadow-md', 'bg-surface/95');
-          nav.classList.remove('bg-surface/80');
-        } else {
-          nav.classList.remove('shadow-md', 'bg-surface/95');
-          nav.classList.add('bg-surface/80');
+      const progress = document.getElementById('scroll-progress');
+      const backTop = document.getElementById('btnBackTop');
+      const heroGlow = document.getElementById('heroGlow');
+      let scrollTicking = false;
+
+      function onScroll() {
+        const y = window.scrollY;
+        if (nav) {
+          if (y > 20) { nav.classList.add('shadow-md', 'bg-surface/95'); nav.classList.remove('bg-surface/80'); }
+          else        { nav.classList.remove('shadow-md', 'bg-surface/95'); nav.classList.add('bg-surface/80'); }
         }
+        if (progress) {
+          const max = document.documentElement.scrollHeight - window.innerHeight;
+          progress.style.width = (max > 0 ? (y / max) * 100 : 0) + '%';
+        }
+        if (backTop) backTop.classList.toggle('show', y > 600);
+        if (heroGlow && !reducedMotion) heroGlow.style.transform = `translate(-50%, ${y * 0.12}px)`;
+        scrollTicking = false;
+      }
+      window.addEventListener('scroll', () => {
+        if (!scrollTicking) { scrollTicking = true; requestAnimationFrame(onScroll); }
+      }, { passive: true });
+      onScroll();
+
+      backTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' }));
+
+      // ── Scroll reveal ──
+      const revealEls = document.querySelectorAll('.reveal');
+      if (reducedMotion || !('IntersectionObserver' in window)) {
+        revealEls.forEach(el => el.classList.add('in'));
+      } else {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) { entry.target.classList.add('in'); io.unobserve(entry.target); }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        revealEls.forEach(el => io.observe(el));
+      }
+
+      // ── Stat counters ──
+      const stats = document.querySelectorAll('.stat-num');
+      function animateStat(el) {
+        const target = parseInt(el.dataset.target, 10) || 0;
+        if (reducedMotion) { el.textContent = target; return; }
+        const dur = 1400;
+        const start = performance.now();
+        function tick(now) {
+          const p = Math.min((now - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(target * eased);
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      }
+      if ('IntersectionObserver' in window && !reducedMotion) {
+        const statIo = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) { animateStat(entry.target); statIo.unobserve(entry.target); }
+          });
+        }, { threshold: 0.6 });
+        stats.forEach(el => statIo.observe(el));
+      } else {
+        stats.forEach(el => { el.textContent = el.dataset.target; });
+      }
+
+      // ── Channel showcase: hover/click select + auto-cycle ──
+      const CH_ORDER = ['basecolor','roughness','ao','height','metallic','normal'];
+      const chItems = document.querySelectorAll('.ch-item');
+      const chSurfaces = document.querySelectorAll('.ch-surface');
+      const chTag = document.getElementById('channelTag');
+      const chSection = document.getElementById('channels');
+      let chCurrent = 'basecolor';
+      let chPaused = false;
+
+      function selectChannel(ch) {
+        chCurrent = ch;
+        chItems.forEach(b => b.classList.toggle('active', b.dataset.ch === ch));
+        chSurfaces.forEach(s => s.classList.toggle('active', s.dataset.ch === ch));
+        if (chTag) chTag.textContent = `material_${ch}.jpg`;
+      }
+      chItems.forEach(btn => {
+        btn.addEventListener('mouseenter', () => selectChannel(btn.dataset.ch));
+        btn.addEventListener('focus',      () => selectChannel(btn.dataset.ch));
+        btn.addEventListener('click',      () => selectChannel(btn.dataset.ch));
       });
+
+      // Auto-cycle every 3.5 s while visible; pause when the section is hovered
+      if (!reducedMotion && chSection) {
+        chSection.addEventListener('mouseenter', () => { chPaused = true; });
+        chSection.addEventListener('mouseleave', () => { chPaused = false; });
+        let chVisible = false;
+        if ('IntersectionObserver' in window) {
+          new IntersectionObserver((entries) => {
+            entries.forEach(e => { chVisible = e.isIntersecting; });
+          }, { threshold: 0.2 }).observe(chSection);
+        } else {
+          chVisible = true;
+        }
+        setInterval(() => {
+          if (chPaused || !chVisible || document.hidden) return;
+          const next = CH_ORDER[(CH_ORDER.indexOf(chCurrent) + 1) % CH_ORDER.length];
+          selectChannel(next);
+        }, 3500);
+      }
     });
   </script>
 </body>

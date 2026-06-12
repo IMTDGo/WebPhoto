@@ -46,6 +46,12 @@
             "label-xs": ["10px", { lineHeight: "1.0", letterSpacing: "0.1em", fontWeight: "600" }],
             "body-lg": ["18px", { lineHeight: "1.6", letterSpacing: "0.01em", fontWeight: "400" }],
             "body-md": ["16px", { lineHeight: "1.6", fontWeight: "400" }]
+          },
+          keyframes: {
+            "fade-up": { "0%": { opacity: "0", transform: "translateY(24px)" }, "100%": { opacity: "1", transform: "translateY(0)" } }
+          },
+          animation: {
+            "fade-up": "fade-up 0.9s cubic-bezier(0.22,1,0.36,1) forwards"
           }
         }
       }
@@ -53,10 +59,19 @@
   </script>
   <style>
     body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
-    .glass-panel { background: rgba(24,24,27,0.7); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,200,84,0.08); }
+    .studio-light-bg { background: radial-gradient(circle at 50% 0%, rgba(232,200,84,0.05) 0%, rgba(9,9,11,1) 70%); }
+    .glass-card { box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(232,200,84,0.08); }
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24; }
-    .spinner { display:inline-block;width:14px;height:14px;border:2px solid #E8C854;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px; }
+    .spinner { display:inline-block;width:14px;height:14px;border:2px solid #18181B;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:4px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    .anim-fade-up { opacity: 0; animation: fadeUp 0.9s cubic-bezier(0.22,1,0.36,1) forwards; }
+    .anim-delay-1 { animation-delay: 0.12s; }
+    .anim-delay-2 { animation-delay: 0.28s; }
+    @media (prefers-reduced-motion: reduce) {
+      .anim-fade-up { animation: none; opacity: 1; transform: none; }
+      .animate-pulse { animation: none; }
+    }
     .alert-box {
       display: none;
       border-radius: 0 8px 8px 0;
@@ -99,134 +114,157 @@
   </style>
   <script src="./js/i18n.js"></script>
 </head>
-<body class="bg-background text-on-background min-h-screen flex items-center justify-center p-margin-mobile md:p-margin-page relative overflow-x-hidden selection:bg-primary selection:text-on-primary">
+<body class="bg-background text-on-surface font-body-md antialiased min-h-screen flex items-center justify-center px-margin-mobile py-16 md:px-margin-page studio-light-bg relative overflow-x-hidden selection:bg-primary selection:text-on-primary">
 
-  <!-- Atmospheric background -->
-  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden flex items-center justify-center">
-    <div class="absolute w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-primary/5 rounded-full blur-[100px] opacity-60 mix-blend-screen -translate-x-1/4 -translate-y-1/4"></div>
-    <div class="absolute w-[60vw] h-[60vw] max-w-[600px] max-h-[600px] bg-surface-bright/20 rounded-full blur-[120px] opacity-40 mix-blend-screen translate-x-1/3 translate-y-1/3"></div>
+  <!-- Fine gold grid -->
+  <div class="fixed inset-0 z-0 pointer-events-none bg-[linear-gradient(rgba(232,200,84,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(232,200,84,0.03)_1px,transparent_1px)] bg-[size:60px_60px]"></div>
+
+  <!-- Ambient glow -->
+  <div class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <div class="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] bg-primary/5 rounded-full blur-[100px]"></div>
+    <div class="absolute -bottom-[25%] -left-[15%] w-[45vw] h-[45vw] max-w-[460px] max-h-[460px] bg-primary/5 rounded-full blur-[100px]"></div>
   </div>
-  <div class="absolute inset-0 pointer-events-none opacity-[0.02] bg-[radial-gradient(#e5e2e1_1px,transparent_1px)] [background-size:24px_24px]"></div>
 
-  <main class="w-full max-w-[480px] z-10 relative">
+  <main class="w-full max-w-md z-10 relative">
+
     <!-- Brand -->
-    <div class="text-center mb-8">
-      <a href="./index.html" class="font-headline-lg text-headline-lg tracking-tighter text-primary hover:text-primary-fixed transition-colors duration-250">SNAPBRIFY</a>
+    <div class="text-center mb-10 anim-fade-up">
+      <a href="./index.html" class="font-headline-lg text-[24px] md:text-[30px] font-semibold uppercase tracking-[0.35em] pl-[0.35em] text-primary hover:text-primary-fixed transition-colors duration-300 inline-block">SNAPBRIFY</a>
+      <div class="mt-6 flex justify-center">
+        <span class="inline-flex items-center gap-2 border border-outline-variant/40 rounded-full px-4 py-1.5 bg-surface-container/60 backdrop-blur">
+          <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+          <span class="font-label-xs text-[10px] uppercase tracking-[0.25em] text-primary" data-i18n="auth_eyebrow_signup">Join the Studio</span>
+        </span>
+      </div>
     </div>
 
-    <!-- Glass Card -->
-    <div class="glass-panel rounded-xl p-container-padding md:p-12 transition-all duration-250 ease-out hover:bg-surface-container-high/50 hover:border-outline/20">
+    <!-- Card -->
+    <div class="anim-fade-up anim-delay-1 bg-surface-container/60 border border-outline-variant/30 rounded-xl backdrop-blur glass-card p-8 md:p-10 transition-all duration-300 hover:border-primary/30 hover:-translate-y-1">
 
       <!-- ── STEP 1: Fill in details ── -->
       <div id="step1">
-        <div class="text-center mb-8">
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" data-i18n="signup_create_title">Create Your Account</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant" data-i18n="signup_subtitle">Join SNAPBRIFY and start creating</p>
-        </div>
+        <header class="mb-8 text-center">
+          <h2 class="font-headline-lg text-[22px] md:text-[26px] uppercase tracking-[0.08em] text-on-surface mb-4" data-i18n="signup_create_title">Create Your Account</h2>
+          <div class="h-px w-2/3 mx-auto bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-4"></div>
+          <p class="font-body-md text-body-md italic text-on-surface-variant" data-i18n="signup_subtitle">Join SNAPBRIFY and start creating</p>
+        </header>
 
         <div id="alertBox1" class="alert-box mb-6"></div>
 
-        <form id="step1Form" autocomplete="on" novalidate class="flex flex-col gap-8">
+        <form id="step1Form" autocomplete="on" novalidate class="flex flex-col gap-7">
           <!-- Username -->
-          <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Username" data-i18n="signup_username_label">Username</label>
+          <div class="group flex flex-col gap-unit">
+            <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="s1Username" data-i18n="signup_username_label">Username</label>
             <div class="relative">
               <input id="s1Username" name="username" type="text" autocomplete="username" required
-                class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
+                class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
                 placeholder=" " />
+              <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">person</span>
             </div>
             <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_username_hint">Letters, numbers or underscore · 3–30 chars</p>
           </div>
 
           <!-- Password -->
-          <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Password" data-i18n="signup_password_label">Password</label>
+          <div class="group flex flex-col gap-unit">
+            <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="s1Password" data-i18n="signup_password_label">Password</label>
             <div class="relative">
               <input id="s1Password" name="password" type="password" autocomplete="new-password" required
-                class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
+                class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
                 placeholder=" " />
+              <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">lock</span>
             </div>
             <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_password_hint">Minimum 8 characters</p>
           </div>
 
           <!-- Confirm Password -->
-          <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Confirm" data-i18n="signup_confirm_label">Confirm Password</label>
+          <div class="group flex flex-col gap-unit">
+            <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="s1Confirm" data-i18n="signup_confirm_label">Confirm Password</label>
             <div class="relative">
               <input id="s1Confirm" name="confirm" type="password" autocomplete="new-password" required
-                class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
+                class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
                 placeholder=" " />
+              <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">lock</span>
             </div>
           </div>
 
           <!-- Email -->
-          <div class="flex flex-col gap-2 group relative">
-            <label class="font-label-sm text-label-sm text-on-surface-variant transition-colors duration-250 group-focus-within:text-primary uppercase tracking-widest" for="s1Email" data-i18n="signup_email_label">Email Address</label>
+          <div class="group flex flex-col gap-unit">
+            <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300" for="s1Email" data-i18n="signup_email_label">Email Address</label>
             <div class="relative">
               <input id="s1Email" name="email" type="email" autocomplete="email" required
-                class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface font-body-lg text-body-lg py-3 px-1 pr-8 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out"
+                class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 pr-9 font-body-md text-body-md text-on-surface placeholder:text-on-surface-variant/40 focus:ring-0 transition-colors duration-300"
                 placeholder=" " />
-              <span class="absolute right-2 top-1/2 -translate-y-1/2 text-outline-variant pointer-events-none material-symbols-outlined text-[18px]">mail</span>
+              <span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant/60 group-focus-within:text-primary transition-colors duration-300 pointer-events-none">mail</span>
             </div>
             <p class="font-label-xs text-label-xs text-on-surface-variant/50" data-i18n="signup_email_hint">A 6-digit code will be sent to your inbox · valid 10 min</p>
           </div>
 
+          <!-- Divider -->
+          <div class="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
+
           <!-- Actions -->
-          <div class="flex flex-col gap-4 mt-2">
+          <div class="flex flex-col gap-stack-gap">
             <button type="submit" id="btnSendOtp"
-              class="w-full bg-primary text-on-primary font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-primary-fixed hover:scale-[0.98] active:scale-[0.95] flex items-center justify-center gap-2 uppercase tracking-widest">
+              class="w-full bg-primary text-on-primary rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:bg-primary-container active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(232,200,84,0.2)] hover:shadow-[0_12px_32px_rgba(232,200,84,0.35)] flex items-center justify-center gap-2">
               <span data-i18n="signup_send_otp">Send OTP</span>
               <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
             <button type="button" id="btnCancel1"
-              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 hover:text-primary active:scale-[0.98] uppercase tracking-widest" data-i18n="editor_cancel">
+              class="w-full bg-transparent border border-outline-variant/40 text-on-surface-variant rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:text-on-surface hover:border-primary/40 hover:bg-surface-container-high/40 active:scale-95 transition-all duration-300" data-i18n="editor_cancel">
               Cancel
             </button>
           </div>
         </form>
 
         <div class="mt-8 text-center">
+          <div class="h-px w-1/2 mx-auto bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-6"></div>
           <p class="font-body-md text-body-md text-on-surface-variant">
             <span data-i18n="signup_already">Already have an account?</span>
-            <a href="./login.html?ref=app" class="text-primary hover:text-primary-fixed transition-colors duration-250 underline decoration-primary/30 underline-offset-4 hover:decoration-primary ml-1" data-i18n="login_btn">Log in</a>
+            <a href="./login.html?ref=app" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-300 border-b border-transparent hover:border-primary pb-0.5" data-i18n="login_btn">Log in</a>
           </p>
         </div>
       </div>
 
       <!-- ── STEP 2: OTP verification ── -->
       <div id="step2" class="hidden">
-        <div class="text-center mb-8">
-          <span class="material-symbols-outlined text-primary text-[48px] mb-3 block">mark_email_unread</span>
-          <h2 class="font-headline-xl text-[30px] md:text-[36px] text-on-surface tracking-tight mb-2" data-i18n="signup_verify_title">Verify Email</h2>
-          <p class="font-body-md text-body-md text-on-surface-variant mb-1" data-i18n="signup_verify_sent">Verification code sent to</p>
+        <header class="mb-8 text-center">
+          <span class="inline-flex items-center justify-center w-16 h-16 rounded-full border border-primary/30 bg-primary/5 mb-5">
+            <span class="material-symbols-outlined text-primary text-[28px]">mark_email_unread</span>
+          </span>
+          <h2 class="font-headline-lg text-[22px] md:text-[26px] uppercase tracking-[0.08em] text-on-surface mb-4" data-i18n="signup_verify_title">Verify Email</h2>
+          <div class="h-px w-2/3 mx-auto bg-gradient-to-r from-transparent via-primary/40 to-transparent mb-4"></div>
+          <p class="font-body-md text-body-md italic text-on-surface-variant mb-1" data-i18n="signup_verify_sent">Verification code sent to</p>
           <p class="font-label-sm text-label-sm text-primary tracking-widest" id="displayEmail"></p>
-        </div>
+        </header>
 
         <div id="alertBox2" class="alert-box mb-6"></div>
 
-        <form id="step2Form" novalidate class="flex flex-col gap-8">
-          <div class="flex flex-col gap-2 group">
-            <label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest" data-i18n="signup_otp_label">Verification Code</label>
+        <form id="step2Form" novalidate class="flex flex-col gap-7">
+          <div class="group flex flex-col gap-unit">
+            <label class="font-label-xs text-[11px] uppercase tracking-[0.25em] text-on-surface-variant group-focus-within:text-primary transition-colors duration-300 text-center" data-i18n="signup_otp_label">Verification Code</label>
             <input id="s2Otp" type="text" inputmode="numeric" maxlength="6" required
-              class="w-full bg-surface-variant/10 border-b border-outline-variant/30 text-on-surface py-3 px-1 focus:outline-none focus:border-primary focus:bg-surface-variant/20 transition-all duration-250 ease-out otp-input"
+              class="w-full bg-transparent border-b border-outline-variant focus:border-primary outline-none py-3 text-primary placeholder:text-on-surface-variant/30 focus:ring-0 transition-colors duration-300 otp-input"
               placeholder="______" />
             <p class="font-label-xs text-label-xs text-on-surface-variant/50 text-center" data-i18n="signup_otp_hint">Enter the 6-digit verification code</p>
           </div>
 
           <div class="text-center">
             <span class="font-body-md text-body-md text-on-surface-variant" data-i18n="signup_no_code">Didn't receive it?</span>
-            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm ml-2 transition-colors duration-250 border-b border-transparent hover:border-primary" data-i18n="signup_resend">Resend</button>
+            <button type="button" id="btnResend" class="text-primary hover:text-primary-fixed font-label-sm text-label-sm uppercase tracking-widest ml-2 transition-colors duration-300 border-b border-transparent hover:border-primary pb-0.5" data-i18n="signup_resend">Resend</button>
             <span id="resendCooldown" class="font-label-xs text-label-xs text-on-surface-variant/40 ml-1 hidden"></span>
           </div>
 
-          <div class="flex flex-col gap-3">
+          <!-- Divider -->
+          <div class="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"></div>
+
+          <div class="flex flex-col gap-stack-gap">
             <button type="submit" id="btnVerify"
-              class="w-full bg-primary text-on-primary font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-primary-fixed hover:scale-[0.98] active:scale-[0.95] flex items-center justify-center gap-2 uppercase tracking-widest">
+              class="w-full bg-primary text-on-primary rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:bg-primary-container active:scale-95 transition-all duration-300 shadow-[0_8px_24px_rgba(232,200,84,0.2)] hover:shadow-[0_12px_32px_rgba(232,200,84,0.35)] flex items-center justify-center gap-2">
               <span data-i18n="signup_verify_btn">Verify</span>
               <span class="material-symbols-outlined text-[16px]">verified</span>
             </button>
             <button type="button" id="btnBack2"
-              class="w-full bg-transparent border border-outline/20 text-on-surface font-label-sm text-label-sm py-4 rounded transition-all duration-250 ease-out hover:bg-surface-variant/30 hover:border-outline/50 active:scale-[0.98] uppercase tracking-widest" data-i18n="signup_back">
+              class="w-full bg-transparent border border-outline-variant/40 text-on-surface-variant rounded-full px-8 py-4 font-label-sm text-[12px] uppercase tracking-widest hover:text-on-surface hover:border-primary/40 hover:bg-surface-container-high/40 active:scale-95 transition-all duration-300" data-i18n="signup_back">
               Back
             </button>
           </div>
@@ -260,7 +298,7 @@
       document.getElementById(boxId).style.display = 'none';
     }
     function _sanitize(msg, fallback) {
-      return (!msg || /[\u4e00-\u9fff]/.test(msg)) ? fallback : msg;
+      return (!msg || /[一-鿿]/.test(msg)) ? fallback : msg;
     }
     function showStep(n) {
       document.getElementById('step1').classList.toggle('hidden', n !== 1);
@@ -327,10 +365,10 @@
           showStep(2);
           startResendCooldown();
         } else {
-          showAlert('alertBox1', 'error', '\u2718 ' + _sanitize(data.message, 'An error occurred. Please try again.'));
+          showAlert('alertBox1', 'error', '✘ ' + _sanitize(data.message, 'An error occurred. Please try again.'));
         }
       } catch (err) {
-          showAlert('alertBox1', 'error', '\u2718 Connection failed. Please try again.');
+          showAlert('alertBox1', 'error', '✘ Connection failed. Please try again.');
       } finally {
         btn.disabled  = false;
         btn.innerHTML = 'Send OTP';
@@ -360,10 +398,10 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showAlert('alertBox2', 'success', '\u2714 ' + _sanitize(data.message, 'Registration successful! Welcome to SNAPBRIFY.'));
+          showAlert('alertBox2', 'success', '✔ ' + _sanitize(data.message, 'Registration successful! Welcome to SNAPBRIFY.'));
           setTimeout(() => window.location.replace('./login.html?ref=app'), 1500);
         } else {
-          showAlert('alertBox2', 'error', '\u2718 ' + _sanitize(data.message, 'Verification failed. Please try again.'));
+          showAlert('alertBox2', 'error', '✘ ' + _sanitize(data.message, 'Verification failed. Please try again.'));
         }
       } catch (err) {
         showAlert('alertBox2', 'error', '✘ Connection failed. Please try again.');
@@ -407,13 +445,13 @@
         });
         const data = await res.json();
         if (data.ok) {
-          showAlert('alertBox2', 'info', '\u2709 Verification code resent');
+          showAlert('alertBox2', 'info', '✉ Verification code resent');
           startResendCooldown();
         } else {
-          showAlert('alertBox2', 'error', '\u2718 ' + _sanitize(data.message, 'Failed to resend. Please try again.'));
+          showAlert('alertBox2', 'error', '✘ ' + _sanitize(data.message, 'Failed to resend. Please try again.'));
         }
       } catch (err) {
-          showAlert('alertBox2', 'error', '\u2718 Connection failed.');
+          showAlert('alertBox2', 'error', '✘ Connection failed.');
       }
     });
   </script>
