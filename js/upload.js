@@ -7,13 +7,12 @@
  *   2. uploadAllMaps(name, canvasMap, onProgress)
  *      → uploads all canvases in PARALLEL to backend, then backend forwards to Cloudflare Images
  *
- * Logical file structure:
- *   {name}/{name}_basecolor.png
- *   {name}/{name}_roughness.png
- *   {name}/{name}_ao.png
- *   {name}/{name}_height.png
- *   {name}/{name}_metallic.png
- *   {name}/{name}_normal.png
+ * Logical file structure (all maps are JPEG, recursively compressed ≤ 3 MB):
+ *   {name}/{name}_basecolor.jpg
+ *   {name}/{name}_roughness.jpg
+ *   {name}/{name}_ao.jpg
+ *   {name}/{name}_height.jpg
+ *   {name}/{name}_normal.jpg
  */
 
 import { applySeamless, extractCrop, DEFAULT_PARAMS } from './seamless.js';
@@ -25,7 +24,7 @@ import {
   canvasFromData,
 } from './textureGenerator.js';
 
-const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024; // every JPG must end up ≤ 3 MB (server hard limit)
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -54,15 +53,13 @@ async function _encodeBlob(canvas, mimeType, quality) {
   });
 }
 
+// Recursively compress to JPEG: step quality down first, then downscale 85%
+// per pass, until the encoded file fits under maxBytes (3 MB).
 async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
   let work = canvas;
 
-  for (let pass = 0; pass < 5; pass++) {
-    for (const q of [0.92, 0.86, 0.8, 0.74, 0.68, 0.62]) {
-      const webp = await _encodeBlob(work, 'image/webp', q).catch(() => null);
-      if (webp && webp.size <= maxBytes) return { blob: webp, mime: 'image/webp', ext: 'webp' };
-    }
-    for (const q of [0.9, 0.82, 0.74, 0.66, 0.58]) {
+  for (let pass = 0; pass < 6; pass++) {
+    for (const q of [0.92, 0.86, 0.8, 0.74, 0.68, 0.6, 0.52]) {
       const jpg = await _encodeBlob(work, 'image/jpeg', q).catch(() => null);
       if (jpg && jpg.size <= maxBytes) return { blob: jpg, mime: 'image/jpeg', ext: 'jpg' };
     }
@@ -74,10 +71,10 @@ async function _toSizedBlob(canvas, maxBytes = MAX_UPLOAD_BYTES) {
     work = next;
   }
 
-  // Last resort: lowest-quality JPEG even if slightly above target
-  const fallback = await _encodeBlob(work, 'image/jpeg', 0.5);
+  // Last resort: lowest-quality JPEG of the smallest canvas
+  const fallback = await _encodeBlob(work, 'image/jpeg', 0.45);
   if (fallback.size > maxBytes) {
-    throw new Error('Unable to compress image under 2MB');
+    throw new Error('Unable to compress image under 3MB');
   }
   return { blob: fallback, mime: 'image/jpeg', ext: 'jpg' };
 }
@@ -201,9 +198,9 @@ export function generateChannels(crop, params = DEFAULT_PARAMS, outSize = 1024, 
 
 /**
  * Check whether the current user is allowed to upload right now.
- * Server enforces:
- * - max 200 unique uploader accounts per day
- * - max 3 uploads per user per day (except exempt test account)
+ * Server enforces (counters reset daily at 23:59 UTC+8):
+ * - max 600 project groups per day site-wide
+ * - max 3 project groups per user per day (except exempt test account)
  */
 export async function checkUploadQuota(username) {
   const resp = await fetch(`${getApiBase()}/upload-quota/check`, {

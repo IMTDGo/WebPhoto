@@ -39,10 +39,10 @@ function _getS3Client() {
   });
 }
 
-// ─── In-memory ZIP store (TTL 24 h) ──────────────────────────────────────────
+// ─── In-memory ZIP store (TTL 48 h, matches UPLOAD_RETENTION_MS) ─────────────
 const zipStore = new Map(); // id → { name, buffer, createdAt }
 setInterval(() => {
-  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - 48 * 60 * 60 * 1000;
   for (const [id, e] of zipStore) { if (e.createdAt < cutoff) zipStore.delete(id); }
 }, 60 * 60 * 1000).unref();
 
@@ -130,10 +130,10 @@ const uploadRecordSchema = new mongoose.Schema({
 });
 const UploadRecord = mongoose.models.UploadRecord || mongoose.model('UploadRecord', uploadRecordSchema);
 
-const DAILY_UNIQUE_UPLOADERS_LIMIT = 200;
-const DAILY_UPLOADS_PER_ACCOUNT = 3;
+const DAILY_TOTAL_GROUPS_LIMIT = 600;            // site-wide project groups per day
+const DAILY_UPLOADS_PER_ACCOUNT = 3;             // project groups per account per day
 const EXEMPT_UPLOAD_ACCOUNT = 'testestest';
-const UPLOAD_RETENTION_MS = 24 * 60 * 60 * 1000;
+const UPLOAD_RETENTION_MS = 48 * 60 * 60 * 1000; // auto-delete from Cloudflare after 48 h
 
 // Fallback upload records when MongoDB is unavailable
 const memUploadRecords = [];
@@ -371,15 +371,20 @@ async function r2DeleteObject(objectKey) {
   }
 }
 
-// Daily quota window is anchored to Taiwan Standard Time (UTC+8).
-// "Start of today TST" = today 00:00 TST = today 00:00 UTC+8 expressed as UTC.
-const TST_OFFSET_MS = 8 * 60 * 60 * 1000; // UTC+8
+// Daily quota window is anchored to Taiwan Standard Time (UTC+8) and the
+// counters reset at 23:59 TST — i.e. a "day" runs [23:59, next-day 23:59).
+const TST_OFFSET_MS = 8 * 60 * 60 * 1000;       // UTC+8
+const DAY_RESET_OFFSET_MS = 60 * 1000;          // reset 1 minute before midnight (23:59)
 
 function startOfTodayTST() {
   const now = new Date();
-  // Shift clock to TST, read the calendar date there, then shift back to UTC
-  const tst = new Date(now.getTime() + TST_OFFSET_MS);
-  return new Date(Date.UTC(tst.getUTCFullYear(), tst.getUTCMonth(), tst.getUTCDate()) - TST_OFFSET_MS);
+  // Shift the clock so that 23:59 TST lands exactly on a calendar-date boundary,
+  // take the date there, then shift back to real UTC.
+  const shifted = new Date(now.getTime() + TST_OFFSET_MS + DAY_RESET_OFFSET_MS);
+  return new Date(
+    Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate())
+    - TST_OFFSET_MS - DAY_RESET_OFFSET_MS
+  );
 }
 
 function endOfTodayTST() {
@@ -404,18 +409,24 @@ async function getTodayUploadStats(username) {
   const end = endOfTodayUTC();
 
   // One upload produces multiple records (images via /record-upload, ZIP via
-  // /send-upload-report) — count distinct folders so quota isn't double-charged
-  const countUserUploads = (records) => {
+  // /send-upload-report) — count distinct (user, folder) groups so quota
+  // isn't double-charged
+  const computeStats = (records) => {
+    const groupKey = r =>
+      `${String(r.username || '').trim().toLowerCase()}/${String(r.folderName || '').trim().toLowerCase()}`;
+    const named   = records.filter(r => String(r.folderName || '').trim());
+    const unnamed = records.length - named.length;
+    const totalGroupsToday = new Set(named.map(groupKey)).size + unnamed;
+
     const userRecords = records.filter(r => String(r.username || '').trim() === username);
-    const folders = new Set(userRecords.map(r => String(r.folderName || '').trim().toLowerCase()).filter(Boolean));
-    const unnamed = userRecords.filter(r => !String(r.folderName || '').trim()).length;
-    return folders.size + unnamed;
+    const userFolders = new Set(userRecords.map(r => String(r.folderName || '').trim().toLowerCase()).filter(Boolean));
+    const userUnnamed = userRecords.filter(r => !String(r.folderName || '').trim()).length;
+    return { totalGroupsToday, userUploadsToday: userFolders.size + userUnnamed };
   };
 
   if (mongoose.connection.readyState === 1) {
     const todayRecords = await UploadRecord.find({ uploadedAt: { $gte: start, $lt: end } }, { username: 1, folderName: 1 }).lean();
-    const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
-    return { uniqueUsersToday: todayUsers.size, userUploadsToday: countUserUploads(todayRecords), userAlreadyUploadedToday: todayUsers.has(username) };
+    return computeStats(todayRecords);
   }
 
   purgeMemUploadRecords();
@@ -423,8 +434,7 @@ async function getTodayUploadStats(username) {
     const t = new Date(r.uploadedAt).getTime();
     return t >= start.getTime() && t < end.getTime();
   });
-  const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
-  return { uniqueUsersToday: todayUsers.size, userUploadsToday: countUserUploads(todayRecords), userAlreadyUploadedToday: todayUsers.has(username) };
+  return computeStats(todayRecords);
 }
 
 async function checkUploadQuotaForUser(username) {
@@ -441,22 +451,68 @@ async function checkUploadQuotaForUser(username) {
     return {
       ok: false,
       status: 429,
-      message: `Daily upload limit reached (${DAILY_UPLOADS_PER_ACCOUNT} groups per account)`
+      message: `Daily upload limit reached (${DAILY_UPLOADS_PER_ACCOUNT} groups per account). Resets at 23:59 (UTC+8).`
     };
   }
 
-  if (!stats.userAlreadyUploadedToday && stats.uniqueUsersToday >= DAILY_UNIQUE_UPLOADERS_LIMIT) {
+  if (stats.totalGroupsToday >= DAILY_TOTAL_GROUPS_LIMIT) {
     return {
       ok: false,
       status: 429,
-      message: `Daily uploader limit reached (${DAILY_UNIQUE_UPLOADERS_LIMIT} accounts)`
+      message: `Daily site-wide upload limit reached (${DAILY_TOTAL_GROUPS_LIMIT} groups). Resets at 23:59 (UTC+8).`
     };
   }
 
   return { ok: true, status: 200, message: 'Quota available', stats };
 }
 
-// ─── Scheduled R2 cleanup (every 24 h, delete objects > 24 hours old) ───
+// ─── Always bundle a project's channel maps into a ZIP on R2 ─────────────────
+// Called fire-and-forget after /record-upload so every project gets a ZIP,
+// not only the ones that request an email report.
+async function buildProjectZip(username, folderName, publicIds, recordId = null) {
+  if (!isR2Configured() || !folderName) return;
+  const imgKeys = (publicIds || []).filter(k => !String(k).endsWith('.zip'));
+  if (!imgKeys.length) return;
+
+  const zip = new AdmZip();
+  const fetches = await Promise.allSettled(
+    imgKeys.map(async key => {
+      const r = await fetch(`${R2_BUCKET_URL}/${key}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status} for ${key}`);
+      return { key, buf: Buffer.from(await r.arrayBuffer()) };
+    })
+  );
+  let added = 0;
+  for (const f of fetches) {
+    if (f.status === 'fulfilled') {
+      zip.addFile(String(f.value.key).split('/').pop(), f.value.buf);
+      added++;
+    } else {
+      console.warn(`[project-zip] fetch failed: ${f.reason?.message}`);
+    }
+  }
+  if (!added) return;
+
+  const zipKey = `${folderName}/${folderName}_textures.zip`;
+  await r2UploadBuffer(zip.toBuffer(), zipKey, {
+    contentType: 'application/zip',
+    username: username || '',
+    folder: folderName,
+    uploadedAt: new Date().toISOString(),
+  });
+
+  // Attach the zip key to the upload record so /projects lists it and the
+  // 48 h cleanup deletes it together with the images
+  if (recordId && mongoose.connection.readyState === 1) {
+    await UploadRecord.updateOne({ _id: recordId }, { $addToSet: { publicIds: zipKey } }).catch(() => {});
+  } else {
+    const rec = memUploadRecords.find(r => r.username === username && r.folderName === folderName);
+    if (rec && !rec.publicIds.includes(zipKey)) rec.publicIds.push(zipKey);
+  }
+  console.log(`[project-zip] ${zipKey} built from ${added} map(s)`);
+}
+
+// ─── Scheduled R2 cleanup (every 24 h, delete objects > 48 hours old) ───
 async function runR2Cleanup() {
   purgeMemUploadRecords();
   if (!isR2Configured()) return;
@@ -818,10 +874,11 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
         res.end(JSON.stringify({
           ok: quota.ok,
           message: quota.message,
-          uniqueUsersToday: quota.stats?.uniqueUsersToday ?? null,
+          totalGroupsToday: quota.stats?.totalGroupsToday ?? null,
           userUploadsToday: quota.stats?.userUploadsToday ?? null,
-          dailyUniqueLimit: DAILY_UNIQUE_UPLOADERS_LIMIT,
+          dailyTotalLimit: DAILY_TOTAL_GROUPS_LIMIT,
           dailyPerUserLimit: DAILY_UPLOADS_PER_ACCOUNT,
+          resetsAt: '23:59 UTC+8',
         }));
       })
       .catch(err => {
@@ -871,7 +928,8 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
           );
           for (const r of fetches) {
             if (r.status === 'fulfilled') {
-              zip.addFile(`${name}_${r.value.ch}.png`, r.value.buf);
+              const ext = (String(maps[r.value.ch]).split('?')[0].split('.').pop() || 'jpg').toLowerCase();
+              zip.addFile(`${name}_${r.value.ch}.${ext}`, r.value.buf);
             } else {
               console.warn(`[upload-report] ZIP fetch failed: ${r.reason?.message}`);
             }
@@ -890,7 +948,7 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
                 uploadedAt: new Date().toISOString(),
               });
               zipUrl = uploaded.url;
-              // Register zip key for 24h R2 cleanup alongside the image files
+              // Register zip key for 48h R2 cleanup alongside the image files
               const record = { username, folderName: folder, publicIds: [zipKey], uploadedAt: new Date() };
               if (mongoose.connection.readyState === 1) {
                 await UploadRecord.create(record).catch(() => {});
@@ -922,7 +980,7 @@ if (!username || !password || !email) return fail(400, 'Please fill in all field
         }).join('');
 
         const zipButton = zipUrl
-          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#E8C854;color:#18181B;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 24 h)</a></div>`
+          ? `<div style="margin:20px 0 4px"><a href="${zipUrl}" style="display:inline-block;background:#E8C854;color:#18181B;padding:10px 22px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">⬇ Download All as ZIP (valid 48 h)</a></div>`
           : '';
 
         const html = `<div style="font-family:sans-serif;background:#0d1117;color:#e0e6f0;padding:24px;border-radius:12px;max-width:560px">
@@ -957,7 +1015,7 @@ ${zipButton}
     const entry = zipStore.get(id);
     if (!entry) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('ZIP not found or has expired (valid 24 hours)');
+      res.end('ZIP not found or has expired (valid 48 hours)');
       return;
     }
     const filename = encodeURIComponent(`${entry.name}_textures.zip`);
@@ -1054,12 +1112,18 @@ ${zipButton}
       }
 
       const record = { username, folderName, publicIds, uploadedAt: new Date() };
+      let recordId = null;
       if (mongoose.connection.readyState === 1) {
-        await UploadRecord.create(record);
+        const created = await UploadRecord.create(record);
+        recordId = created._id;
       } else {
         memUploadRecords.push(record);
       }
       console.log(`[record-upload] Saved ${publicIds.length} id(s) for "${folderName || 'unnamed'}" (${username || 'anon'})`);
+
+      // Bundle the channel maps into a ZIP on R2 (fire-and-forget)
+      buildProjectZip(username, folderName, publicIds, recordId)
+        .catch(e => console.warn('[project-zip]', e.message));
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ ok: true }));
     }).catch(err => {
