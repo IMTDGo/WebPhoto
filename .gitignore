@@ -23,3 +23,6 @@ login_log.txt
 
 # Cloudflare tunnel binary (large, platform-specific)
 cloudflared.exe
+
+# Claude Code local settings (per-machine, not project code)
+.claude/
