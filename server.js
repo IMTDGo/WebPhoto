@@ -403,11 +403,19 @@ async function getTodayUploadStats(username) {
   const start = startOfTodayUTC();
   const end = endOfTodayUTC();
 
+  // One upload produces multiple records (images via /record-upload, ZIP via
+  // /send-upload-report) — count distinct folders so quota isn't double-charged
+  const countUserUploads = (records) => {
+    const userRecords = records.filter(r => String(r.username || '').trim() === username);
+    const folders = new Set(userRecords.map(r => String(r.folderName || '').trim().toLowerCase()).filter(Boolean));
+    const unnamed = userRecords.filter(r => !String(r.folderName || '').trim()).length;
+    return folders.size + unnamed;
+  };
+
   if (mongoose.connection.readyState === 1) {
-    const todayRecords = await UploadRecord.find({ uploadedAt: { $gte: start, $lt: end } }, { username: 1 }).lean();
+    const todayRecords = await UploadRecord.find({ uploadedAt: { $gte: start, $lt: end } }, { username: 1, folderName: 1 }).lean();
     const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
-    const userCount = todayRecords.filter(r => String(r.username || '').trim() === username).length;
-    return { uniqueUsersToday: todayUsers.size, userUploadsToday: userCount, userAlreadyUploadedToday: todayUsers.has(username) };
+    return { uniqueUsersToday: todayUsers.size, userUploadsToday: countUserUploads(todayRecords), userAlreadyUploadedToday: todayUsers.has(username) };
   }
 
   purgeMemUploadRecords();
@@ -416,8 +424,7 @@ async function getTodayUploadStats(username) {
     return t >= start.getTime() && t < end.getTime();
   });
   const todayUsers = new Set(todayRecords.map(r => String(r.username || '').trim()).filter(Boolean));
-  const userCount = todayRecords.filter(r => String(r.username || '').trim() === username).length;
-  return { uniqueUsersToday: todayUsers.size, userUploadsToday: userCount, userAlreadyUploadedToday: todayUsers.has(username) };
+  return { uniqueUsersToday: todayUsers.size, userUploadsToday: countUserUploads(todayRecords), userAlreadyUploadedToday: todayUsers.has(username) };
 }
 
 async function checkUploadQuotaForUser(username) {
@@ -965,7 +972,8 @@ ${zipButton}
   }
 
   // ── GET /projects ─────────────────────────────────────────────────────────
-  if (req.method === 'GET' && rawUrl.startsWith('/projects')) {
+  // Exact match only — '/projects.html' must fall through to the static handler
+  if (req.method === 'GET' && rawUrl === '/projects') {
     const qs       = new URL(req.url, `http://localhost`).searchParams;
     const username = String(qs.get('username') || '').trim();
     if (!username) {
@@ -984,16 +992,36 @@ ${zipButton}
     recordsPromise
       .then(records => {
         const bucketUrl = (process.env.R2_BUCKET_URL || '').replace(/\/$/, '');
-        const projects  = records.map(r => ({
-          folderName: r.folderName,
-          publicIds:  r.publicIds || [],
-          uploadedAt: r.uploadedAt,
-          bucketUrl,
-          thumbUrl: (() => {
-            const k = (r.publicIds || []).find(id => id.includes('_basecolor'));
-            return k && bucketUrl ? `${bucketUrl}/${k}` : null;
-          })(),
-        }));
+        // Images and the ZIP are stored as separate UploadRecords for the same
+        // folder — merge them so each project shows as a single row
+        const byFolder = new Map();
+        records.forEach((r, i) => {
+          const key = String(r.folderName || `__unnamed_${i}`).trim().toLowerCase();
+          const cur = byFolder.get(key);
+          if (cur) {
+            cur.publicIds.push(...(r.publicIds || []));
+            if (new Date(r.uploadedAt) > new Date(cur.uploadedAt)) cur.uploadedAt = r.uploadedAt;
+          } else {
+            byFolder.set(key, {
+              folderName: r.folderName,
+              publicIds:  [...(r.publicIds || [])],
+              uploadedAt: r.uploadedAt,
+            });
+          }
+        });
+        const projects = [...byFolder.values()]
+          .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
+          .map(r => {
+            const publicIds = [...new Set(r.publicIds)];
+            const bcKey = publicIds.find(id => id.includes('_basecolor'));
+            return {
+              folderName: r.folderName,
+              publicIds,
+              uploadedAt: r.uploadedAt,
+              bucketUrl,
+              thumbUrl: bcKey && bucketUrl ? `${bucketUrl}/${bcKey}` : null,
+            };
+          });
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true, projects }));
       })
@@ -1008,7 +1036,9 @@ ${zipButton}
   if (req.method === 'POST' && rawUrl === '/record-upload') {
     readJsonBody(req).then(async body => {
       const username   = String(body.username   || '').trim() || null;
-      const folderName = String(body.folderName || '').trim() || null;
+      // Same slug rules as /upload-map and /send-upload-report, so records
+      // for one upload share an identical folderName and merge in /projects
+      const folderName = String(body.folderName || '').trim() ? _sanitizeSlug(body.folderName) : null;
       const publicIds  = Array.isArray(body.publicIds) ? body.publicIds.map(String) : [];
       if (!publicIds.length) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
